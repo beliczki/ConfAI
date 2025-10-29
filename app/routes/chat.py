@@ -1,7 +1,9 @@
-"""Chat routes - placeholder for implementation."""
+"""Chat routes with LLM integration."""
 from flask import Blueprint, render_template, request, jsonify, session, Response
 from app.utils.helpers import login_required, sanitize_input
 from app.models import ChatThread, ChatMessage
+from app.services.llm_service import llm_service
+from app.services.embedding_service import embedding_service
 import json
 
 chat_bp = Blueprint('chat', __name__)
@@ -120,13 +122,74 @@ def send_message():
     })
 
 
-# TODO: Implement SSE streaming endpoint
 @chat_bp.route('/api/chat/stream', methods=['POST'])
 @login_required
 def stream_message():
     """Stream AI response using Server-Sent Events."""
+    data = request.json
+    thread_id = data.get('thread_id')
+    message = data.get('message', '')
+
+    if not thread_id or not message:
+        def error_gen():
+            yield f"data: {json.dumps({'error': 'Thread ID and message are required', 'done': True})}\n\n"
+        return Response(error_gen(), mimetype='text/event-stream')
+
+    # Verify ownership
+    thread = ChatThread.get_by_id(thread_id)
+    if not thread or thread['user_id'] != session['user_id']:
+        def error_gen():
+            yield f"data: {json.dumps({'error': 'Thread not found', 'done': True})}\n\n"
+        return Response(error_gen(), mimetype='text/event-stream')
+
+    # Sanitize input
+    message = sanitize_input(message)
+
+    # Store user message
+    ChatMessage.create(thread_id, 'user', message)
+
+    # Get conversation history for context
+    messages_history = ChatMessage.get_by_thread(thread_id)
+    conversation = [
+        {'role': m['role'], 'content': m['content']}
+        for m in messages_history[-10:]  # Last 10 messages for context
+    ]
+
+    # Get relevant context from embeddings (if available)
+    context = embedding_service.search_context(message)
+
     def generate():
-        # TODO: Implement streaming from LLM
-        yield f"data: {json.dumps({'content': 'Streaming coming soon!', 'done': True})}\n\n"
+        """Generator for streaming response."""
+        try:
+            # Get streaming response from LLM
+            full_response = ""
+            stream = llm_service.generate_response(
+                messages=conversation,
+                context=context,
+                stream=True
+            )
+
+            # Check if we got a string (error) or iterator
+            if isinstance(stream, str):
+                # Error message, send as single chunk
+                yield f"data: {json.dumps({'content': stream, 'done': True})}\n\n"
+                ChatMessage.create(thread_id, 'assistant', stream)
+            else:
+                # Stream the response
+                for chunk in stream:
+                    full_response += chunk
+                    yield f"data: {json.dumps({'content': chunk, 'done': False})}\n\n"
+
+                # Send completion signal
+                yield f"data: {json.dumps({'content': '', 'done': True})}\n\n"
+
+                # Store complete AI response
+                if full_response:
+                    ChatMessage.create(thread_id, 'assistant', full_response)
+
+        except Exception as e:
+            error_msg = f"Sorry, I encountered an error: {str(e)}"
+            yield f"data: {json.dumps({'content': error_msg, 'done': True})}\n\n"
+            ChatMessage.create(thread_id, 'assistant', error_msg)
 
     return Response(generate(), mimetype='text/event-stream')
