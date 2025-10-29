@@ -68,7 +68,7 @@ Be professional, engaging, and help users derive meaningful insights."""
                 # Streaming response
                 def generate_stream():
                     with client.messages.stream(
-                        model="claude-3-5-sonnet-20241022",
+                        model="claude-sonnet-4-5-20250929",
                         max_tokens=2048,
                         system=system_prompt,
                         messages=messages
@@ -80,7 +80,7 @@ Be professional, engaging, and help users derive meaningful insights."""
             else:
                 # Non-streaming response
                 response = client.messages.create(
-                    model="claude-3-5-sonnet-20241022",
+                    model="claude-sonnet-4-5-20250929",
                     max_tokens=2048,
                     system=system_prompt,
                     messages=messages
