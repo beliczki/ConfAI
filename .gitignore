@@ -50,3 +50,4 @@ documents/transcripts/*
 dist/
 build/
 *.egg-info/
+flask_session/
