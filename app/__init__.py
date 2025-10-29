@@ -13,7 +13,7 @@ load_dotenv()
 session = Session()
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["5 per minute"],
+    default_limits=["200 per minute", "2000 per hour"],
     storage_uri="memory://"
 )
 
