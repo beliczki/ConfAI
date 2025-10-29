@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Login - ConfAI{% endblock %}
+
+{% block styles %}
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #E20074 0%, #001E50 100%);
+    }
+
+    .login-card {
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+        width: 100%;
+    }
+
+    .logo {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .logo h1 {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .logo p {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-top: 8px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    #pin-form {
+        display: none;
+    }
+
+    .pin-input-group {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .pin-digit {
+        width: 50px;
+        height: 60px;
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        border: 2px solid #CCCCCC;
+        border-radius: 8px;
+    }
+
+    .pin-digit:focus {
+        border-color: var(--primary);
+    }
+
+    .message {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    .message.error {
+        background: #FFE5E5;
+        color: var(--error);
+    }
+
+    .message.success {
+        background: #E5F5EA;
+        color: var(--success);
+    }
+
+    .back-link {
+        text-align: center;
+        margin-top: 16px;
+    }
+
+    .back-link a {
+        color: var(--primary);
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .loading {
+        display: none;
+        text-align: center;
+        color: var(--text-secondary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="logo">
+            <h1>ConfAI</h1>
+            <p>Conference Intelligence Assistant</p>
+        </div>
+
+        <div id="message"></div>
+
+        <!-- Email Form -->
+        <form id="email-form">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input
+                    type="email"
+                    id="email"
+                    class="input"
+                    placeholder="your.email@example.com"
+                    required
+                    autocomplete="email"
+                >
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Send PIN Code
+            </button>
+        </form>
+
+        <!-- PIN Form -->
+        <form id="pin-form">
+            <div class="form-group">
+                <label>Enter 6-Digit PIN</label>
+                <div class="pin-input-group">
+                    <input type="text" maxlength="1" class="pin-digit" data-index="0">
+                    <input type="text" maxlength="1" class="pin-digit" data-index="1">
+                    <input type="text" maxlength="1" class="pin-digit" data-index="2">
+                    <input type="text" maxlength="1" class="pin-digit" data-index="3">
+                    <input type="text" maxlength="1" class="pin-digit" data-index="4">
+                    <input type="text" maxlength="1" class="pin-digit" data-index="5">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Verify & Login
+            </button>
+            <div class="back-link">
+                <a href="#" id="back-link">← Back to email</a>
+            </div>
+        </form>
+
+        <div class="loading">
+            <p>Loading...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const emailForm = document.getElementById('email-form');
+    const pinForm = document.getElementById('pin-form');
+    const emailInput = document.getElementById('email');
+    const messageDiv = document.getElementById('message');
+    const backLink = document.getElementById('back-link');
+    const pinDigits = document.querySelectorAll('.pin-digit');
+
+    let userEmail = '';
+
+    // Email form submission
+    emailForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = emailInput.value.trim();
+
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                userEmail = email;
+                showMessage(data.message, 'success');
+                // Show dev PIN if available
+                if (data.dev_pin) {
+                    showMessage(`PIN sent! (Dev mode: ${data.dev_pin})`, 'success');
+                }
+                emailForm.style.display = 'none';
+                pinForm.style.display = 'block';
+                pinDigits[0].focus();
+            } else {
+                showMessage(data.error || 'Failed to send PIN', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error. Please try again.', 'error');
+        }
+    });
+
+    // PIN form submission
+    pinForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pin = Array.from(pinDigits).map(d => d.value).join('');
+
+        if (pin.length !== 6) {
+            showMessage('Please enter all 6 digits', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/verify', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email: userEmail, pin })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage('Login successful! Redirecting...', 'success');
+                setTimeout(() => window.location.href = '/chat', 1000);
+            } else {
+                showMessage(data.error || 'Invalid PIN', 'error');
+                pinDigits.forEach(d => d.value = '');
+                pinDigits[0].focus();
+            }
+        } catch (error) {
+            showMessage('Network error. Please try again.', 'error');
+        }
+    });
+
+    // PIN input auto-focus
+    pinDigits.forEach((digit, index) => {
+        digit.addEventListener('input', (e) => {
+            if (e.target.value.length === 1 && index < 5) {
+                pinDigits[index + 1].focus();
+            }
+        });
+
+        digit.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                pinDigits[index - 1].focus();
+            }
+        });
+    });
+
+    // Back link
+    backLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        pinForm.style.display = 'none';
+        emailForm.style.display = 'block';
+        pinDigits.forEach(d => d.value = '');
+        messageDiv.innerHTML = '';
+    });
+
+    function showMessage(text, type) {
+        messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+    }
+</script>
+{% endblock %}

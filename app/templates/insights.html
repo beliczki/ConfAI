@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Insights Wall - ConfAI{% endblock %}
+
+{% block styles %}
+<style>
+    .insights-header {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 30px 20px;
+        text-align: center;
+    }
+
+    .insights-header h1 {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+
+    .insights-container {
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .nav-link {
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    .nav-link a {
+        color: var(--primary);
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .placeholder {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+
+    .placeholder h2 {
+        font-size: 24px;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="insights-header">
+    <h1>Insights Wall</h1>
+    <p>Share and vote on the best AI-generated insights</p>
+</div>
+
+<div class="nav-link">
+    <a href="/chat">← Back to Chat</a>
+</div>
+
+<div class="insights-container">
+    <div class="placeholder">
+        <h2>Insights Wall Coming Soon!</h2>
+        <p>This is where users will share and vote on insights.</p>
+        <p style="margin-top: 20px;">Features:</p>
+        <ul style="text-align: left; max-width: 400px; margin: 20px auto;">
+            <li>Share AI insights from chats</li>
+            <li>Upvote/downvote system</li>
+            <li>3 votes per user limit</li>
+            <li>Vote counts revealed after all votes cast</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
