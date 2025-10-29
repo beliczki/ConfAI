@@ -1,0 +1,220 @@
+.insights-header {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    padding: 30px 20px;
+    text-align: center;
+    position: relative;
+}
+
+.insights-header h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.insights-header p {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.header-controls {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-link a {
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.votes-remaining {
+    background: var(--surface);
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 2px solid var(--primary);
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.votes-remaining .count {
+    color: var(--primary);
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.insights-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.insight-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.insight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.insight-content {
+    flex: 1;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-bottom: 16px;
+    font-size: 15px;
+}
+
+.insight-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.insight-date {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.vote-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.vote-btn {
+    background: none;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vote-btn:hover {
+    transform: scale(1.1);
+    border-color: var(--primary);
+}
+
+.vote-btn.voted {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.vote-btn.upvote.voted {
+    background: var(--success);
+    border-color: var(--success);
+}
+
+.vote-btn.downvote.voted {
+    background: var(--error);
+    border-color: var(--error);
+}
+
+.vote-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.vote-count {
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text-primary);
+    min-width: 40px;
+    text-align: center;
+}
+
+.vote-count.hidden {
+    color: var(--text-secondary);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-state h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    font-size: 16px;
+    margin-bottom: 24px;
+}
+
+.empty-state .cta-btn {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.empty-state .cta-btn:hover {
+    background: #c5005f;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .insights-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header-controls {
+        flex-direction: column;
+        gap: 16px;
+    }
+}
