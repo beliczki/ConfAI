@@ -212,6 +212,37 @@
         opacity: 0.7;
     }
 
+    .message-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .share-btn {
+        background: none;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .share-btn:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .share-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     .typing-indicator {
         display: none;
         padding: 12px 16px;
@@ -584,7 +615,10 @@
                                 hideTypingIndicator();
                                 messageElement = addStreamingMessage();
                             }
-                            updateStreamingMessage(messageElement, assistantMessage);
+                            updateStreamingMessage(messageElement, assistantMessage, false);
+                        } else if (data.done && messageElement && assistantMessage) {
+                            // Mark streaming as complete and show share button
+                            updateStreamingMessage(messageElement, assistantMessage, true);
                         }
                     }
                 }
@@ -617,6 +651,13 @@
             <div class="message-avatar" style="background: ${gradient}">${avatar}</div>
             <div>
                 <div class="message-content">${escapeHtml(content)}</div>
+                ${role === 'assistant' ? `
+                    <div class="message-actions">
+                        <button class="share-btn" onclick="shareInsight(this, '${escapeHtml(content).replace(/'/g, "\\'")}')">
+                            📌 Share to Insights
+                        </button>
+                    </div>
+                ` : ''}
             </div>
         `;
 
@@ -635,6 +676,11 @@
             <div class="message-avatar" style="background: linear-gradient(135deg, #001E50, #00A0E9)">AI</div>
             <div>
                 <div class="message-content"></div>
+                <div class="message-actions" style="display: none;">
+                    <button class="share-btn" onclick="shareInsightFromElement(this)">
+                        📌 Share to Insights
+                    </button>
+                </div>
             </div>
         `;
 
@@ -642,9 +688,18 @@
         return messageDiv;
     }
 
-    function updateStreamingMessage(element, content) {
+    function updateStreamingMessage(element, content, done = false) {
         const contentDiv = element.querySelector('.message-content');
         contentDiv.textContent = content;
+
+        // Show share button when streaming is complete
+        if (done && content) {
+            const actionsDiv = element.querySelector('.message-actions');
+            if (actionsDiv) {
+                actionsDiv.style.display = 'flex';
+            }
+        }
+
         scrollToBottom();
     }
 
@@ -717,5 +772,56 @@
             sendMessage();
         }
     });
+
+    // Share insight functions
+    async function shareInsight(button, content) {
+        if (!content || content.length < 10) {
+            alert('Insight is too short to share');
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Sharing...';
+
+        try {
+            const response = await fetch('/api/insights', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to share insight');
+            }
+
+            button.textContent = '✓ Shared!';
+            button.style.background = 'var(--success)';
+            button.style.borderColor = 'var(--success)';
+            button.style.color = 'white';
+
+            setTimeout(() => {
+                button.textContent = '📌 Share to Insights';
+                button.style.background = '';
+                button.style.borderColor = '';
+                button.style.color = '';
+                button.disabled = false;
+            }, 2000);
+
+        } catch (error) {
+            alert(`Error sharing insight: ${error.message}`);
+            button.textContent = '📌 Share to Insights';
+            button.disabled = false;
+        }
+    }
+
+    function shareInsightFromElement(button) {
+        const messageDiv = button.closest('.message');
+        const content = messageDiv.querySelector('.message-content').textContent;
+        shareInsight(button, content);
+    }
 </script>
 {% endblock %}

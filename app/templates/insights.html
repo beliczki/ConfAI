@@ -9,11 +9,50 @@
         color: white;
         padding: 30px 20px;
         text-align: center;
+        position: relative;
     }
 
     .insights-header h1 {
         font-size: 32px;
         margin-bottom: 8px;
+    }
+
+    .insights-header p {
+        font-size: 16px;
+        opacity: 0.9;
+    }
+
+    .header-controls {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .nav-link a {
+        color: var(--primary);
+        text-decoration: none;
+        font-size: 16px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .votes-remaining {
+        background: var(--surface);
+        padding: 12px 20px;
+        border-radius: 8px;
+        border: 2px solid var(--primary);
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .votes-remaining .count {
+        color: var(--primary);
+        font-size: 20px;
+        font-weight: 700;
     }
 
     .insights-container {
@@ -22,26 +61,168 @@
         padding: 0 20px;
     }
 
-    .nav-link {
+    .insights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 24px;
+        margin-top: 24px;
+    }
+
+    .insight-card {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .insight-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .insight-content {
+        flex: 1;
+        color: var(--text-primary);
+        line-height: 1.6;
+        margin-bottom: 16px;
+        font-size: 15px;
+    }
+
+    .insight-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+    }
+
+    .insight-date {
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+
+    .vote-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .vote-btn {
+        background: none;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 18px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .vote-btn:hover {
+        transform: scale(1.1);
+        border-color: var(--primary);
+    }
+
+    .vote-btn.voted {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+
+    .vote-btn.upvote.voted {
+        background: var(--success);
+        border-color: var(--success);
+    }
+
+    .vote-btn.downvote.voted {
+        background: var(--error);
+        border-color: var(--error);
+    }
+
+    .vote-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .vote-count {
+        font-weight: 700;
+        font-size: 18px;
+        color: var(--text-primary);
+        min-width: 40px;
         text-align: center;
-        margin: 20px 0;
     }
 
-    .nav-link a {
-        color: var(--primary);
-        text-decoration: none;
-        font-size: 16px;
+    .vote-count.hidden {
+        color: var(--text-secondary);
     }
 
-    .placeholder {
+    .empty-state {
         text-align: center;
         padding: 60px 20px;
         color: var(--text-secondary);
     }
 
-    .placeholder h2 {
+    .empty-state h2 {
         font-size: 24px;
         margin-bottom: 16px;
+        color: var(--text-primary);
+    }
+
+    .empty-state p {
+        font-size: 16px;
+        margin-bottom: 24px;
+    }
+
+    .empty-state .cta-btn {
+        display: inline-block;
+        background: var(--primary);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background 0.2s;
+    }
+
+    .empty-state .cta-btn:hover {
+        background: #c5005f;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary);
+    }
+
+    .loading-spinner {
+        border: 3px solid var(--border);
+        border-top: 3px solid var(--primary);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+        .insights-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .header-controls {
+            flex-direction: column;
+            gap: 16px;
+        }
     }
 </style>
 {% endblock %}
@@ -49,24 +230,194 @@
 {% block content %}
 <div class="insights-header">
     <h1>Insights Wall</h1>
-    <p>Share and vote on the best AI-generated insights</p>
+    <p>Share and vote on the best AI-generated insights from our community</p>
 </div>
 
-<div class="nav-link">
-    <a href="/chat">← Back to Chat</a>
+<div class="header-controls">
+    <a href="/chat" class="nav-link">
+        <span>←</span>
+        <span>Back to Chat</span>
+    </a>
+    <div class="votes-remaining">
+        <span id="votes-count" class="count">3</span> votes remaining
+    </div>
 </div>
 
 <div class="insights-container">
-    <div class="placeholder">
-        <h2>Insights Wall Coming Soon!</h2>
-        <p>This is where users will share and vote on insights.</p>
-        <p style="margin-top: 20px;">Features:</p>
-        <ul style="text-align: left; max-width: 400px; margin: 20px auto;">
-            <li>Share AI insights from chats</li>
-            <li>Upvote/downvote system</li>
-            <li>3 votes per user limit</li>
-            <li>Vote counts revealed after all votes cast</li>
-        </ul>
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+        <p>Loading insights...</p>
     </div>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+        <h2>No insights yet</h2>
+        <p>Be the first to share an insight from your chat conversations!</p>
+        <a href="/chat" class="cta-btn">Go to Chat</a>
+    </div>
+
+    <div id="insights-grid" class="insights-grid" style="display: none;"></div>
 </div>
+
+<script>
+let votesRemaining = 3;
+let insights = [];
+
+async function loadInsights() {
+    try {
+        const response = await fetch('/api/insights');
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to load insights');
+        }
+
+        insights = data.insights;
+        votesRemaining = data.user_votes_remaining;
+
+        // Update UI
+        document.getElementById('votes-count').textContent = votesRemaining;
+        document.getElementById('loading').style.display = 'none';
+
+        if (insights.length === 0) {
+            document.getElementById('empty-state').style.display = 'block';
+        } else {
+            document.getElementById('insights-grid').style.display = 'grid';
+            renderInsights();
+        }
+    } catch (error) {
+        console.error('Error loading insights:', error);
+        document.getElementById('loading').innerHTML =
+            `<p style="color: var(--error);">Error loading insights: ${error.message}</p>`;
+    }
+}
+
+function renderInsights() {
+    const grid = document.getElementById('insights-grid');
+    grid.innerHTML = '';
+
+    insights.forEach(insight => {
+        const card = createInsightCard(insight);
+        grid.appendChild(card);
+    });
+}
+
+function createInsightCard(insight) {
+    const card = document.createElement('div');
+    card.className = 'insight-card';
+    card.dataset.insightId = insight.id;
+
+    const content = document.createElement('div');
+    content.className = 'insight-content';
+    content.textContent = insight.content;
+
+    const footer = document.createElement('div');
+    footer.className = 'insight-footer';
+
+    const date = document.createElement('div');
+    date.className = 'insight-date';
+    const createdDate = new Date(insight.created_at);
+    date.textContent = createdDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const voteControls = document.createElement('div');
+    voteControls.className = 'vote-controls';
+
+    // Upvote button
+    const upvoteBtn = document.createElement('button');
+    upvoteBtn.className = 'vote-btn upvote';
+    if (insight.user_vote === 'upvote') {
+        upvoteBtn.classList.add('voted');
+    }
+    upvoteBtn.innerHTML = '👍';
+    upvoteBtn.disabled = votesRemaining === 0 && !insight.user_vote;
+    upvoteBtn.onclick = () => handleVote(insight.id, 'upvote');
+
+    // Vote count
+    const voteCount = document.createElement('span');
+    voteCount.className = 'vote-count';
+    if (insight.show_count) {
+        voteCount.textContent = insight.vote_count;
+    } else {
+        voteCount.textContent = '?';
+        voteCount.classList.add('hidden');
+    }
+
+    // Downvote button
+    const downvoteBtn = document.createElement('button');
+    downvoteBtn.className = 'vote-btn downvote';
+    if (insight.user_vote === 'downvote') {
+        downvoteBtn.classList.add('voted');
+    }
+    downvoteBtn.innerHTML = '👎';
+    downvoteBtn.disabled = votesRemaining === 0 && !insight.user_vote;
+    downvoteBtn.onclick = () => handleVote(insight.id, 'downvote');
+
+    voteControls.appendChild(upvoteBtn);
+    voteControls.appendChild(voteCount);
+    voteControls.appendChild(downvoteBtn);
+
+    footer.appendChild(date);
+    footer.appendChild(voteControls);
+
+    card.appendChild(content);
+    card.appendChild(footer);
+
+    return card;
+}
+
+async function handleVote(insightId, voteType) {
+    const insight = insights.find(i => i.id === insightId);
+    if (!insight) return;
+
+    try {
+        // If already voted the same way, unvote
+        if (insight.user_vote === voteType) {
+            const response = await fetch(`/api/insights/${insightId}/vote`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to remove vote');
+            }
+
+            votesRemaining = data.votes_remaining;
+            insight.user_vote = null;
+        } else {
+            // Vote (or change vote)
+            const response = await fetch(`/api/insights/${insightId}/vote`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ vote_type: voteType })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to vote');
+            }
+
+            votesRemaining = data.votes_remaining;
+            insight.user_vote = voteType;
+        }
+
+        // Update UI
+        document.getElementById('votes-count').textContent = votesRemaining;
+        renderInsights();
+
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
+}
+
+// Load insights on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadInsights();
+});
+</script>
 {% endblock %}
