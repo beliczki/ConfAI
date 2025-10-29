@@ -1,0 +1,39 @@
+# Web Framework
+Flask==3.0.0
+Flask-Session==0.6.0
+Flask-Limiter==3.5.0
+
+# Database
+SQLAlchemy==2.0.23
+
+# LLM API Clients
+anthropic==0.7.8
+httpx==0.25.2
+requests==2.31.0
+
+# Embeddings & Vector Storage
+transformers==4.36.0
+torch==2.1.1
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+pinecone-client==2.2.4
+
+# PDF Processing
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+
+# Text Processing
+nltk==3.8.1
+
+# Email
+python-dotenv==1.0.0
+
+# Security & Auth
+PyJWT==2.8.0
+bcrypt==4.1.2
+
+# Production Server
+gunicorn==21.2.0
+
+# Development
+python-dotenv==1.0.0

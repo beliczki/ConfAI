@@ -1,0 +1,161 @@
+Project Documentation: Simple LLM-Based Chat Site
+
+1. Project Overview
+This document outlines the requirements for building a simple, Grok-like chat website that integrates LLM APIs for generating responses. The site will allow users to chat with an AI assistant informed by custom embeddings from books and conference transcripts. The system will use global system prompts for LLMs. It includes user login, multiple chat threads per user, streaming responses, and a shared "insights wall" where users can post, upvote, and downvote insights derived from chats. The site is invite-only for up to 150 conference attendees (high-level people), aiming to feel "cool" and modern.
+The overall scope is a Minimal Viable Product (MVP) with core features:
+
+User authentication and profiles.
+Chat interface with multiple threads.
+LLM response generation using selected APIs.
+Embeddings for books and transcripts (loaded into context where possible, no RAG needed as content fits in context windows).
+Insights sharing wall with voting (limited to 3 votes per user; vote results revealed only after a user has cast their 3 votes).
+No analytics, no search within chats.
+Deployment-ready as a Dockerized application.
+
+The site should look and feel like a telecom app, similar to https://comind.telekom.hu/ (assumed to be a modern, clean chat or collaboration interface with a professional telecom branding—e.g., blue/pink color schemes, sidebar navigation, central chat window, and minimalistic design). If exact replication is not possible, fall back to a ChatGPT-like interface: sidebar for chat threads and user options, main area with message history and input box at the bottom.
+2. Technical Stack
+
+Python Version: Python 3.10+.
+Key Libraries: Keep minimal without extra frameworks like LangChain. Use:
+
+Flask for backend web framework.
+Requests or httpx for API calls to LLMs.
+Hugging Face Transformers for embeddings (specifically, use "BAAI/bge-large-en-v1.5" model, as it is an open-source model excels at preserving meaning without information loss in nuanced contexts).
+PyPDF2 or pdfplumber for PDF parsing.
+NLTK or simple string processing for text handling.
+FAISS for in-memory vector storage (if selected).
+Pinecone client library (pinecone-client) for cloud vector storage (if selected).
+SQLAlchemy or sqlite3 for database interactions.
+Flask-Session for session management.
+Email libraries like smtplib for sending PIN codes/login tokens.
+No heavy ML libraries beyond what's needed for embeddings.
+
+
+Database: Use SQLite for simplicity (local file-based). If scaling is needed later, it can be swapped to Supabase, but stick to SQLite for MVP.
+Frontend: Simple HTML/CSS/JavaScript setup. No full frameworks like React/Vue unless necessary for streaming (use WebSockets or SSE for streaming). Style to mimic a telecom app: clean, professional, with gradients, circles for avatars, and responsive design.
+Deployment: Dockerized for easy deployment (include Dockerfile and docker-compose.yml for local/cloud setup, e.g., on AWS/Heroku).
+
+3. Features Breakdown
+3.1 User Authentication and Profiles
+
+Method: Email-based login with emailed PIN code or login token (e.g., a one-time token sent via email for session authentication).
+
+User enters email; system sends a 6-digit PIN or unique token via email.
+User inputs PIN/token to log in.
+Use JWT or session-based tokens for maintaining login state.
+
+
+User Profiles: Minimal.
+
+Store email address.
+Derive name from email (part before '@', e.g., 'john' from 'john@example.com').
+Avatar: Random gradient circle (generate via CSS or simple SVG—no images needed).
+
+
+Sessions: Support up to 150 simultaneous users. Use Flask sessions (cookie-based) for management.
+Security:
+
+HTTPS enforcement (configure in Flask or via reverse proxy in Docker).
+Rate limiting: Limit login attempts and API calls (e.g., using flask-limiter, 5 attempts per minute per IP).
+Input sanitization: Escape user inputs to prevent prompt injection in LLM calls (e.g., validate and strip special characters in chat messages).
+Invite-only: Only pre-registered emails can log in (store allowed emails in DB).
+
+
+Data Storage: Store credentials (hashed emails/PINs if persistent) and profiles in SQLite.
+
+3.2 Chat Functionality
+
+Interface:
+
+Similar to ChatGPT: Sidebar for listing multiple chat threads (e.g., "New Chat", "Chat 1", etc.), main area showing message history (user messages on right, AI on left), input box at bottom.
+Style like a telecom app: Professional colors (e.g., blues, whites), minimal UI, perhaps with telecom branding elements like icons for messages.
+Support multiple chats per user (store and manage threads in DB).
+
+
+Response Generation:
+
+Integrate LLM APIs: Claude (Anthropic), Grok (xAI), Perplexity.
+Selection: Configurable in settings (e.g., env vars or config file). Default to Claude. If multiple, allow admin to switch globally (no per-user choice in MVP).
+Use streaming responses: Send partial responses in real-time (use Server-Sent Events or WebSockets in Flask).
+System Prompts: Global (same for all users). Example prompt: "You are a helpful assistant specialized in books and conference insights. Respond concisely and insightfully, drawing from provided context." (Customize based on embeddings).
+
+
+Chat History:
+
+Store per user in SQLite (table: chats with user_id, thread_id, messages as JSON or serialized).
+Indefinite storage (no auto-delete).
+Users can view past chats via sidebar and delete them (button per thread).
+
+
+Multi-Threading: Refers to storing/managing multiple chat threads per user (not concurrent processing). Handle concurrent users (up to 150) via Flask's built-in handling (use Gunicorn in Docker for multi-workers if needed).
+Errors: Handle LLM failures (e.g., retry once, then show "Sorry, try again"), invalid logins (error message). Console logging only (print to stdout, no file storage).
+
+3.3 Embeddings and Document Handling
+
+Documents: Books and conference transcripts in PDF and TXT formats. Approximately [user didn't specify number, assume small set that fits in context].
+Ingestion: No automatic ingestion/update in MVP. Provide an API endpoint (e.g., /api/update-transcript) for admin to upload/update documents (e.g., POST with file, parse PDF/TXT, generate embeddings).
+
+Parse PDFs using PyPDF2 to extract text.
+For updates during conference: API allows real-time uploads as lectures progress.
+
+
+Embedding Model: Use "BAAI/bge-large-en-v1.5" from Hugging Face Transformers (open-source, excels at preserving semantic meaning without loss in nuanced content).
+Storage: Configurable in settings (env var or config file):
+
+In-memory (use FAISS for vector index).
+Or Pinecone (cloud-based vector DB).
+
+
+Usage: Since content likely fits in LLM context windows (e.g., summaries/transcripts), load relevant snippets/summaries directly into the system prompt or chat context. No RAG needed. Prevent full transcript extraction: Only provide vector-based or tokenized insights in responses (e.g., summarize matches, don't dump raw text).
+Security: Ensure users can't query to extract full documents (e.g., limit response to insights, not raw dumps).
+
+3.4 Insights Sharing Wall
+
+Description: A shared "message wall" behind login where users post insights from chats (e.g., a good AI response or idea).
+
+Users can post insights (e.g., button in chat to "Share this insight").
+Each insight is shareable (e.g., via unique URL, but behind login).
+Upvote/downvote: Each user has 3 votes total (track in DB).
+Vote results revealed only after a user has cast all 3 votes (hide counts until then).
+
+
+Implementation:
+
+DB table: insights (id, user_id, text, upvotes, downvotes, votes_json for tracking).
+Page: Separate route (/insights) showing list of insights, sorted by net votes (up - down).
+UI: Card-based list with vote buttons; refresh after voting.
+
+
+
+3.5 Backend Structure
+
+Framework: Flask with API layer (use blueprints for modularity).
+Routes:
+
+/login: Handle email/PIN.
+/chat: Main chat page.
+/api/chat: POST for sending messages, returns streamed response.
+/api/threads: GET/DELETE for managing chats.
+/api/update-transcript: POST for admin document updates (secure with key).
+/insights: GET/POST for wall.
+Error handlers for 404, 500.
+
+
+LLM Calls: In /api/chat, compose prompt with global system prompt + user message + embedded context, call selected LLM API.
+
+3.6 Frontend Structure
+
+HTML templates (Jinja2 in Flask).
+CSS: Custom for telecom look (gradients, circles, responsive).
+JS: For streaming (fetch API with ReadableStream), thread switching, voting.
+No extras like user search or analytics.
+
+4. Development Guidelines
+
+Keep code simple and modular.
+Use environment variables for API keys (Claude, Grok, Perplexity, Pinecone).
+Test for 150 concurrent users (use threading if needed, but Flask handles).
+Docker: Include setup for app, DB init.
+No stored logging; console only for debugging.
+
+This documentation should be sufficient for coding tools like Claude Code, Cursor, or Codex to generate the code. If ambiguities arise, clarify defaults as per standard practices.
