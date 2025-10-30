@@ -37,6 +37,33 @@
                 <span>Admin Dashboard</span>
             </a>
             {% endif %}
+
+            <!-- Model Selector -->
+            <div class="model-selector">
+                <button class="model-selector-btn" onclick="toggleModelDropdown()">
+                    <i data-lucide="cpu"></i>
+                    <span id="current-model-name">Loading...</span>
+                </button>
+                <div class="model-dropdown" id="model-dropdown">
+                    <div class="model-option" onclick="selectModel('claude')">
+                        <i data-lucide="brain"></i>
+                        <span>Claude</span>
+                    </div>
+                    <div class="model-option" onclick="selectModel('gemini')">
+                        <i data-lucide="sparkles"></i>
+                        <span>Gemini</span>
+                    </div>
+                    <div class="model-option" onclick="selectModel('grok')">
+                        <i data-lucide="zap"></i>
+                        <span>Grok</span>
+                    </div>
+                    <div class="model-option" onclick="selectModel('perplexity')">
+                        <i data-lucide="search"></i>
+                        <span>Perplexity</span>
+                    </div>
+                </div>
+            </div>
+
             <a href="/logout">
                 <i data-lucide="log-out"></i>
                 <span>Logout</span>

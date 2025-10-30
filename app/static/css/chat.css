@@ -171,6 +171,78 @@ button:focus-visible,
     height: 18px;
 }
 
+/* Model Selector */
+.model-selector {
+    position: relative;
+    margin: 8px 0;
+}
+
+.model-selector-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    text-decoration: none;
+    padding: 8px 0;
+    font-size: 14px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0.8;
+}
+
+.model-selector-btn:hover {
+    opacity: 1;
+}
+
+.model-selector-btn i {
+    width: 18px;
+    height: 18px;
+}
+
+.model-dropdown {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    margin-bottom: 8px;
+    background: #1a1a1a;
+    border: 1px solid rgba(226, 0, 116, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.model-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.model-option:last-child {
+    border-bottom: none;
+}
+
+.model-option:hover {
+    background: rgba(226, 0, 116, 0.15);
+}
+
+.model-option i {
+    width: 18px;
+    height: 18px;
+    color: var(--primary);
+}
+
 /* Main Chat */
 .main-chat {
     flex: 1;

@@ -41,11 +41,13 @@ document.addEventListener('DOMContentLoaded', function() {
     loadContextFiles();
     loadStatistics();
     loadWelcomeMessage();
+    loadLLMProviderSetting();
 
     // Setup event listeners
     setupFileUpload();
     setupCharacterCounter();
     setupWelcomeMessageCounter();
+    setupLLMProviderChange();
 
     console.log('Admin dashboard initialized');
 });
@@ -762,19 +764,136 @@ function setupWelcomeMessageCounter() {
 // ============================
 
 /**
+ * Load current LLM provider setting
+ */
+async function loadLLMProviderSetting() {
+    try {
+        const response = await fetch('/api/config');
+        if (!response.ok) {
+            throw new Error('Failed to load config');
+        }
+
+        const data = await response.json();
+        const providerSelect = document.getElementById('llm-provider');
+
+        if (providerSelect && data.provider) {
+            providerSelect.value = data.provider;
+            console.log('Loaded LLM provider setting:', data.provider);
+        }
+    } catch (error) {
+        console.error('Error loading LLM provider setting:', error);
+    }
+}
+
+/**
+ * Setup LLM provider change handler (just for UI feedback, not saving)
+ */
+function setupLLMProviderChange() {
+    // This function is now just a placeholder
+    // Settings are only saved when the Save Settings button is clicked
+    console.log('LLM provider dropdown initialized');
+}
+
+/**
  * Save application settings
  */
 async function saveSettings() {
-    const settings = {
-        llm_provider: document.getElementById('llm-provider')?.value,
-        max_tokens: parseInt(document.getElementById('max-tokens')?.value),
-        rate_limit: parseInt(document.getElementById('rate-limit')?.value),
-        votes_per_user: parseInt(document.getElementById('votes-per-user')?.value)
-    };
+    const provider = document.getElementById('llm-provider')?.value;
+    const welcomeMessage = document.getElementById('welcome-message')?.value?.trim();
 
-    // For now, just show a message (implementation depends on backend)
-    console.log('Settings to save:', settings);
-    alert('Settings saved successfully!\n\nNote: Some settings may require application restart to take effect.');
+    if (!provider) {
+        showSettingsError('Please select a provider');
+        return;
+    }
+
+    if (!welcomeMessage) {
+        showSettingsError('Welcome message cannot be empty');
+        return;
+    }
+
+    try {
+        // Save both LLM provider and welcome message
+        const [providerResponse, welcomeResponse] = await Promise.all([
+            fetch('/api/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ provider: provider })
+            }),
+            fetch('/api/admin/welcome-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: welcomeMessage })
+            })
+        ]);
+
+        if (!providerResponse.ok || !welcomeResponse.ok) {
+            throw new Error('Failed to save settings');
+        }
+
+        const providerData = await providerResponse.json();
+        console.log('Settings saved:', providerData);
+
+        // Show success message ABOVE the save button
+        showSettingsSuccess(`Settings saved successfully! Default LLM Provider: ${providerData.provider_name}`);
+
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showSettingsError('Failed to save settings. Please try again.');
+    }
+}
+
+/**
+ * Show success message above save button
+ */
+function showSettingsSuccess(message) {
+    const settingsTab = document.getElementById('settings');
+    if (!settingsTab) return;
+
+    // Remove any existing messages
+    const existingMsg = settingsTab.querySelector('.setting-message');
+    if (existingMsg) existingMsg.remove();
+
+    // Create success message
+    const successMsg = document.createElement('div');
+    successMsg.className = 'setting-message';
+    successMsg.style.cssText = 'background: #00A651; color: white; padding: 12px; border-radius: 4px; margin-bottom: 15px;';
+    successMsg.textContent = `✓ ${message}`;
+
+    // Insert before the save button
+    const saveButton = settingsTab.querySelector('.btn-primary');
+    if (saveButton) {
+        saveButton.parentNode.insertBefore(successMsg, saveButton);
+        setTimeout(() => successMsg.remove(), 4000);
+    }
+}
+
+/**
+ * Show error message above save button
+ */
+function showSettingsError(message) {
+    const settingsTab = document.getElementById('settings');
+    if (!settingsTab) return;
+
+    // Remove any existing messages
+    const existingMsg = settingsTab.querySelector('.setting-message');
+    if (existingMsg) existingMsg.remove();
+
+    // Create error message
+    const errorMsg = document.createElement('div');
+    errorMsg.className = 'setting-message';
+    errorMsg.style.cssText = 'background: #E20074; color: white; padding: 12px; border-radius: 4px; margin-bottom: 15px;';
+    errorMsg.textContent = `✗ ${message}`;
+
+    // Insert before the save button
+    const saveButton = settingsTab.querySelector('.btn-primary');
+    if (saveButton) {
+        saveButton.parentNode.insertBefore(errorMsg, saveButton);
+        setTimeout(() => errorMsg.remove(), 4000);
+    }
 }
 
 // ============================

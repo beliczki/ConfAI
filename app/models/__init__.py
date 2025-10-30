@@ -60,6 +60,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 title TEXT NOT NULL DEFAULT 'New Chat',
+                model_used TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -125,6 +126,36 @@ def init_db():
             )
         ''')
 
+        # Activity log table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                activity_type TEXT NOT NULL,
+                description TEXT NOT NULL,
+                metadata TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+
+        # Token usage table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS token_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                thread_id INTEGER,
+                message_id INTEGER,
+                model_used TEXT NOT NULL,
+                input_tokens INTEGER DEFAULT 0,
+                output_tokens INTEGER DEFAULT 0,
+                cache_creation_tokens INTEGER DEFAULT 0,
+                cache_read_tokens INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (thread_id) REFERENCES chat_threads(id) ON DELETE CASCADE,
+                FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE
+            )
+        ''')
+
         # Insert default welcome message if not exists
         cursor.execute('''
             INSERT OR IGNORE INTO settings (key, value)
@@ -141,9 +172,27 @@ I''m your conference intelligence assistant. I can help you with insights from c
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_insights_user ON insights(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_votes_user ON votes(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_votes_insight ON votes(insight_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(activity_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_token_usage_thread ON token_usage(thread_id)')
+
+        # Run migrations
+        _run_migrations(cursor)
 
         conn.commit()
         print("Database initialized successfully")
+
+
+def _run_migrations(cursor):
+    """Run database migrations to update existing tables."""
+    # Check if model_used column exists in chat_threads
+    cursor.execute("PRAGMA table_info(chat_threads)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if 'model_used' not in columns:
+        print("Running migration: Adding model_used column to chat_threads")
+        cursor.execute('ALTER TABLE chat_threads ADD COLUMN model_used TEXT')
+        print("Migration completed: model_used column added")
 
 
 # Helper functions for models
@@ -182,13 +231,13 @@ class ChatThread:
     """Chat thread model helper."""
 
     @staticmethod
-    def create(user_id, title='New Chat'):
+    def create(user_id, title='New Chat', model_used=None):
         """Create a new chat thread."""
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                'INSERT INTO chat_threads (user_id, title) VALUES (?, ?)',
-                (user_id, title)
+                'INSERT INTO chat_threads (user_id, title, model_used) VALUES (?, ?, ?)',
+                (user_id, title, model_used)
             )
             return cursor.lastrowid
 
@@ -455,4 +504,85 @@ class Settings:
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM settings')
+            return cursor.fetchall()
+
+
+class ActivityLog:
+    """Activity log model helper."""
+
+    @staticmethod
+    def log(user_id, activity_type, description, metadata=None):
+        """Log an activity."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO activity_log (user_id, activity_type, description, metadata)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, activity_type, description, metadata))
+            return cursor.lastrowid
+
+    @staticmethod
+    def get_recent(limit=20):
+        """Get recent activities."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT a.*, u.name as user_name
+                FROM activity_log a
+                LEFT JOIN users u ON a.user_id = u.id
+                ORDER BY a.created_at DESC
+                LIMIT ?
+            ''', (limit,))
+            return cursor.fetchall()
+
+
+class TokenUsage:
+    """Token usage model helper."""
+
+    @staticmethod
+    def log(thread_id, message_id, model_used, input_tokens=0, output_tokens=0,
+            cache_creation_tokens=0, cache_read_tokens=0):
+        """Log token usage."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO token_usage
+                (thread_id, message_id, model_used, input_tokens, output_tokens,
+                 cache_creation_tokens, cache_read_tokens)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (thread_id, message_id, model_used, input_tokens, output_tokens,
+                  cache_creation_tokens, cache_read_tokens))
+            return cursor.lastrowid
+
+    @staticmethod
+    def get_totals():
+        """Get total token usage across all models."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT
+                    SUM(input_tokens) as total_input,
+                    SUM(output_tokens) as total_output,
+                    SUM(cache_creation_tokens) as total_cache_creation,
+                    SUM(cache_read_tokens) as total_cache_read
+                FROM token_usage
+            ''')
+            return cursor.fetchone()
+
+    @staticmethod
+    def get_by_model():
+        """Get token usage grouped by model."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT
+                    model_used,
+                    COUNT(*) as message_count,
+                    SUM(input_tokens) as total_input,
+                    SUM(output_tokens) as total_output,
+                    SUM(cache_creation_tokens) as total_cache_creation,
+                    SUM(cache_read_tokens) as total_cache_read
+                FROM token_usage
+                GROUP BY model_used
+            ''')
             return cursor.fetchall()

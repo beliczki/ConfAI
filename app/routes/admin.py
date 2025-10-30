@@ -416,7 +416,7 @@ def toggle_context_file(filename):
 def get_stats():
     """Get application statistics."""
     try:
-        from app.models import get_db
+        from app.models import get_db, ActivityLog, TokenUsage
 
         with get_db() as conn:
             cursor = conn.cursor()
@@ -427,9 +427,30 @@ def get_stats():
                 'total_threads': cursor.execute('SELECT COUNT(*) FROM chat_threads').fetchone()[0],
                 'total_insights': cursor.execute('SELECT COUNT(*) FROM insights').fetchone()[0],
                 'total_votes': cursor.execute('SELECT COUNT(*) FROM votes').fetchone()[0],
-                'tokens_sent': 0,  # TODO: Implement token tracking
-                'tokens_received': 0,  # TODO: Implement token tracking
             }
+
+            # Get token usage statistics
+            token_totals = TokenUsage.get_totals()
+            if token_totals:
+                stats['tokens_sent'] = (token_totals['total_input'] or 0) + (token_totals['total_cache_creation'] or 0)
+                stats['tokens_received'] = token_totals['total_output'] or 0
+                stats['cache_tokens_read'] = token_totals['total_cache_read'] or 0
+            else:
+                stats['tokens_sent'] = 0
+                stats['tokens_received'] = 0
+                stats['cache_tokens_read'] = 0
+
+            # Get token usage by model
+            token_by_model = TokenUsage.get_by_model()
+            stats['token_by_model'] = [
+                {
+                    'model': row['model_used'],
+                    'message_count': row['message_count'],
+                    'input_tokens': row['total_input'] or 0,
+                    'output_tokens': row['total_output'] or 0,
+                    'cache_read': row['total_cache_read'] or 0
+                } for row in token_by_model
+            ]
 
             # Get context usage
             context_chars = 0
@@ -446,56 +467,25 @@ def get_stats():
             stats['context_used'] = context_chars
             stats['context_max'] = 200000  # Claude's context window
 
-            # Get recent activity (last 10 items)
+            # Get recent activity from activity_log table
             recent_activity = []
+            activities = ActivityLog.get_recent(limit=15)
 
-            # Get recent users
-            recent_users = cursor.execute('''
-                SELECT name, created_at FROM users
-                ORDER BY created_at DESC LIMIT 3
-            ''').fetchall()
-
-            for user in recent_users:
+            for activity in activities:
                 recent_activity.append({
-                    'type': 'user_joined',
-                    'text': f'{user["name"]} joined',
-                    'time': format_time_ago(user["created_at"])
+                    'type': activity['activity_type'],
+                    'text': activity['description'],
+                    'user': activity['user_name'] if activity['user_name'] else 'System',
+                    'time': format_time_ago(activity['created_at'])
                 })
 
-            # Get recent threads
-            recent_threads = cursor.execute('''
-                SELECT u.name, t.created_at FROM chat_threads t
-                JOIN users u ON t.user_id = u.id
-                ORDER BY t.created_at DESC LIMIT 3
-            ''').fetchall()
-
-            for thread in recent_threads:
-                recent_activity.append({
-                    'type': 'thread_created',
-                    'text': f'{thread["name"]} started a conversation',
-                    'time': format_time_ago(thread["created_at"])
-                })
-
-            # Get recent insights
-            recent_insights = cursor.execute('''
-                SELECT u.name, i.created_at FROM insights i
-                JOIN users u ON i.user_id = u.id
-                ORDER BY i.created_at DESC LIMIT 3
-            ''').fetchall()
-
-            for insight in recent_insights:
-                recent_activity.append({
-                    'type': 'insight_shared',
-                    'text': f'{insight["name"]} shared an insight',
-                    'time': format_time_ago(insight["created_at"])
-                })
-
-            # Sort by time and limit
-            stats['recent_activity'] = recent_activity[:10]
+            stats['recent_activity'] = recent_activity
 
             return jsonify(stats)
     except Exception as e:
         print(f"Error getting stats: {e}")
+        import traceback
+        traceback.print_exc()
         # Return empty stats on error
         return jsonify({
             'total_users': 0,
@@ -504,9 +494,11 @@ def get_stats():
             'total_votes': 0,
             'tokens_sent': 0,
             'tokens_received': 0,
+            'cache_tokens_read': 0,
             'context_used': 0,
             'context_max': 200000,
-            'recent_activity': []
+            'recent_activity': [],
+            'token_by_model': []
         })
 
 

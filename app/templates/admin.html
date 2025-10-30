@@ -234,17 +234,12 @@
                         <span id="welcome-chars">0</span> characters
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="saveWelcomeMessage()">
-                    <i data-lucide="save"></i>
-                    <span>Save Welcome Message</span>
-                </button>
-                <div id="welcome-status" class="status-message"></div>
             </div>
 
             <div class="setting-group">
                 <h3>LLM Configuration</h3>
                 <div class="form-group">
-                    <label for="llm-provider">LLM Provider</label>
+                    <label for="llm-provider">Default LLM Provider</label>
                     <select id="llm-provider">
                         <option value="claude">Claude (Anthropic)</option>
                         <option value="gemini">Gemini (Google)</option>
@@ -267,10 +262,14 @@
             </div>
 
             <div class="setting-group">
-                <h3>Voting System</h3>
+                <h3>Insights Limits</h3>
                 <div class="form-group">
                     <label for="votes-per-user">Votes per User</label>
                     <input type="number" id="votes-per-user" value="3" min="1" max="10">
+                </div>
+                <div class="form-group">
+                    <label for="shares-per-user">Shares per User</label>
+                    <input type="number" id="shares-per-user" value="3" min="1" max="10">
                 </div>
             </div>
 

@@ -19,7 +19,6 @@ Respond concisely and insightfully, drawing from the provided context when relev
 Be professional, engaging, and help users derive meaningful insights."""
 
     def __init__(self):
-        self.provider = os.getenv('LLM_PROVIDER', 'claude').lower()
         self.anthropic_key = os.getenv('ANTHROPIC_API_KEY')
         self.gemini_key = os.getenv('GEMINI_API_KEY')
         self.grok_key = os.getenv('GROK_API_KEY')
@@ -28,6 +27,15 @@ Be professional, engaging, and help users derive meaningful insights."""
         # Configure Gemini if key is available
         if self.gemini_key:
             genai.configure(api_key=self.gemini_key)
+
+    def _get_provider(self) -> str:
+        """Get current provider from database settings."""
+        try:
+            from app.models import Settings
+            return Settings.get('llm_provider', os.getenv('LLM_PROVIDER', 'gemini')).lower()
+        except Exception as e:
+            print(f"Error reading provider from database: {e}")
+            return os.getenv('LLM_PROVIDER', 'gemini').lower()
 
     def _load_system_prompt(self) -> str:
         """Load system prompt from file or return default."""
@@ -105,21 +113,25 @@ Be professional, engaging, and help users derive meaningful insights."""
         if context:
             system_prompt += f"\n\nRelevant context:\n{context}"
 
+        # Get current provider from database
+        provider = self._get_provider()
+
         # Estimate token count (rough: chars / 4)
         estimated_tokens = len(system_prompt) // 4
         print(f"System prompt size: {len(system_prompt)} chars (~{estimated_tokens} tokens)")
+        print(f"Using LLM provider: {provider}")
 
         # Route to appropriate provider
-        if self.provider == 'claude':
+        if provider == 'claude':
             return self._generate_claude(messages, system_prompt, stream)
-        elif self.provider == 'gemini':
+        elif provider == 'gemini':
             return self._generate_gemini(messages, system_prompt, stream)
-        elif self.provider == 'grok':
+        elif provider == 'grok':
             return self._generate_grok(messages, system_prompt, stream)
-        elif self.provider == 'perplexity':
+        elif provider == 'perplexity':
             return self._generate_perplexity(messages, system_prompt, stream)
         else:
-            raise ValueError(f"Unknown LLM provider: {self.provider}")
+            raise ValueError(f"Unknown LLM provider: {provider}")
 
     def _generate_claude(
         self,
@@ -146,6 +158,8 @@ Be professional, engaging, and help users derive meaningful insights."""
 
             if stream:
                 # Streaming response with caching
+                usage_data = {'captured': False}
+
                 def generate_stream():
                     with client.messages.stream(
                         model="claude-sonnet-4-5-20250929",
@@ -157,17 +171,21 @@ Be professional, engaging, and help users derive meaningful insights."""
                         for text in stream.text_stream:
                             yield text
 
-                        # Log cache usage stats AFTER streaming completes
-                        # The usage data is available on the final message
+                        # Log and capture cache usage stats AFTER streaming completes
                         final_message = stream.get_final_message()
                         if hasattr(final_message, 'usage'):
                             usage = final_message.usage
-                            cache_read = getattr(usage, 'cache_read_input_tokens', 0)
-                            cache_create = getattr(usage, 'cache_creation_input_tokens', 0)
-                            input_tokens = getattr(usage, 'input_tokens', 0)
-                            print(f"Cache stats - Read: {cache_read}, Create: {cache_create}, Input: {input_tokens}")
+                            usage_data['input_tokens'] = getattr(usage, 'input_tokens', 0)
+                            usage_data['output_tokens'] = getattr(usage, 'output_tokens', 0)
+                            usage_data['cache_creation_tokens'] = getattr(usage, 'cache_creation_input_tokens', 0)
+                            usage_data['cache_read_tokens'] = getattr(usage, 'cache_read_input_tokens', 0)
+                            usage_data['captured'] = True
+                            print(f"Cache stats - Read: {usage_data['cache_read_tokens']}, Create: {usage_data['cache_creation_tokens']}, Input: {usage_data['input_tokens']}, Output: {usage_data['output_tokens']}")
 
-                return generate_stream()
+                def get_usage():
+                    return usage_data if usage_data['captured'] else None
+
+                return (generate_stream(), get_usage)
             else:
                 # Non-streaming response with caching
                 response = client.messages.create(

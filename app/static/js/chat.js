@@ -18,6 +18,7 @@ function parseMarkdown(text) {
 document.addEventListener('DOMContentLoaded', async () => {
     await loadUserInfo();
     await loadWelcomeMessage();
+    await loadModelInfo();
     await loadThreads();
 });
 
@@ -48,6 +49,88 @@ async function loadWelcomeMessage() {
         welcomeMessage = '# Welcome to ConfAI!\n\nStart a new chat to begin.';
     }
 }
+
+async function loadModelInfo() {
+    try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+            const data = await response.json();
+            const modelNameEl = document.getElementById('current-model-name');
+            if (modelNameEl) {
+                modelNameEl.textContent = data.provider_name;
+            }
+            // Re-initialize Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load model info:', error);
+    }
+}
+
+function toggleModelDropdown() {
+    const dropdown = document.getElementById('model-dropdown');
+    const isVisible = dropdown.style.display === 'block';
+    dropdown.style.display = isVisible ? 'none' : 'block';
+
+    // Re-initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+async function selectModel(provider) {
+    try {
+        // Close dropdown
+        document.getElementById('model-dropdown').style.display = 'none';
+
+        // Show loading state
+        const modelNameEl = document.getElementById('current-model-name');
+        const originalText = modelNameEl.textContent;
+        modelNameEl.textContent = 'Switching...';
+
+        // Send update request
+        const response = await fetch('/api/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({provider: provider})
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            modelNameEl.textContent = data.provider_name;
+
+            // Show success message
+            console.log(data.message);
+
+            // Re-initialize Lucide icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        } else {
+            // Revert on error
+            modelNameEl.textContent = originalText;
+            const error = await response.json();
+            alert('Failed to switch model: ' + (error.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Failed to switch model:', error);
+        alert('Failed to switch model');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('model-dropdown');
+    const button = document.querySelector('.model-selector-btn');
+
+    if (dropdown && button &&
+        !dropdown.contains(event.target) &&
+        !button.contains(event.target)) {
+        dropdown.style.display = 'none';
+    }
+});
 
 async function loadThreads() {
     try {
