@@ -3,6 +3,7 @@ import os
 import json
 import anthropic
 import httpx
+import google.generativeai as genai
 from typing import Iterator, Dict, Any
 
 
@@ -20,8 +21,13 @@ Be professional, engaging, and help users derive meaningful insights."""
     def __init__(self):
         self.provider = os.getenv('LLM_PROVIDER', 'claude').lower()
         self.anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+        self.gemini_key = os.getenv('GEMINI_API_KEY')
         self.grok_key = os.getenv('GROK_API_KEY')
         self.perplexity_key = os.getenv('PERPLEXITY_API_KEY')
+
+        # Configure Gemini if key is available
+        if self.gemini_key:
+            genai.configure(api_key=self.gemini_key)
 
     def _load_system_prompt(self) -> str:
         """Load system prompt from file or return default."""
@@ -106,6 +112,8 @@ Be professional, engaging, and help users derive meaningful insights."""
         # Route to appropriate provider
         if self.provider == 'claude':
             return self._generate_claude(messages, system_prompt, stream)
+        elif self.provider == 'gemini':
+            return self._generate_gemini(messages, system_prompt, stream)
         elif self.provider == 'grok':
             return self._generate_grok(messages, system_prompt, stream)
         elif self.provider == 'perplexity':
@@ -180,6 +188,64 @@ Be professional, engaging, and help users derive meaningful insights."""
 
         except Exception as e:
             print(f"Error calling Claude API: {str(e)}")
+            return f"Sorry, I encountered an error: {str(e)}"
+
+    def _generate_gemini(
+        self,
+        messages: list,
+        system_prompt: str,
+        stream: bool
+    ) -> str | Iterator[str]:
+        """Generate response using Google Gemini API."""
+        if not self.gemini_key:
+            return "Gemini API key not configured."
+
+        try:
+            # Use Gemini 2.0 Flash model
+            model = genai.GenerativeModel(
+                model_name='gemini-2.0-flash-exp',
+                system_instruction=system_prompt
+            )
+
+            # Convert messages to Gemini format
+            # Gemini expects alternating user/model messages
+            gemini_messages = []
+            for msg in messages:
+                role = "user" if msg['role'] == 'user' else "model"
+                gemini_messages.append({
+                    'role': role,
+                    'parts': [msg['content']]
+                })
+
+            if stream:
+                # Streaming response
+                def generate_stream():
+                    response = model.generate_content(
+                        gemini_messages,
+                        stream=True,
+                        generation_config=genai.types.GenerationConfig(
+                            max_output_tokens=2048,
+                            temperature=0.7,
+                        )
+                    )
+                    for chunk in response:
+                        if chunk.text:
+                            yield chunk.text
+
+                return generate_stream()
+            else:
+                # Non-streaming response
+                response = model.generate_content(
+                    gemini_messages,
+                    generation_config=genai.types.GenerationConfig(
+                        max_output_tokens=2048,
+                        temperature=0.7,
+                    )
+                )
+                return response.text
+
+        except Exception as e:
+            print(f"Error calling Gemini API: {str(e)}")
             return f"Sorry, I encountered an error: {str(e)}"
 
     def _generate_grok(
