@@ -4,6 +4,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/insights.css') }}">
 <script src="https://unpkg.com/lucide@latest"></script>
 {% endblock %}
 
@@ -14,21 +15,22 @@
         <div class="sidebar-header">
             <img src="{{ url_for('static', filename='img/telekom-confai-white.png') }}" alt="ConfAI" class="sidebar-logo">
             <p>Conference Intelligence</p>
-            <button class="new-chat-btn" onclick="createNewThread()">
-                <i data-lucide="plus"></i>
-                <span>New Chat</span>
-            </button>
+            <a href="#" class="insights-wall-link" onclick="showInsights(); return false;">
+                <i data-lucide="lightbulb"></i>
+                <span>Insights Wall</span>
+            </a>
         </div>
+
+        <button class="new-chat-btn" onclick="showChat(); createNewThread();">
+            <i data-lucide="plus"></i>
+            <span>New Chat</span>
+        </button>
 
         <div class="threads-list" id="threads-list">
             <!-- Threads will be loaded here -->
         </div>
 
         <div class="sidebar-footer">
-            <a href="/insights">
-                <i data-lucide="lightbulb"></i>
-                <span>Insights Wall</span>
-            </a>
             {% if session.get('is_admin') %}
             <a href="/admin">
                 <i data-lucide="settings"></i>
@@ -42,38 +44,62 @@
         </div>
     </div>
 
-    <!-- Main Chat -->
+    <!-- Main Content Area -->
     <div class="main-chat">
         <div class="chat-header">
-            <h1 id="thread-title">Select or create a chat</h1>
+            <h1 id="main-title">Select or create a chat</h1>
             <div class="user-info">
                 <div class="user-avatar" id="user-avatar"></div>
                 <span id="user-name"></span>
             </div>
         </div>
 
-        <div class="chat-messages" id="chat-messages">
-            <div class="empty-state">
-                <h3>Welcome to ConfAI! 👋</h3>
-                <p>Start a new conversation or select an existing one from the sidebar.</p>
-                <p style="margin-top: 20px; font-size: 14px;">
-                    I can help you with insights from conference materials and answer your questions.
-                </p>
+        <!-- Chat Content -->
+        <div id="chat-content">
+            <div class="chat-messages" id="chat-messages">
+                <div class="empty-state">
+                    <h3>Welcome to ConfAI! 👋</h3>
+                    <p>Start a new conversation or select an existing one from the sidebar.</p>
+                    <p style="margin-top: 20px; font-size: 14px;">
+                        I can help you with insights from conference materials and answer your questions.
+                    </p>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-wrapper">
+                    <textarea
+                        id="chat-input"
+                        class="chat-input"
+                        placeholder="Type your message..."
+                        rows="1"
+                        disabled
+                    ></textarea>
+                    <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
+                        Send
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="chat-input-area">
-            <div class="chat-input-wrapper">
-                <textarea
-                    id="chat-input"
-                    class="chat-input"
-                    placeholder="Type your message..."
-                    rows="1"
-                    disabled
-                ></textarea>
-                <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
-                    Send
-                </button>
+        <!-- Insights Content -->
+        <div id="insights-content" style="display: none;">
+            <div class="insights-main">
+                <div class="votes-info-bar">
+                    <span id="votes-count-main" class="count">3</span> votes remaining
+                </div>
+
+                <div id="insights-loading" class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading insights...</p>
+                </div>
+
+                <div id="insights-empty-state" class="empty-state" style="display: none;">
+                    <h2>No insights yet</h2>
+                    <p>Be the first to share an insight from your chat conversations!</p>
+                </div>
+
+                <div id="insights-grid" class="insights-grid" style="display: none;"></div>
             </div>
         </div>
     </div>
@@ -93,7 +119,28 @@
     });
 </script>
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script src="{{ url_for('static', filename='js/insights.js') }}"></script>
 <script>
+    // View switcher functions
+    function showChat() {
+        document.getElementById('chat-content').style.display = 'flex';
+        document.getElementById('insights-content').style.display = 'none';
+        document.getElementById('main-title').textContent = currentThreadId ?
+            document.getElementById('thread-title')?.textContent || 'Select or create a chat' :
+            'Select or create a chat';
+        lucide.createIcons();
+    }
+
+    function showInsights() {
+        document.getElementById('chat-content').style.display = 'none';
+        document.getElementById('insights-content').style.display = 'block';
+        document.getElementById('main-title').textContent = 'Insights Wall';
+
+        // Load insights when switching to insights view
+        loadInsights();
+        lucide.createIcons();
+    }
+
     // Initialize Lucide icons
     lucide.createIcons();
 </script>

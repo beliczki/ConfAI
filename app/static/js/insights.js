@@ -13,20 +13,30 @@ async function loadInsights() {
         insights = data.insights;
         votesRemaining = data.user_votes_remaining;
 
-        // Update UI
-        document.getElementById('votes-count').textContent = votesRemaining;
-        document.getElementById('loading').style.display = 'none';
+        // Update UI - update both vote counters
+        const voteCountMain = document.getElementById('votes-count-main');
+        if (voteCountMain) voteCountMain.textContent = votesRemaining;
+
+        const loadingEl = document.getElementById('insights-loading');
+        if (loadingEl) loadingEl.style.display = 'none';
+
+        const emptyStateEl = document.getElementById('insights-empty-state');
+        const gridEl = document.getElementById('insights-grid');
 
         if (insights.length === 0) {
-            document.getElementById('empty-state').style.display = 'block';
+            if (emptyStateEl) emptyStateEl.style.display = 'block';
+            if (gridEl) gridEl.style.display = 'none';
         } else {
-            document.getElementById('insights-grid').style.display = 'grid';
+            if (emptyStateEl) emptyStateEl.style.display = 'none';
+            if (gridEl) gridEl.style.display = 'grid';
             renderInsights();
         }
     } catch (error) {
         console.error('Error loading insights:', error);
-        document.getElementById('loading').innerHTML =
-            `<p style="color: var(--error);">Error loading insights: ${error.message}</p>`;
+        const loadingEl = document.getElementById('insights-loading');
+        if (loadingEl) {
+            loadingEl.innerHTML = `<p style="color: #ff6b6b;">Error loading insights: ${error.message}</p>`;
+        }
     }
 }
 

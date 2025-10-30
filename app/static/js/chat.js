@@ -101,9 +101,12 @@ async function createNewThread() {
 
 async function selectThread(threadId, title) {
     currentThreadId = threadId;
-    document.getElementById('thread-title').textContent = title;
+    document.getElementById('main-title').textContent = title;
     document.getElementById('chat-input').disabled = false;
     document.getElementById('send-btn').disabled = false;
+
+    // Show chat view
+    showChat();
 
     // Update active thread in sidebar
     await loadThreads();
@@ -147,7 +150,7 @@ function renderMessages(messages) {
                         <div class="message-actions">
                             <button class="share-btn" onclick="shareInsight(this, '${escapeHtml(m.content).replace(/'/g, "\\'")}')">
                                 <i data-lucide="share-2"></i>
-                                <span>Share to Insights</span>
+                                <span>Share to Insights Wall</span>
                             </button>
                         </div>
                     ` : ''}
@@ -266,7 +269,7 @@ function addMessageToUI(role, content) {
                 <div class="message-actions">
                     <button class="share-btn" onclick="shareInsight(this, '${escapeHtml(content).replace(/'/g, "\\'")}')">
                         <i data-lucide="share-2"></i>
-                        <span>Share to Insights</span>
+                        <span>Share to Insights Wall</span>
                     </button>
                 </div>
             ` : ''}
@@ -296,7 +299,7 @@ function addStreamingMessage() {
             <div class="message-actions" style="display: none;">
                 <button class="share-btn" onclick="shareInsightFromElement(this)">
                     <i data-lucide="share-2"></i>
-                    <span>Share to Insights</span>
+                    <span>Share to Insights Wall</span>
                 </button>
             </div>
         </div>
@@ -359,7 +362,7 @@ async function deleteThread(threadId) {
             if (currentThreadId === threadId) {
                 currentThreadId = null;
                 document.getElementById('chat-messages').innerHTML = '<div class="empty-state"><h3>Chat deleted</h3><p>Create a new chat to continue.</p></div>';
-                document.getElementById('thread-title').textContent = 'Select or create a chat';
+                document.getElementById('main-title').textContent = 'Select or create a chat';
                 document.getElementById('chat-input').disabled = true;
                 document.getElementById('send-btn').disabled = true;
             }
@@ -428,13 +431,16 @@ document.getElementById('chat-input').addEventListener('keydown', function(e) {
 
 // Share insight functions
 async function shareInsight(button, content) {
+    console.log('shareInsight called with content:', content?.substring(0, 50));
+
     if (!content || content.length < 10) {
         alert('Insight is too short to share');
         return;
     }
 
     button.disabled = true;
-    button.textContent = 'Sharing...';
+    button.innerHTML = '<i data-lucide="loader"></i><span>Sharing...</span>';
+    lucide.createIcons();
 
     try {
         const response = await fetch('/api/insights', {
@@ -446,28 +452,33 @@ async function shareInsight(button, content) {
         });
 
         const data = await response.json();
+        console.log('Share response:', data);
 
         if (!response.ok) {
             throw new Error(data.error || 'Failed to share insight');
         }
 
-        button.textContent = '✓ Shared!';
-        button.style.background = 'var(--success)';
-        button.style.borderColor = 'var(--success)';
+        button.innerHTML = '<i data-lucide="check"></i><span>Shared!</span>';
+        button.style.background = '#10b981';
+        button.style.borderColor = '#10b981';
         button.style.color = 'white';
+        lucide.createIcons();
 
         setTimeout(() => {
-            button.textContent = '📌 Share to Insights';
+            button.innerHTML = '<i data-lucide="share-2"></i><span>Share to Insights Wall</span>';
             button.style.background = '';
             button.style.borderColor = '';
             button.style.color = '';
             button.disabled = false;
+            lucide.createIcons();
         }, 2000);
 
     } catch (error) {
+        console.error('Error sharing insight:', error);
         alert(`Error sharing insight: ${error.message}`);
-        button.textContent = '📌 Share to Insights';
+        button.innerHTML = '<i data-lucide="share-2"></i><span>Share to Insights Wall</span>';
         button.disabled = false;
+        lucide.createIcons();
     }
 }
 
