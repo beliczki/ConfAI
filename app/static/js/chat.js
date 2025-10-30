@@ -1,6 +1,9 @@
 let currentThreadId = null;
 let currentUser = null;
 let welcomeMessage = null;
+let sharedMessages = {}; // Track which messages are shared {message_id: insight_id}
+let shareCount = 0; // Track how many shares user has used
+let messageContents = {}; // Store original markdown content by message ID
 
 // Helper function to parse markdown safely
 function parseMarkdown(text) {
@@ -120,10 +123,49 @@ async function loadMessages(threadId) {
         const response = await fetch(`/api/threads/${threadId}/messages`);
         if (response.ok) {
             const data = await response.json();
+
+            // Check which messages are shared
+            await checkSharedStatus(data.messages);
+
             renderMessages(data.messages);
         }
     } catch (error) {
         console.error('Failed to load messages:', error);
+    }
+}
+
+async function checkSharedStatus(messages) {
+    try {
+        const messageIds = messages
+            .filter(m => m.role === 'assistant' && m.id)
+            .map(m => m.id);
+
+        if (messageIds.length === 0) return;
+
+        const response = await fetch('/api/insights/check', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ message_ids: messageIds })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            sharedMessages = data.shared_messages || {};
+            shareCount = data.share_count || 0;
+            updateShareCountDisplay();
+        }
+    } catch (error) {
+        console.error('Failed to check shared status:', error);
+    }
+}
+
+function updateShareCountDisplay() {
+    const sharesHeader = document.getElementById('shares-header');
+    const sharesCount = document.getElementById('shares-count-header');
+
+    if (sharesHeader && sharesCount) {
+        sharesHeader.style.display = 'flex';
+        sharesCount.textContent = `${shareCount}/3`;
     }
 }
 
@@ -141,17 +183,42 @@ function renderMessages(messages) {
         const gradient = isUser ? currentUser.avatar_gradient : 'linear-gradient(135deg, #001E50, #00A0E9)';
         const content = isUser ? escapeHtml(m.content) : parseMarkdown(m.content);
 
+        // Store original markdown content in JavaScript object for assistant messages
+        if (m.role === 'assistant' && m.id) {
+            messageContents[m.id] = m.content;
+        }
+
+        // Check if this message is shared
+        const isShared = m.role === 'assistant' && sharedMessages[m.id];
+        const insightId = isShared ? sharedMessages[m.id] : null;
+        const shareLimitReached = shareCount >= 3;
+
         return `
-            <div class="message ${m.role}">
+            <div class="message ${m.role}" data-message-id="${m.id || ''}">
                 <div class="message-avatar" style="background: ${gradient}"><span>${avatar}</span></div>
                 <div>
                     <div class="message-content">${content}</div>
                     ${m.role === 'assistant' ? `
                         <div class="message-actions">
-                            <button class="share-btn" onclick="shareInsight(this, '${escapeHtml(m.content).replace(/'/g, "\\'")}')">
-                                <i data-lucide="share-2"></i>
-                                <span>Share to Insights Wall</span>
-                            </button>
+                            ${isShared ? `
+                                <span class="shared-tag">
+                                    <i data-lucide="check-circle"></i>
+                                    <span>Shared</span>
+                                </span>
+                                <button class="unshare-btn" onclick="unshareInsight(this, ${insightId})">
+                                    <i data-lucide="x-circle"></i>
+                                    <span>Unshare</span>
+                                </button>
+                            ` : shareLimitReached ? `
+                                <div class="share-limit-message">
+                                    Share limit reached. Try unsharing your least favourites on <a href="#" onclick="showMyShares(); return false;">your shares page</a>
+                                </div>
+                            ` : `
+                                <button class="share-btn" onclick="shareInsightFromElement(this)">
+                                    <i data-lucide="share-2"></i>
+                                    <span>Share to Insights Wall</span>
+                                </button>
+                            `}
                         </div>
                     ` : ''}
                 </div>
@@ -231,7 +298,14 @@ async function sendMessage() {
                         updateStreamingMessage(messageElement, assistantMessage, false);
                     } else if (data.done && messageElement && assistantMessage) {
                         // Mark streaming as complete and show share button
-                        updateStreamingMessage(messageElement, assistantMessage, true);
+                        const messageId = data.message_id;
+                        updateStreamingMessage(messageElement, assistantMessage, true, messageId);
+
+                        // Store the original markdown content
+                        if (messageId) {
+                            messageContents[messageId] = assistantMessage;
+                            messageElement.setAttribute('data-message-id', messageId);
+                        }
                     }
                 }
             }
@@ -258,19 +332,31 @@ function addMessageToUI(role, content) {
     const avatar = isUser ? currentUser.name.substring(0, 2).toUpperCase() : 'AI';
     const gradient = isUser ? currentUser.avatar_gradient : 'linear-gradient(135deg, #001E50, #00A0E9)';
     const displayContent = isUser ? escapeHtml(content) : parseMarkdown(content);
+    // Store original markdown content in data attribute for sharing
+    const originalContent = content.replace(/"/g, '&quot;');
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
+
+    // Check if share limit is reached
+    const shareLimitReached = shareCount >= 3;
+
     messageDiv.innerHTML = `
         <div class="message-avatar" style="background: ${gradient}"><span>${avatar}</span></div>
         <div>
-            <div class="message-content">${displayContent}</div>
+            <div class="message-content" data-original-content="${originalContent}">${displayContent}</div>
             ${role === 'assistant' ? `
                 <div class="message-actions">
-                    <button class="share-btn" onclick="shareInsight(this, '${escapeHtml(content).replace(/'/g, "\\'")}')">
-                        <i data-lucide="share-2"></i>
-                        <span>Share to Insights Wall</span>
-                    </button>
+                    ${shareLimitReached ? `
+                        <div class="share-limit-message">
+                            Share limit reached. Try unsharing your least favourites on <a href="#" onclick="showMyShares(); return false;">your shares page</a>
+                        </div>
+                    ` : `
+                        <button class="share-btn" onclick="shareInsightFromElement(this)">
+                            <i data-lucide="share-2"></i>
+                            <span>Share to Insights Wall</span>
+                        </button>
+                    `}
                 </div>
             ` : ''}
         </div>
@@ -290,6 +376,9 @@ function addStreamingMessage() {
     const emptyState = container.querySelector('.empty-state');
     if (emptyState) emptyState.remove();
 
+    // Check if share limit is reached
+    const shareLimitReached = shareCount >= 3;
+
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant';
     messageDiv.innerHTML = `
@@ -297,10 +386,16 @@ function addStreamingMessage() {
         <div>
             <div class="message-content"></div>
             <div class="message-actions" style="display: none;">
-                <button class="share-btn" onclick="shareInsightFromElement(this)">
-                    <i data-lucide="share-2"></i>
-                    <span>Share to Insights Wall</span>
-                </button>
+                ${shareLimitReached ? `
+                    <div class="share-limit-message">
+                        Share limit reached. Try unsharing your least favourites on <a href="#" onclick="showMyShares(); return false;">your shares page</a>
+                    </div>
+                ` : `
+                    <button class="share-btn" onclick="shareInsightFromElement(this)">
+                        <i data-lucide="share-2"></i>
+                        <span>Share to Insights Wall</span>
+                    </button>
+                `}
             </div>
         </div>
     `;
@@ -309,7 +404,7 @@ function addStreamingMessage() {
     return messageDiv;
 }
 
-function updateStreamingMessage(element, content, done = false) {
+function updateStreamingMessage(element, content, done = false, messageId = null) {
     const contentDiv = element.querySelector('.message-content');
 
     // Parse markdown during streaming AND when complete
@@ -430,7 +525,7 @@ document.getElementById('chat-input').addEventListener('keydown', function(e) {
 });
 
 // Share insight functions
-async function shareInsight(button, content) {
+async function shareInsight(button, content, messageId) {
     console.log('shareInsight called with content:', content?.substring(0, 50));
 
     if (!content || content.length < 10) {
@@ -448,7 +543,10 @@ async function shareInsight(button, content) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ content })
+            body: JSON.stringify({
+                content: content,
+                message_id: messageId
+            })
         });
 
         const data = await response.json();
@@ -458,20 +556,27 @@ async function shareInsight(button, content) {
             throw new Error(data.error || 'Failed to share insight');
         }
 
-        button.innerHTML = '<i data-lucide="check"></i><span>Shared!</span>';
-        button.style.background = '#10b981';
-        button.style.borderColor = '#10b981';
-        button.style.color = 'white';
-        lucide.createIcons();
+        // Update share count and shared messages tracking
+        shareCount = data.shares_remaining !== undefined ? 3 - data.shares_remaining : shareCount + 1;
+        if (messageId && data.insight_id) {
+            sharedMessages[messageId] = data.insight_id;
+        }
+        updateShareCountDisplay();
 
-        setTimeout(() => {
-            button.innerHTML = '<i data-lucide="share-2"></i><span>Share to Insights Wall</span>';
-            button.style.background = '';
-            button.style.borderColor = '';
-            button.style.color = '';
-            button.disabled = false;
-            lucide.createIcons();
-        }, 2000);
+        // Replace button with shared tag and unshare button
+        const messageDiv = button.closest('.message');
+        const actionsDiv = messageDiv.querySelector('.message-actions');
+        actionsDiv.innerHTML = `
+            <span class="shared-tag">
+                <i data-lucide="check-circle"></i>
+                <span>Shared</span>
+            </span>
+            <button class="unshare-btn" onclick="unshareInsight(this, ${data.insight_id})">
+                <i data-lucide="x-circle"></i>
+                <span>Unshare</span>
+            </button>
+        `;
+        lucide.createIcons();
 
     } catch (error) {
         console.error('Error sharing insight:', error);
@@ -482,8 +587,67 @@ async function shareInsight(button, content) {
     }
 }
 
+async function unshareInsight(button, insightId) {
+    if (!confirm('Remove this insight from the Insights Wall?')) return;
+
+    button.disabled = true;
+    button.innerHTML = '<i data-lucide="loader"></i><span>Removing...</span>';
+    lucide.createIcons();
+
+    try {
+        const response = await fetch(`/api/insights/${insightId}/unshare`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to unshare insight');
+        }
+
+        // Update share count and shared messages tracking
+        shareCount = data.shares_remaining !== undefined ? 3 - data.shares_remaining : shareCount - 1;
+
+        // Remove from sharedMessages tracking
+        const messageDiv = button.closest('.message');
+        const messageId = messageDiv.getAttribute('data-message-id');
+        if (messageId && sharedMessages[messageId]) {
+            delete sharedMessages[messageId];
+        }
+        updateShareCountDisplay();
+
+        // Replace with share button
+        const actionsDiv = messageDiv.querySelector('.message-actions');
+        actionsDiv.innerHTML = `
+            <button class="share-btn" onclick="shareInsightFromElement(this)">
+                <i data-lucide="share-2"></i>
+                <span>Share to Insights Wall</span>
+            </button>
+        `;
+        lucide.createIcons();
+
+    } catch (error) {
+        console.error('Error unsharing insight:', error);
+        alert(`Error unsharing insight: ${error.message}`);
+        button.disabled = false;
+        button.innerHTML = '<i data-lucide="x-circle"></i><span>Unshare</span>';
+        lucide.createIcons();
+    }
+}
+
 function shareInsightFromElement(button) {
     const messageDiv = button.closest('.message');
-    const content = messageDiv.querySelector('.message-content').textContent;
-    shareInsight(button, content);
+    const messageId = messageDiv.getAttribute('data-message-id');
+
+    // Get the original markdown content from our JavaScript object
+    const content = messageContents[messageId];
+
+    if (!content) {
+        alert('Unable to share this message. Please try again.');
+        console.error('No content found for message ID:', messageId);
+        return;
+    }
+
+    console.log('shareInsightFromElement - original markdown content length:', content.length, 'messageId:', messageId);
+    shareInsight(button, content, messageId);
 }

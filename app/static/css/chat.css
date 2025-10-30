@@ -192,7 +192,7 @@ button:focus-visible,
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    min-height: 0;
 }
 
 .votes-info-bar {
@@ -212,8 +212,29 @@ button:focus-visible,
 
 .insights-main {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: scroll;
     padding: 20px 40px;
+    background: #2a2a2a;
+    min-height: 0;
+    height: 100%;
+}
+
+/* Scrollbar styling for insights (same as chat) */
+.insights-main::-webkit-scrollbar {
+    width: 6px;
+}
+
+.insights-main::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.insights-main::-webkit-scrollbar-thumb {
+    background: #CCCCCC;
+    border-radius: 3px;
+}
+
+.insights-main::-webkit-scrollbar-thumb:hover {
+    background: #DDDDDD;
 }
 
 .chat-header {
@@ -230,6 +251,47 @@ button:focus-visible,
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.insight-counter-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.insight-counter-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.insight-counter-btn i {
+    width: 16px;
+    height: 16px;
+    color: white;
+}
+
+.insight-counter-btn .votes-label {
+    color: white;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.insight-counter-btn #votes-count-header,
+.insight-counter-btn #shares-count-header {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 14px;
 }
 
 .user-avatar {
@@ -389,6 +451,80 @@ button:focus-visible,
 .share-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.shared-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid #10b981;
+    color: #10b981;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.shared-tag i {
+    width: 16px;
+    height: 16px;
+}
+
+.unshare-btn {
+    background: none;
+    border: 1px solid #ef4444;
+    color: #ef4444;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    outline: none;
+}
+
+.unshare-btn:focus,
+.unshare-btn:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+.share-limit-message {
+    font-size: 13px;
+    color: #999;
+    padding: 6px 0;
+    line-height: 1.5;
+}
+
+.share-limit-message a {
+    color: var(--primary);
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.share-limit-message a:hover {
+    color: #c5005f;
+}
+
+.unshare-btn:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+    box-shadow: none;
+}
+
+.unshare-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.unshare-btn i {
+    width: 16px;
+    height: 16px;
 }
 
 .typing-indicator {

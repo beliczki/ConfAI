@@ -490,3 +490,86 @@
         width: 100%;
     }
 }
+
+/* Insights Management */
+.insights-section {
+    margin-top: 20px;
+}
+
+.admin-insight-item {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.insight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.insight-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.user-name {
+    color: white;
+    font-weight: 500;
+}
+
+.insight-stats {
+    display: flex;
+    gap: 12px;
+}
+
+.vote-stat {
+    color: #999;
+    font-size: 14px;
+}
+
+.vote-stat.net {
+    color: #E20074;
+    font-weight: 600;
+}
+
+.insight-content-preview {
+    color: white;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    padding: 12px;
+    background: #1a1a1a;
+    border-radius: 4px;
+}
+
+.insight-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.insight-date {
+    color: #999;
+    font-size: 13px;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+}

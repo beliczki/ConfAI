@@ -1,7 +1,7 @@
 """Admin routes for document management."""
 from flask import Blueprint, request, jsonify, render_template, session
 from app.utils.helpers import admin_required, login_required
-from app.models import Settings
+from app.models import Settings, Insight
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -453,3 +453,35 @@ def format_time_ago(timestamp_str):
             return timestamp.strftime("%b %d")
     except:
         return "recently"
+
+
+@admin_bp.route('/api/admin/insights', methods=['GET'])
+@admin_required
+def get_all_insights():
+    """Get all insights for admin management."""
+    insights = Insight.get_all()
+    return jsonify({
+        'insights': [
+            {
+                'id': i['id'],
+                'content': i['content'],
+                'user_name': i['user_name'],
+                'avatar_gradient': i['avatar_gradient'],
+                'upvotes': i['upvotes'],
+                'downvotes': i['downvotes'],
+                'net_votes': i['net_votes'],
+                'created_at': i['created_at']
+            } for i in insights
+        ]
+    })
+
+
+@admin_bp.route('/api/admin/insights/<int:insight_id>', methods=['DELETE'])
+@admin_required
+def delete_insight(insight_id):
+    """Delete an insight (admin only)."""
+    success = Insight.delete(insight_id)
+    if success:
+        return jsonify({'success': True, 'message': 'Insight deleted successfully'})
+    else:
+        return jsonify({'error': 'Insight not found'}), 404

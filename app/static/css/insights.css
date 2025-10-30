@@ -23,6 +23,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .nav-link a {
@@ -34,19 +36,45 @@
     gap: 8px;
 }
 
-.votes-remaining {
-    background: var(--surface);
-    padding: 12px 20px;
-    border-radius: 8px;
-    border: 2px solid var(--primary);
-    font-weight: 500;
-    color: var(--text-primary);
+.filter-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-.votes-remaining .count {
+.filter-btn {
+    background: transparent;
+    border: 2px solid var(--primary);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    outline: none;
+}
+
+.filter-btn:hover {
+    background: rgba(226, 0, 116, 0.1);
+}
+
+.filter-btn.active {
+    background: var(--primary);
+    color: white;
+}
+
+.filter-btn .count {
     color: var(--primary);
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 700;
+}
+
+.filter-btn.active .count {
+    color: white;
 }
 
 .insights-container {
@@ -59,30 +87,95 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 24px;
-    margin-top: 24px;
+    padding-bottom: 24px;
 }
 
 .insight-card {
-    background: var(--surface);
+    background: #1a1a1a;
     border-radius: 12px;
     padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
+    border: 1px solid #3a3a3a;
+    position: relative;
 }
 
-.insight-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+.insight-date-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    font-size: 12px;
+    color: #999;
+    background: #2a2a2a;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #3a3a3a;
 }
 
 .insight-content {
     flex: 1;
-    color: var(--text-primary);
+    color: white;
     line-height: 1.6;
     margin-bottom: 16px;
     font-size: 15px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    position: relative;
+}
+
+.more-link {
+    display: inline-block;
+    color: #E20074;
+    text-decoration: underline;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 8px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.more-link:hover {
+    color: #c5005f;
+}
+
+.insight-content h1,
+.insight-content h2,
+.insight-content h3,
+.insight-content h4,
+.insight-content h5,
+.insight-content h6 {
+    color: white;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.insight-content p {
+    margin-bottom: 0.8em;
+}
+
+.insight-content code {
+    background: #2a2a2a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.insight-content pre {
+    background: #2a2a2a;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.insight-content a {
+    color: #E20074;
+}
+
+.insight-content ul, .insight-content ol {
+    margin-left: 1.5em;
+    margin-bottom: 0.8em;
 }
 
 .insight-footer {
@@ -90,12 +183,34 @@
     justify-content: space-between;
     align-items: center;
     padding-top: 16px;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid #3a3a3a;
 }
 
-.insight-date {
-    font-size: 13px;
-    color: var(--text-secondary);
+.remix-btn {
+    background: none;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    outline: none;
+}
+
+.remix-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.remix-btn i {
+    width: 16px;
+    height: 16px;
 }
 
 .vote-controls {
@@ -106,7 +221,7 @@
 
 .vote-btn {
     background: none;
-    border: 2px solid var(--border);
+    border: 2px solid #3a3a3a;
     border-radius: 8px;
     padding: 8px 16px;
     cursor: pointer;
@@ -119,23 +234,23 @@
 
 .vote-btn:hover {
     transform: scale(1.1);
-    border-color: var(--primary);
+    border-color: #E20074;
 }
 
 .vote-btn.voted {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: #E20074;
+    border-color: #E20074;
     color: white;
 }
 
 .vote-btn.upvote.voted {
-    background: var(--success);
-    border-color: var(--success);
+    background: #10b981;
+    border-color: #10b981;
 }
 
 .vote-btn.downvote.voted {
-    background: var(--error);
-    border-color: var(--error);
+    background: #ef4444;
+    border-color: #ef4444;
 }
 
 .vote-btn:disabled {
@@ -143,28 +258,48 @@
     cursor: not-allowed;
 }
 
+.revoke-btn {
+    background: #ef4444;
+    border: 2px solid #ef4444;
+    color: white;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.revoke-btn:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
 .vote-count {
     font-weight: 700;
     font-size: 18px;
-    color: var(--text-primary);
+    color: white;
     min-width: 40px;
     text-align: center;
 }
 
 .vote-count.hidden {
-    color: var(--text-secondary);
+    color: #999;
 }
 
 .empty-state {
     text-align: center;
     padding: 60px 20px;
-    color: var(--text-secondary);
+    color: #999;
 }
 
 .empty-state h2 {
     font-size: 24px;
     margin-bottom: 16px;
-    color: var(--text-primary);
+    color: white;
 }
 
 .empty-state p {
@@ -174,7 +309,7 @@
 
 .empty-state .cta-btn {
     display: inline-block;
-    background: var(--primary);
+    background: #E20074;
     color: white;
     padding: 12px 24px;
     border-radius: 8px;
@@ -190,12 +325,12 @@
 .loading {
     text-align: center;
     padding: 40px;
-    color: var(--text-secondary);
+    color: #999;
 }
 
 .loading-spinner {
-    border: 3px solid var(--border);
-    border-top: 3px solid var(--primary);
+    border: 3px solid #3a3a3a;
+    border-top: 3px solid #E20074;
     border-radius: 50%;
     width: 40px;
     height: 40px;

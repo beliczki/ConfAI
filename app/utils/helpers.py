@@ -46,11 +46,10 @@ def sanitize_input(text, max_length=5000):
     if len(text) > max_length:
         text = text[:max_length]
 
-    # Remove special control characters but keep common punctuation
-    allowed_chars = set(string.ascii_letters + string.digits +
-                       string.punctuation + string.whitespace +
-                       'áéíóúüőűÁÉÍÓÚÜŐŰäöÄÖßñÑ')  # Add international chars
-    text = ''.join(c for c in text if c in allowed_chars)
+    # Remove only dangerous control characters (NULL, etc.)
+    # but preserve all printable characters including Unicode emoji
+    import unicodedata
+    text = ''.join(c for c in text if unicodedata.category(c)[0] != 'C' or c in '\n\r\t')
 
     return text
 

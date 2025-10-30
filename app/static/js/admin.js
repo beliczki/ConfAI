@@ -73,6 +73,8 @@ function switchTab(tabName) {
     // Load data for specific tabs when switched to
     if (tabName === 'context-files') {
         loadContextFiles();
+    } else if (tabName === 'insights') {
+        loadAdminInsights();
     } else if (tabName === 'statistics') {
         loadStatistics();
     }
@@ -688,4 +690,108 @@ function escapeHtml(unsafe) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+/**
+ * Load insights for admin management
+ */
+async function loadAdminInsights() {
+    const loadingEl = document.getElementById('admin-insights-loading');
+    const listEl = document.getElementById('admin-insights-list');
+    const emptyEl = document.getElementById('admin-insights-empty');
+
+    try {
+        const response = await fetch('/api/admin/insights');
+        const data = await response.json();
+
+        loadingEl.style.display = 'none';
+
+        if (data.insights.length === 0) {
+            emptyEl.style.display = 'block';
+            listEl.style.display = 'none';
+        } else {
+            emptyEl.style.display = 'none';
+            listEl.style.display = 'block';
+            renderAdminInsights(data.insights);
+        }
+    } catch (error) {
+        console.error('Error loading insights:', error);
+        loadingEl.innerHTML = '<p style="color: #ff6b6b;">Error loading insights</p>';
+    }
+}
+
+/**
+ * Render insights list for admin
+ */
+function renderAdminInsights(insights) {
+    const listEl = document.getElementById('admin-insights-list');
+
+    listEl.innerHTML = insights.map(insight => {
+        const date = new Date(insight.created_at).toLocaleString();
+        const content = insight.content.length > 200 ? insight.content.substring(0, 200) + '...' : insight.content;
+
+        return `
+            <div class="admin-insight-item" data-insight-id="${insight.id}">
+                <div class="insight-header">
+                    <div class="insight-user">
+                        <div class="user-avatar-small" style="background: ${insight.avatar_gradient}">
+                            ${insight.user_name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <span class="user-name">${escapeHtml(insight.user_name)}</span>
+                    </div>
+                    <div class="insight-stats">
+                        <span class="vote-stat">👍 ${insight.upvotes}</span>
+                        <span class="vote-stat">👎 ${insight.downvotes}</span>
+                        <span class="vote-stat net">Net: ${insight.net_votes}</span>
+                    </div>
+                </div>
+                <div class="insight-content-preview">${escapeHtml(content)}</div>
+                <div class="insight-footer">
+                    <span class="insight-date">${date}</span>
+                    <button class="btn btn-danger btn-sm" onclick="deleteInsight(${insight.id})">
+                        🗑️ Delete
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Delete an insight
+ */
+async function deleteInsight(insightId) {
+    if (!confirm('Are you sure you want to delete this insight? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/insights/${insightId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Remove the insight from the UI
+            const insightEl = document.querySelector(`[data-insight-id="${insightId}"]`);
+            if (insightEl) {
+                insightEl.remove();
+            }
+
+            // Check if list is now empty
+            const listEl = document.getElementById('admin-insights-list');
+            if (listEl.children.length === 0) {
+                document.getElementById('admin-insights-empty').style.display = 'block';
+                listEl.style.display = 'none';
+            }
+
+            alert('Insight deleted successfully');
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Error deleting insight:', error);
+        alert('Failed to delete insight');
+    }
 }

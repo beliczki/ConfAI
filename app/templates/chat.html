@@ -49,6 +49,16 @@
         <div class="chat-header">
             <h1 id="main-title">Select or create a chat</h1>
             <div class="user-info">
+                <button class="insight-counter-btn" id="votes-header" style="display: none;" onclick="showMyVotes()">
+                    <i data-lucide="vote"></i>
+                    <span class="votes-label">Votes casted:</span>
+                    <span id="votes-count-header">0/3</span>
+                </button>
+                <button class="insight-counter-btn" id="shares-header" style="display: none;" onclick="showMyShares()">
+                    <i data-lucide="share-2"></i>
+                    <span class="votes-label">Shares:</span>
+                    <span id="shares-count-header">0/3</span>
+                </button>
                 <div class="user-avatar" id="user-avatar"></div>
                 <span id="user-name"></span>
             </div>
@@ -85,10 +95,6 @@
         <!-- Insights Content -->
         <div id="insights-content" style="display: none;">
             <div class="insights-main">
-                <div class="votes-info-bar">
-                    <span id="votes-count-main" class="count">3</span> votes remaining
-                </div>
-
                 <div id="insights-loading" class="loading">
                     <div class="loading-spinner"></div>
                     <p>Loading insights...</p>
@@ -125,6 +131,7 @@
     function showChat() {
         document.getElementById('chat-content').style.display = 'flex';
         document.getElementById('insights-content').style.display = 'none';
+        document.getElementById('votes-header').style.display = 'none';
         document.getElementById('main-title').textContent = currentThreadId ?
             document.getElementById('thread-title')?.textContent || 'Select or create a chat' :
             'Select or create a chat';
@@ -132,13 +139,41 @@
     }
 
     function showInsights() {
+        console.log('showInsights called');
         document.getElementById('chat-content').style.display = 'none';
         document.getElementById('insights-content').style.display = 'block';
+
+        const votesHeader = document.getElementById('votes-header');
+        const sharesHeader = document.getElementById('shares-header');
+        console.log('Votes header element:', votesHeader);
+        votesHeader.style.display = 'flex';
+        sharesHeader.style.display = 'flex';
+        console.log('Set votes header display to flex');
+
         document.getElementById('main-title').textContent = 'Insights Wall';
 
         // Load insights when switching to insights view
+        if (typeof filterInsights === 'function') {
+            filterInsights('all');
+        }
         loadInsights();
         lucide.createIcons();
+    }
+
+    function showMyVotes() {
+        // Switch to insights view and filter by votes
+        showInsights();
+        if (typeof filterInsights === 'function') {
+            filterInsights('votes');
+        }
+    }
+
+    function showMyShares() {
+        // Switch to insights view and filter by shares
+        showInsights();
+        if (typeof filterInsights === 'function') {
+            filterInsights('shares');
+        }
     }
 
     // Initialize Lucide icons

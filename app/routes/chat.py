@@ -190,12 +190,13 @@ def stream_message():
                     full_response += chunk
                     yield f"data: {json.dumps({'content': chunk, 'done': False})}\n\n"
 
-                # Send completion signal
-                yield f"data: {json.dumps({'content': '', 'done': True})}\n\n"
-
-                # Store complete AI response
+                # Store complete AI response and get message ID
+                message_id = None
                 if full_response:
-                    ChatMessage.create(thread_id, 'assistant', full_response)
+                    message_id = ChatMessage.create(thread_id, 'assistant', full_response)
+
+                # Send completion signal with message ID
+                yield f"data: {json.dumps({'content': '', 'done': True, 'message_id': message_id})}\n\n"
 
         except Exception as e:
             error_msg = f"Sorry, I encountered an error: {str(e)}"

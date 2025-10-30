@@ -375,6 +375,54 @@ class Insight:
             result = cursor.fetchone()
             return result['votes_used'] if result else 0
 
+    @staticmethod
+    def delete(insight_id):
+        """Delete an insight and its associated votes."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            # Delete associated votes first
+            cursor.execute('DELETE FROM votes WHERE insight_id = ?', (insight_id,))
+            # Delete the insight
+            cursor.execute('DELETE FROM insights WHERE id = ?', (insight_id,))
+            return cursor.rowcount > 0
+
+    @staticmethod
+    def get_user_share_count(user_id):
+        """Get how many insights a user has shared."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT COUNT(*) as count FROM insights WHERE user_id = ?',
+                (user_id,)
+            )
+            result = cursor.fetchone()
+            return result['count'] if result else 0
+
+    @staticmethod
+    def get_by_message_id(message_id, user_id):
+        """Get insight by message_id for a specific user."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT * FROM insights WHERE message_id = ? AND user_id = ?',
+                (message_id, user_id)
+            )
+            return cursor.fetchone()
+
+    @staticmethod
+    def delete_by_user(insight_id, user_id):
+        """Delete an insight only if it belongs to the user."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            # Delete associated votes first
+            cursor.execute('DELETE FROM votes WHERE insight_id = ?', (insight_id,))
+            # Delete the insight only if it belongs to the user
+            cursor.execute(
+                'DELETE FROM insights WHERE id = ? AND user_id = ?',
+                (insight_id, user_id)
+            )
+            return cursor.rowcount > 0
+
 
 class Settings:
     """Settings model helper."""

@@ -21,6 +21,7 @@
     <div class="admin-tabs">
         <button class="tab-btn active" onclick="switchTab('system-prompt')">System Prompt</button>
         <button class="tab-btn" onclick="switchTab('context-files')">Context Files</button>
+        <button class="tab-btn" onclick="switchTab('insights')">Insights</button>
         <button class="tab-btn" onclick="switchTab('statistics')">Statistics</button>
         <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
     </div>
@@ -108,6 +109,29 @@
             <div class="context-stats">
                 <span>Total Characters: <strong id="context-total-chars">0</strong></span>
                 <span>Estimated Tokens: <strong id="context-total-tokens">0</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Insights Management -->
+    <div id="insights" class="tab-content">
+        <div class="section-card">
+            <h2>Shared Insights Management</h2>
+            <p class="help-text">Manage user-shared insights from the Insights Wall. You can delete inappropriate or duplicate content.</p>
+
+            <div class="insights-section">
+                <div id="admin-insights-loading" class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading insights...</p>
+                </div>
+
+                <div id="admin-insights-list" style="display: none;">
+                    <!-- Insights will be loaded here -->
+                </div>
+
+                <div id="admin-insights-empty" style="display: none;" class="empty-state">
+                    <p>No insights have been shared yet</p>
+                </div>
             </div>
         </div>
     </div>

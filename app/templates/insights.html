@@ -17,8 +17,18 @@
         <span>←</span>
         <span>Back to Chat</span>
     </a>
-    <div class="votes-remaining">
-        <span id="votes-count" class="count">3</span> votes remaining
+    <div class="filter-buttons">
+        <button id="filter-all" class="filter-btn active" onclick="filterInsights('all')">
+            All Insights
+        </button>
+        <button id="filter-votes" class="filter-btn" onclick="filterInsights('votes')">
+            <span>My Votes</span>
+            <span id="votes-count" class="count">0/3</span>
+        </button>
+        <button id="filter-shares" class="filter-btn" onclick="filterInsights('shares')">
+            <span>My Shares</span>
+            <span id="shares-count" class="count">0/3</span>
+        </button>
     </div>
 </div>
 
