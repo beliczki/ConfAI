@@ -30,6 +30,7 @@ Be engaging, thought-provoking, and encourage exploration of ideas.`
 // Global state
 let currentFiles = [];
 let currentSystemPrompt = '';
+let selectedFile = null;
 
 /**
  * Initialize the admin dashboard on page load
@@ -67,8 +68,12 @@ function switchTab(tabName) {
         selectedTab.classList.add('active');
     }
 
-    // Activate the clicked button
-    event.target.classList.add('active');
+    // Activate the clicked button - find the button by matching onclick attribute
+    tabButtons.forEach(btn => {
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tabName}'`)) {
+            btn.classList.add('active');
+        }
+    });
 
     // Load data for specific tabs when switched to
     if (tabName === 'context-files') {
@@ -307,7 +312,7 @@ async function loadContextFiles() {
 
         displayFilesList(currentFiles);
         updateContextPreview(data.preview || '');
-        updateContextStats(data.total_chars || 0, data.total_tokens || 0);
+        updateStatistics(); // Use updateStatistics() to only count enabled files
 
     } catch (error) {
         console.error('Error loading context files:', error);
@@ -315,35 +320,188 @@ async function loadContextFiles() {
 }
 
 /**
- * Display the list of context files
+ * Display the list of context files in new simple layout
  */
 function displayFilesList(files) {
-    const filesList = document.getElementById('files-list');
+    const filesContainer = document.getElementById('files-list-container');
+    const emptyState = document.getElementById('files-empty-state');
     const fileCount = document.getElementById('file-count');
+    const fileCountStat = document.getElementById('file-count-stat');
 
-    if (!filesList) return;
+    if (!filesContainer) return;
 
-    fileCount.textContent = files.length;
+    // Update file counts
+    if (fileCount) fileCount.textContent = files.length;
+    if (fileCountStat) fileCountStat.textContent = files.length;
 
     if (files.length === 0) {
-        filesList.innerHTML = '<p class="empty-state">No context files uploaded yet</p>';
+        if (emptyState) emptyState.style.display = 'block';
+        // Clear any existing file items
+        const existingItems = filesContainer.querySelectorAll('.file-list-item');
+        existingItems.forEach(item => item.remove());
         return;
     }
 
-    filesList.innerHTML = files.map(file => `
-        <div class="file-card">
-            <div class="file-icon">📄</div>
-            <div class="file-info">
-                <div class="file-name">${escapeHtml(file.name)}</div>
-                <div class="file-meta">
-                    ${formatFileSize(file.size)} • ${file.chars} chars
-                </div>
+    // Hide empty state
+    if (emptyState) emptyState.style.display = 'none';
+
+    // Create file list items
+    const filesHTML = files.map((file, index) => {
+        const fileNameEscaped = escapeHtml(file.name).replace(/'/g, "\\'");
+        const isEnabled = file.enabled !== false; // Default to enabled if not specified
+        return `
+        <div class="file-list-item" data-file-index="${index}" onclick="viewFileContent(${index})">
+            <div class="file-item-name-row">
+                <i data-lucide="file-text"></i>
+                <span class="file-item-name-text">${escapeHtml(file.name)}</span>
             </div>
-            <button class="btn-icon btn-danger" onclick="deleteContextFile('${escapeHtml(file.name)}')" title="Delete file">
-                🗑️
-            </button>
+            <div class="file-item-stats">
+                <button class="file-checkbox-btn ${isEnabled ? 'checked' : ''}" onclick="event.stopPropagation(); toggleFileEnabled(${index})" title="${isEnabled ? 'Enabled in context' : 'Disabled from context'}">
+                    <i data-lucide="${isEnabled ? 'check-square' : 'square'}"></i>
+                </button>
+                <span>${formatFileSize(file.size)}</span>
+                <span>•</span>
+                <span>${file.chars.toLocaleString()} chars</span>
+                <span>•</span>
+                <span>${Math.ceil(file.chars / 4).toLocaleString()} tokens</span>
+                <button class="btn-file-delete" onclick="event.stopPropagation(); deleteFileByIndex(${index})">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
+
+    // Insert after empty state or replace existing items
+    const existingItems = filesContainer.querySelectorAll('.file-list-item');
+    if (existingItems.length > 0) {
+        existingItems.forEach(item => item.remove());
+    }
+    filesContainer.insertAdjacentHTML('beforeend', filesHTML);
+
+    // Re-initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => lucide.createIcons(), 10);
+    }
+
+    // Update statistics
+    updateStatistics();
+
+    // Automatically select the first file
+    if (files.length > 0) {
+        viewFileContent(0);
+    }
+}
+
+/**
+ * Select a file to view details
+ */
+function selectFile(index) {
+    selectedFile = currentFiles[index];
+
+    // Update UI - remove selected class from all items
+    document.querySelectorAll('.file-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+
+    // Add selected class to clicked item
+    const selectedItem = document.querySelector(`[data-file-index="${index}"]`);
+    if (selectedItem) {
+        selectedItem.classList.add('selected');
+    }
+
+    // Update selected panel
+    updateSelectedPanel();
+
+    // Update preview panel
+    updatePreviewPanel();
+
+    // Enable delete button
+    const deleteBtn = document.getElementById('delete-file-btn');
+    if (deleteBtn) {
+        deleteBtn.disabled = false;
+    }
+}
+
+/**
+ * Update the selected file info panel
+ */
+function updateSelectedPanel() {
+    const selectedInfoEl = document.getElementById('selected-file-info');
+
+    if (!selectedInfoEl || !selectedFile) return;
+
+    selectedInfoEl.innerHTML = `
+        <div class="selected-file-details">
+            <div class="detail-row">
+                <div class="detail-label">Filename</div>
+                <div class="detail-value">${escapeHtml(selectedFile.name)}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">File Size</div>
+                <div class="detail-value">${formatFileSize(selectedFile.size)}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Characters</div>
+                <div class="detail-value">${selectedFile.chars.toLocaleString()}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Estimated Tokens</div>
+                <div class="detail-value">${Math.ceil(selectedFile.chars / 4).toLocaleString()}</div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Update the content preview panel
+ */
+function updatePreviewPanel() {
+    const previewEl = document.getElementById('context-preview');
+
+    if (!previewEl || !selectedFile) return;
+
+    previewEl.textContent = selectedFile.content || selectedFile.preview || 'No content available';
+}
+
+/**
+ * Clear file selection
+ */
+function clearFileSelection() {
+    selectedFile = null;
+
+    // Remove selected class from all items
+    document.querySelectorAll('.file-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+
+    // Reset selected panel
+    const selectedInfoEl = document.getElementById('selected-file-info');
+    if (selectedInfoEl) {
+        selectedInfoEl.innerHTML = '<p class="empty-state">Select a file to view details</p>';
+    }
+
+    // Reset preview panel
+    const previewEl = document.getElementById('context-preview');
+    if (previewEl) {
+        previewEl.innerHTML = '<p class="empty-state">Select a file to preview its content</p>';
+    }
+
+    // Disable delete button
+    const deleteBtn = document.getElementById('delete-file-btn');
+    if (deleteBtn) {
+        deleteBtn.disabled = true;
+    }
+}
+
+/**
+ * Delete the currently selected file
+ */
+async function deleteSelectedFile() {
+    if (!selectedFile) return;
+
+    await deleteContextFile(selectedFile.name);
+    clearFileSelection();
 }
 
 /**
@@ -423,6 +581,8 @@ async function loadStatistics() {
         updateStatCard('stat-threads', data.total_threads || 0);
         updateStatCard('stat-insights', data.total_insights || 0);
         updateStatCard('stat-votes', data.total_votes || 0);
+        updateStatCard('stat-tokens-sent', data.tokens_sent || 0);
+        updateStatCard('stat-tokens-received', data.tokens_received || 0);
 
         // Update context usage
         updateContextUsage(data.context_used || 0, data.context_max || 200000);
@@ -487,24 +647,31 @@ function displayRecentActivity(activities) {
 
     activityEl.innerHTML = activities.map(activity => `
         <div class="activity-item">
-            <span class="activity-icon">${getActivityIcon(activity.type)}</span>
-            <span class="activity-text">${escapeHtml(activity.text)}</span>
+            <div class="activity-left">
+                <i data-lucide="${getActivityIcon(activity.type)}" class="activity-icon"></i>
+                <span class="activity-text">${escapeHtml(activity.text)}</span>
+            </div>
             <span class="activity-time">${activity.time}</span>
         </div>
     `).join('');
+
+    // Re-initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
 /**
- * Get icon for activity type
+ * Get Lucide icon name for activity type
  */
 function getActivityIcon(type) {
     const icons = {
-        'user_joined': '👤',
-        'thread_created': '💬',
-        'insight_shared': '💡',
-        'vote_cast': '👍',
-        'file_uploaded': '📁',
-        'prompt_updated': '✏️'
+        'user_joined': 'user-plus',
+        'thread_created': 'message-circle',
+        'insight_shared': 'lightbulb',
+        'vote_cast': 'thumbs-up',
+        'file_uploaded': 'folder-up',
+        'prompt_updated': 'edit'
     };
     return icons[type] || '📌';
 }
@@ -793,5 +960,160 @@ async function deleteInsight(insightId) {
     } catch (error) {
         console.error('Error deleting insight:', error);
         alert('Failed to delete insight');
+    }
+}
+
+/**
+ * View file content in preview panel
+ */
+function viewFileContent(index) {
+    const file = currentFiles[index];
+    if (!file) return;
+
+    const previewContent = document.getElementById('main-preview-content');
+    const previewHeader = document.querySelector('.preview-panel-header h3');
+    if (!previewContent) return;
+
+    // Remove active class from all items
+    document.querySelectorAll('.file-list-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // Add active class to selected item
+    const selectedItem = document.querySelector(`[data-file-index="${index}"]`);
+    if (selectedItem) {
+        selectedItem.classList.add('active');
+    }
+
+    // Update header with filename
+    if (previewHeader) {
+        previewHeader.innerHTML = `<i data-lucide="eye"></i> File Preview - ${escapeHtml(file.name)}`;
+        // Reinitialize icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+
+    // Display file content without filename
+    previewContent.innerHTML = `<pre style="margin: 0; font-family: 'Courier New', monospace; white-space: pre-wrap; word-wrap: break-word; color: #000;">${escapeHtml(file.content || file.preview || 'No content available')}</pre>`;
+}
+
+/**
+ * Delete file by index
+ */
+async function deleteFileByIndex(index) {
+    const file = currentFiles[index];
+    if (!file) return;
+
+    if (!confirm('Delete ' + file.name + '?')) return;
+
+    await deleteContextFile(file.name);
+
+    // Clear preview if this file was being viewed
+    const selectedItem = document.querySelector('.file-list-item.active');
+    if (selectedItem && selectedItem.dataset.fileIndex == index) {
+        const previewContent = document.getElementById('main-preview-content');
+        if (previewContent) {
+            previewContent.innerHTML = `
+                <div class="empty-state-preview">
+                    <i data-lucide="file-text"></i>
+                    <p>Select a file to preview its content</p>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+    }
+}
+
+/**
+ * Toggle file enabled/disabled status
+ */
+async function toggleFileEnabled(index) {
+    const file = currentFiles[index];
+    if (!file) return;
+
+    try {
+        const newEnabledState = file.enabled === false ? true : false;
+
+        const response = await fetch(`/api/admin/context-files/${encodeURIComponent(file.name)}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({ enabled: newEnabledState })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to toggle file status');
+        }
+
+        // Update local state
+        file.enabled = newEnabledState;
+
+        // Re-render the list
+        displayFilesList(currentFiles);
+
+    } catch (error) {
+        console.error('Error toggling file:', error);
+        alert('Failed to toggle file status');
+    }
+}
+
+/**
+ * Update statistics display
+ */
+function updateStatistics() {
+    const breakdownEl = document.getElementById('files-breakdown');
+    const usageBar = document.getElementById('context-usage-bar');
+    const totalCharsEl = document.getElementById('context-total-chars');
+    const totalTokensEl = document.getElementById('context-total-tokens');
+
+    // Only count ENABLED files
+    const enabledFiles = currentFiles.filter(file => file.enabled !== false);
+    const totalChars = enabledFiles.reduce((sum, file) => sum + file.chars, 0);
+    const totalTokens = Math.ceil(totalChars / 4);
+    const maxChars = 200000;
+    const percentage = Math.min((totalChars / maxChars) * 100, 100);
+
+    // Update usage bar
+    if (usageBar) {
+        usageBar.style.width = percentage + '%';
+    }
+
+    // Update totals
+    if (totalCharsEl) {
+        totalCharsEl.textContent = totalChars.toLocaleString();
+    }
+
+    if (totalTokensEl) {
+        totalTokensEl.textContent = totalTokens.toLocaleString();
+    }
+
+    // Display files breakdown (only enabled files)
+    if (!breakdownEl) return;
+
+    if (enabledFiles.length === 0) {
+        breakdownEl.innerHTML = '<p class="empty-state">No enabled files</p>';
+        return;
+    }
+
+    breakdownEl.innerHTML = enabledFiles.map(file => `
+        <div class="file-stat-row">
+            <div class="file-stat-name">
+                <i data-lucide="file-text"></i>
+                ${escapeHtml(file.name)}
+            </div>
+            <div class="file-stat-value">
+                ${file.chars.toLocaleString()} chars (${Math.ceil(file.chars / 4).toLocaleString()} tokens)
+            </div>
+        </div>
+    `).join('');
+
+    // Re-initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => lucide.createIcons(), 10);
     }
 }

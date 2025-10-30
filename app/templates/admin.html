@@ -4,26 +4,41 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<script src="https://unpkg.com/lucide@latest"></script>
 {% endblock %}
 
 {% block content %}
 <div class="admin-container">
-    <!-- Header -->
+    <!-- Header with Tabs -->
     <div class="admin-header">
-        <h1>⚙️ Admin Dashboard</h1>
-        <div class="header-actions">
-            <a href="/chat" class="btn btn-secondary">← Back to Chat</a>
-            <a href="/logout" class="btn btn-danger">Logout</a>
+        <div class="header-left">
+            <a href="/chat" class="btn btn-secondary btn-back">
+                <i data-lucide="arrow-left"></i>
+            </a>
+            <h1>Admin Dashboard</h1>
         </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="admin-tabs">
-        <button class="tab-btn active" onclick="switchTab('system-prompt')">System Prompt</button>
-        <button class="tab-btn" onclick="switchTab('context-files')">Context Files</button>
-        <button class="tab-btn" onclick="switchTab('insights')">Insights</button>
-        <button class="tab-btn" onclick="switchTab('statistics')">Statistics</button>
-        <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="switchTab('system-prompt')">
+                <i data-lucide="message-square"></i>
+                <span>System Prompt</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('context-files')">
+                <i data-lucide="folder-open"></i>
+                <span>Context Files</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('insights')">
+                <i data-lucide="lightbulb"></i>
+                <span>Insights</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('statistics')">
+                <i data-lucide="bar-chart-3"></i>
+                <span>Statistics</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('settings')">
+                <i data-lucide="sliders"></i>
+                <span>Settings</span>
+            </button>
+        </div>
     </div>
 
     <!-- Tab: System Prompt -->
@@ -41,9 +56,18 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-primary" onclick="saveSystemPrompt()">💾 Save Changes</button>
-                <button class="btn btn-secondary" onclick="resetSystemPrompt()">↺ Reset to Default</button>
-                <button class="btn btn-info" onclick="testSystemPrompt()">🧪 Test Prompt</button>
+                <button class="btn btn-primary" onclick="saveSystemPrompt()">
+                    <i data-lucide="save"></i>
+                    <span>Save Changes</span>
+                </button>
+                <button class="btn btn-secondary" onclick="resetSystemPrompt()">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span>Reset to Default</span>
+                </button>
+                <button class="btn btn-info" onclick="testSystemPrompt()">
+                    <i data-lucide="flask-conical"></i>
+                    <span>Test Prompt</span>
+                </button>
             </div>
 
             <div id="prompt-status" class="status-message"></div>
@@ -54,16 +78,20 @@
             <h3>Quick Templates</h3>
             <div class="template-grid">
                 <button class="template-btn" onclick="loadTemplate('conference')">
-                    📋 Conference Expert
+                    <i data-lucide="presentation"></i>
+                    <span>Conference Expert</span>
                 </button>
                 <button class="template-btn" onclick="loadTemplate('helpful')">
-                    🤝 Helpful Assistant
+                    <i data-lucide="heart-handshake"></i>
+                    <span>Helpful Assistant</span>
                 </button>
                 <button class="template-btn" onclick="loadTemplate('concise')">
-                    ⚡ Concise Responder
+                    <i data-lucide="zap"></i>
+                    <span>Concise Responder</span>
                 </button>
                 <button class="template-btn" onclick="loadTemplate('creative')">
-                    ✨ Creative Thinker
+                    <i data-lucide="sparkles"></i>
+                    <span>Creative Thinker</span>
                 </button>
             </div>
         </div>
@@ -71,44 +99,55 @@
 
     <!-- Tab: Context Files -->
     <div id="context-files" class="tab-content">
+        <!-- Manage Files Section -->
         <div class="section-card">
-            <h2>Context Files Management</h2>
-            <p class="help-text">Upload TXT or MD files to inject knowledge directly into the AI's context. Perfect for conference info, FAQs, or specific instructions.</p>
+            <div class="section-header-with-stats">
+                <div>
+                    <h2><i data-lucide="folder"></i> Manage Files</h2>
+                    <p class="help-text">Upload, view, and manage context files that will be included in every conversation.<br>
+                    <small style="color: #E20074; font-style: italic;">Only checked files are included in the AI context.</small></p>
+                </div>
+                <div class="context-stats-compact">
+                    Context chars: <span id="context-total-chars">0</span> | tokens: <span id="context-total-tokens">0</span>
+                </div>
+            </div>
 
-            <!-- Upload Section -->
-            <div class="upload-section">
-                <div class="file-upload-area" id="drop-zone">
-                    <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
-                    <div class="upload-content">
-                        <span class="upload-icon">📁</span>
-                        <p>Drag & drop files here or click to browse</p>
-                        <p class="upload-hint">Supports .txt and .md files (max 500KB each)</p>
+            <div class="files-workspace">
+                <!-- Left: File List -->
+                <div class="files-list-panel">
+                    <div class="files-list-header">
+                        <h3>Uploaded Files (<span id="file-count">0</span>)</h3>
+                    </div>
+
+                    <div class="files-list-scroll" id="files-list-container">
+                        <div class="empty-state-small" id="files-empty-state">
+                            <i data-lucide="inbox"></i>
+                            <p>No files uploaded yet</p>
+                        </div>
+                        <!-- Files will be listed here -->
+                    </div>
+
+                    <!-- Upload Area at Bottom of File List -->
+                    <div class="upload-zone" id="drop-zone">
+                        <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
+                        <i data-lucide="upload"></i>
+                        <span>Drop files here or click to upload</span>
+                        <small>.txt, .md (Max 500KB)</small>
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="document.getElementById('context-file-input').click()">
-                    📤 Upload Files
-                </button>
-            </div>
 
-            <!-- Files List -->
-            <div class="files-section">
-                <h3>Uploaded Context Files (<span id="file-count">0</span>)</h3>
-                <div id="files-list" class="files-grid">
-                    <!-- Files will be loaded here -->
+                <!-- Right: Preview Panel -->
+                <div class="preview-panel-main">
+                    <div class="preview-panel-header">
+                        <h3><i data-lucide="eye"></i> File Preview</h3>
+                    </div>
+                    <div class="preview-panel-content" id="main-preview-content">
+                        <div class="empty-state-preview">
+                            <i data-lucide="file-text"></i>
+                            <p>Select a file to preview its content</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Context Preview -->
-        <div class="section-card">
-            <h3>Context Preview</h3>
-            <p class="help-text">This is what will be injected into the AI's context window.</p>
-            <div class="context-preview" id="context-preview">
-                <p class="empty-state">No context files uploaded yet</p>
-            </div>
-            <div class="context-stats">
-                <span>Total Characters: <strong id="context-total-chars">0</strong></span>
-                <span>Estimated Tokens: <strong id="context-total-tokens">0</strong></span>
             </div>
         </div>
     </div>
@@ -140,24 +179,34 @@
     <div id="statistics" class="tab-content">
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon">👥</div>
+                <div class="stat-icon"><i data-lucide="users"></i></div>
                 <div class="stat-value" id="stat-users">0</div>
                 <div class="stat-label">Total Users</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">💬</div>
+                <div class="stat-icon"><i data-lucide="message-circle"></i></div>
                 <div class="stat-value" id="stat-threads">0</div>
                 <div class="stat-label">Chat Threads</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">💡</div>
+                <div class="stat-icon"><i data-lucide="lightbulb"></i></div>
                 <div class="stat-value" id="stat-insights">0</div>
                 <div class="stat-label">Shared Insights</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">👍</div>
+                <div class="stat-icon"><i data-lucide="thumbs-up"></i></div>
                 <div class="stat-value" id="stat-votes">0</div>
                 <div class="stat-label">Total Votes Cast</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i data-lucide="arrow-up-circle"></i></div>
+                <div class="stat-value" id="stat-tokens-sent">0</div>
+                <div class="stat-label">Tokens Sent</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i data-lucide="arrow-down-circle"></i></div>
+                <div class="stat-value" id="stat-tokens-received">0</div>
+                <div class="stat-label">Tokens Received</div>
             </div>
         </div>
 
@@ -167,17 +216,6 @@
             <div id="recent-activity" class="activity-list">
                 <!-- Activity items will be loaded here -->
             </div>
-        </div>
-
-        <!-- Context Usage -->
-        <div class="section-card">
-            <h3>Context Window Usage</h3>
-            <div class="usage-bar">
-                <div class="usage-fill" id="context-usage-fill" style="width: 0%"></div>
-            </div>
-            <p class="usage-stats">
-                <span id="context-used">0</span> / <span id="context-max">200000</span> characters used
-            </p>
         </div>
     </div>
 
@@ -196,7 +234,10 @@
                         <span id="welcome-chars">0</span> characters
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="saveWelcomeMessage()">💾 Save Welcome Message</button>
+                <button class="btn btn-primary" onclick="saveWelcomeMessage()">
+                    <i data-lucide="save"></i>
+                    <span>Save Welcome Message</span>
+                </button>
                 <div id="welcome-status" class="status-message"></div>
             </div>
 
@@ -232,7 +273,10 @@
                 </div>
             </div>
 
-            <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+            <button class="btn btn-primary" onclick="saveSettings()">
+                <i data-lucide="save"></i>
+                <span>Save Settings</span>
+            </button>
         </div>
     </div>
 </div>
@@ -240,4 +284,12 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script>
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+        // Re-initialize icons after dynamic content loads
+        setInterval(() => lucide.createIcons(), 500);
+    }
+</script>
 {% endblock %}

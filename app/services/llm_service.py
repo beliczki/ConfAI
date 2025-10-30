@@ -1,5 +1,6 @@
 """LLM service for AI response generation."""
 import os
+import json
 import anthropic
 import httpx
 from typing import Iterator, Dict, Any
@@ -10,6 +11,7 @@ class LLMService:
 
     SYSTEM_PROMPT_FILE = 'data/system_prompt.txt'
     CONTEXT_FOLDER = 'documents/context'
+    CONTEXT_CONFIG_FILE = 'data/context_config.json'
     DEFAULT_SYSTEM_PROMPT = """You are a helpful AI assistant specialized in conference insights and book knowledge.
 You have access to conference transcripts and related books.
 Respond concisely and insightfully, drawing from the provided context when relevant.
@@ -33,17 +35,30 @@ Be professional, engaging, and help users derive meaningful insights."""
         return self.DEFAULT_SYSTEM_PROMPT
 
     def get_context_files(self) -> str:
-        """Load all context files and return as concatenated string."""
+        """Load enabled context files and return as concatenated string."""
         try:
             if not os.path.exists(self.CONTEXT_FOLDER):
                 return ""
+
+            # Load enabled files configuration
+            enabled_files = {}
+            if os.path.exists(self.CONTEXT_CONFIG_FILE):
+                try:
+                    with open(self.CONTEXT_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                        config = json.load(f)
+                        enabled_files = config.get('enabled_files', {})
+                except Exception as e:
+                    print(f"Error loading context config: {e}")
 
             context_parts = []
 
             for filename in os.listdir(self.CONTEXT_FOLDER):
                 filepath = os.path.join(self.CONTEXT_FOLDER, filename)
 
-                if os.path.isfile(filepath) and filename.endswith(('.txt', '.md')):
+                # Check if file is enabled (default to True if not specified)
+                is_enabled = enabled_files.get(filename, True)
+
+                if os.path.isfile(filepath) and filename.endswith(('.txt', '.md')) and is_enabled:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         content = f.read()
                         context_parts.append(f"--- {filename} ---\n{content}\n")

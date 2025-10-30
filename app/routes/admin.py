@@ -4,6 +4,7 @@ from app.utils.helpers import admin_required, login_required
 from app.models import Settings, Insight
 from werkzeug.utils import secure_filename
 import os
+import json
 from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__)
@@ -12,6 +13,7 @@ ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
 UPLOAD_FOLDER = 'documents'
 CONTEXT_FOLDER = 'documents/context'
 SYSTEM_PROMPT_FILE = 'data/system_prompt.txt'
+CONTEXT_CONFIG_FILE = 'data/context_config.json'
 
 # Default system prompt
 DEFAULT_SYSTEM_PROMPT = """You are a helpful AI assistant specialized in conference insights and book knowledge.
@@ -28,6 +30,29 @@ def allowed_file(filename):
 def allowed_context_file(filename):
     """Check if file extension is allowed for context files."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'txt', 'md'}
+
+
+def load_context_config():
+    """Load context configuration from JSON file."""
+    try:
+        if os.path.exists(CONTEXT_CONFIG_FILE):
+            with open(CONTEXT_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading context config: {e}")
+    return {}
+
+
+def save_context_config(config):
+    """Save context configuration to JSON file."""
+    try:
+        os.makedirs(os.path.dirname(CONTEXT_CONFIG_FILE), exist_ok=True)
+        with open(CONTEXT_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving context config: {e}")
+        return False
 
 
 @admin_bp.route('/api/update-transcript', methods=['POST'])
@@ -212,6 +237,10 @@ def get_context_files():
         # Ensure context folder exists
         os.makedirs(CONTEXT_FOLDER, exist_ok=True)
 
+        # Load enabled/disabled state
+        config = load_context_config()
+        enabled_files = config.get('enabled_files', {})
+
         files_info = []
         total_chars = 0
         preview_parts = []
@@ -230,10 +259,15 @@ def get_context_files():
                 char_count = len(content)
                 total_chars += char_count
 
+                # Check if file is enabled (default to True if not specified)
+                is_enabled = enabled_files.get(filename, True)
+
                 files_info.append({
                     'name': filename,
                     'size': file_size,
-                    'chars': char_count
+                    'chars': char_count,
+                    'content': content,
+                    'enabled': is_enabled
                 })
 
                 # Add to preview (with separator)
@@ -322,11 +356,56 @@ def delete_context_file(filename):
 
         os.remove(filepath)
 
+        # Also remove from config
+        config = load_context_config()
+        enabled_files = config.get('enabled_files', {})
+        if filename in enabled_files:
+            del enabled_files[filename]
+            config['enabled_files'] = enabled_files
+            save_context_config(config)
+
         print(f"Deleted context file: {filename}")
 
         return jsonify({
             'success': True,
             'message': f'File deleted: {filename}'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/context-files/<filename>/toggle', methods=['POST'])
+@admin_required
+def toggle_context_file(filename):
+    """Toggle whether a context file is enabled."""
+    try:
+        filename = secure_filename(filename)
+        filepath = os.path.join(CONTEXT_FOLDER, filename)
+
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'File not found'}), 404
+
+        data = request.get_json()
+        enabled = data.get('enabled', True)
+
+        # Load config
+        config = load_context_config()
+        enabled_files = config.get('enabled_files', {})
+
+        # Update enabled state
+        enabled_files[filename] = enabled
+        config['enabled_files'] = enabled_files
+
+        # Save config
+        if not save_context_config(config):
+            return jsonify({'error': 'Failed to save configuration'}), 500
+
+        print(f"Toggled context file {filename}: enabled={enabled}")
+
+        return jsonify({
+            'success': True,
+            'enabled': enabled,
+            'message': f'File {"enabled" if enabled else "disabled"}: {filename}'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -348,6 +427,8 @@ def get_stats():
                 'total_threads': cursor.execute('SELECT COUNT(*) FROM chat_threads').fetchone()[0],
                 'total_insights': cursor.execute('SELECT COUNT(*) FROM insights').fetchone()[0],
                 'total_votes': cursor.execute('SELECT COUNT(*) FROM votes').fetchone()[0],
+                'tokens_sent': 0,  # TODO: Implement token tracking
+                'tokens_received': 0,  # TODO: Implement token tracking
             }
 
             # Get context usage
@@ -421,6 +502,8 @@ def get_stats():
             'total_threads': 0,
             'total_insights': 0,
             'total_votes': 0,
+            'tokens_sent': 0,
+            'tokens_received': 0,
             'context_used': 0,
             'context_max': 200000,
             'recent_activity': []
