@@ -66,14 +66,23 @@ def login_required(f):
 
 
 def admin_required(f):
-    """Decorator to require admin API key."""
+    """Decorator to require admin access via session or API key."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         import os
+
+        # Check if user is admin via session
+        if session.get('is_admin'):
+            return f(*args, **kwargs)
+
+        # Check if admin key is provided in header
         api_key = request.headers.get('X-Admin-Key')
-        if not api_key or api_key != os.getenv('ADMIN_API_KEY'):
-            return {'error': 'Unauthorized'}, 401
-        return f(*args, **kwargs)
+        if api_key and api_key == os.getenv('ADMIN_API_KEY'):
+            return f(*args, **kwargs)
+
+        # If neither, return unauthorized
+        return {'error': 'Unauthorized - Admin access required'}, 401
+
     return decorated_function
 
 

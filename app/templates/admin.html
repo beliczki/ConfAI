@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - ConfAI{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Header -->
+    <div class="admin-header">
+        <h1>⚙️ Admin Dashboard</h1>
+        <div class="header-actions">
+            <a href="/chat" class="btn btn-secondary">← Back to Chat</a>
+            <a href="/logout" class="btn btn-danger">Logout</a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="admin-tabs">
+        <button class="tab-btn active" onclick="switchTab('system-prompt')">System Prompt</button>
+        <button class="tab-btn" onclick="switchTab('context-files')">Context Files</button>
+        <button class="tab-btn" onclick="switchTab('statistics')">Statistics</button>
+        <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+    </div>
+
+    <!-- Tab: System Prompt -->
+    <div id="system-prompt" class="tab-content active">
+        <div class="section-card">
+            <h2>System Prompt Configuration</h2>
+            <p class="help-text">This prompt is sent to the AI with every conversation. Use it to define the AI's personality, knowledge, and behavior.</p>
+
+            <div class="form-group">
+                <label for="current-prompt">Current System Prompt</label>
+                <textarea id="current-prompt" rows="12" placeholder="Loading..."></textarea>
+                <div class="char-count">
+                    <span id="prompt-chars">0</span> characters
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="saveSystemPrompt()">💾 Save Changes</button>
+                <button class="btn btn-secondary" onclick="resetSystemPrompt()">↺ Reset to Default</button>
+                <button class="btn btn-info" onclick="testSystemPrompt()">🧪 Test Prompt</button>
+            </div>
+
+            <div id="prompt-status" class="status-message"></div>
+        </div>
+
+        <!-- Quick Templates -->
+        <div class="section-card">
+            <h3>Quick Templates</h3>
+            <div class="template-grid">
+                <button class="template-btn" onclick="loadTemplate('conference')">
+                    📋 Conference Expert
+                </button>
+                <button class="template-btn" onclick="loadTemplate('helpful')">
+                    🤝 Helpful Assistant
+                </button>
+                <button class="template-btn" onclick="loadTemplate('concise')">
+                    ⚡ Concise Responder
+                </button>
+                <button class="template-btn" onclick="loadTemplate('creative')">
+                    ✨ Creative Thinker
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Context Files -->
+    <div id="context-files" class="tab-content">
+        <div class="section-card">
+            <h2>Context Files Management</h2>
+            <p class="help-text">Upload TXT or MD files to inject knowledge directly into the AI's context. Perfect for conference info, FAQs, or specific instructions.</p>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <div class="file-upload-area" id="drop-zone">
+                    <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
+                    <div class="upload-content">
+                        <span class="upload-icon">📁</span>
+                        <p>Drag & drop files here or click to browse</p>
+                        <p class="upload-hint">Supports .txt and .md files (max 500KB each)</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="document.getElementById('context-file-input').click()">
+                    📤 Upload Files
+                </button>
+            </div>
+
+            <!-- Files List -->
+            <div class="files-section">
+                <h3>Uploaded Context Files (<span id="file-count">0</span>)</h3>
+                <div id="files-list" class="files-grid">
+                    <!-- Files will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Context Preview -->
+        <div class="section-card">
+            <h3>Context Preview</h3>
+            <p class="help-text">This is what will be injected into the AI's context window.</p>
+            <div class="context-preview" id="context-preview">
+                <p class="empty-state">No context files uploaded yet</p>
+            </div>
+            <div class="context-stats">
+                <span>Total Characters: <strong id="context-total-chars">0</strong></span>
+                <span>Estimated Tokens: <strong id="context-total-tokens">0</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Statistics -->
+    <div id="statistics" class="tab-content">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value" id="stat-users">0</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💬</div>
+                <div class="stat-value" id="stat-threads">0</div>
+                <div class="stat-label">Chat Threads</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💡</div>
+                <div class="stat-value" id="stat-insights">0</div>
+                <div class="stat-label">Shared Insights</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👍</div>
+                <div class="stat-value" id="stat-votes">0</div>
+                <div class="stat-label">Total Votes Cast</div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="section-card">
+            <h3>Recent Activity</h3>
+            <div id="recent-activity" class="activity-list">
+                <!-- Activity items will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Context Usage -->
+        <div class="section-card">
+            <h3>Context Window Usage</h3>
+            <div class="usage-bar">
+                <div class="usage-fill" id="context-usage-fill" style="width: 0%"></div>
+            </div>
+            <p class="usage-stats">
+                <span id="context-used">0</span> / <span id="context-max">200000</span> characters used
+            </p>
+        </div>
+    </div>
+
+    <!-- Tab: Settings -->
+    <div id="settings" class="tab-content">
+        <div class="section-card">
+            <h2>Application Settings</h2>
+
+            <div class="setting-group">
+                <h3>Welcome Message</h3>
+                <p class="help-text">This message is shown to users when they first open the chat (before creating their first conversation). Supports markdown.</p>
+                <div class="form-group">
+                    <label for="welcome-message">Welcome Message</label>
+                    <textarea id="welcome-message" rows="8" placeholder="Loading..."></textarea>
+                    <div class="char-count">
+                        <span id="welcome-chars">0</span> characters
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="saveWelcomeMessage()">💾 Save Welcome Message</button>
+                <div id="welcome-status" class="status-message"></div>
+            </div>
+
+            <div class="setting-group">
+                <h3>LLM Configuration</h3>
+                <div class="form-group">
+                    <label for="llm-provider">LLM Provider</label>
+                    <select id="llm-provider">
+                        <option value="claude">Claude (Anthropic)</option>
+                        <option value="grok">Grok (xAI)</option>
+                        <option value="perplexity">Perplexity</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="max-tokens">Max Tokens per Response</label>
+                    <input type="number" id="max-tokens" value="2048" min="256" max="8192">
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Rate Limiting</h3>
+                <div class="form-group">
+                    <label for="rate-limit">Requests per Minute</label>
+                    <input type="number" id="rate-limit" value="200" min="10" max="1000">
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Voting System</h3>
+                <div class="form-group">
+                    <label for="votes-per-user">Votes per User</label>
+                    <input type="number" id="votes-per-user" value="3" min="1" max="10">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

@@ -1,7 +1,7 @@
 """Chat routes with LLM integration."""
 from flask import Blueprint, render_template, request, jsonify, session, Response
 from app.utils.helpers import login_required, sanitize_input
-from app.models import ChatThread, ChatMessage
+from app.models import ChatThread, ChatMessage, Settings
 from app.services.llm_service import llm_service
 from app.services.embedding_service import embedding_service
 import json
@@ -14,6 +14,16 @@ chat_bp = Blueprint('chat', __name__)
 def chat_page():
     """Main chat interface."""
     return render_template('chat.html')
+
+
+@chat_bp.route('/api/welcome', methods=['GET'])
+@login_required
+def get_welcome_message():
+    """Get the welcome message."""
+    welcome_message = Settings.get('welcome_message', '# Welcome to ConfAI!\n\nStart a new chat to begin.')
+    return jsonify({
+        'welcome_message': welcome_message
+    })
 
 
 @chat_bp.route('/api/threads', methods=['GET'])

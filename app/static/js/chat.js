@@ -1,9 +1,20 @@
 let currentThreadId = null;
 let currentUser = null;
+let welcomeMessage = null;
+
+// Helper function to parse markdown safely
+function parseMarkdown(text) {
+    if (typeof marked !== 'undefined' && marked.parse) {
+        return marked.parse(text);
+    }
+    // Fallback to plain text if marked is not loaded
+    return escapeHtml(text);
+}
 
 // Load user info and threads on page load
 document.addEventListener('DOMContentLoaded', async () => {
     await loadUserInfo();
+    await loadWelcomeMessage();
     await loadThreads();
 });
 
@@ -15,10 +26,23 @@ async function loadUserInfo() {
             document.getElementById('user-name').textContent = currentUser.name;
             const avatar = document.getElementById('user-avatar');
             avatar.style.background = currentUser.avatar_gradient;
-            avatar.textContent = currentUser.name.substring(0, 2).toUpperCase();
+            avatar.innerHTML = `<span>${currentUser.name.substring(0, 2).toUpperCase()}</span>`;
         }
     } catch (error) {
         console.error('Failed to load user info:', error);
+    }
+}
+
+async function loadWelcomeMessage() {
+    try {
+        const response = await fetch('/api/welcome');
+        if (response.ok) {
+            const data = await response.json();
+            welcomeMessage = data.welcome_message;
+        }
+    } catch (error) {
+        console.error('Failed to load welcome message:', error);
+        welcomeMessage = '# Welcome to ConfAI!\n\nStart a new chat to begin.';
     }
 }
 
@@ -29,9 +53,11 @@ async function loadThreads() {
             const data = await response.json();
             renderThreads(data.threads);
 
-            // Auto-select first thread if exists
+            // Auto-select first thread if exists, otherwise show welcome screen
             if (data.threads.length > 0 && !currentThreadId) {
                 selectThread(data.threads[0].id, data.threads[0].title);
+            } else if (data.threads.length === 0) {
+                showWelcomeScreen();
             }
         }
     } catch (error) {
@@ -110,16 +136,28 @@ function renderMessages(messages) {
         const isUser = m.role === 'user';
         const avatar = isUser ? currentUser.name.substring(0, 2).toUpperCase() : 'AI';
         const gradient = isUser ? currentUser.avatar_gradient : 'linear-gradient(135deg, #001E50, #00A0E9)';
+        const content = isUser ? escapeHtml(m.content) : parseMarkdown(m.content);
 
         return `
             <div class="message ${m.role}">
-                <div class="message-avatar" style="background: ${gradient}">${avatar}</div>
+                <div class="message-avatar" style="background: ${gradient}"><span>${avatar}</span></div>
                 <div>
-                    <div class="message-content">${escapeHtml(m.content)}</div>
+                    <div class="message-content">${content}</div>
+                    ${m.role === 'assistant' ? `
+                        <div class="message-actions">
+                            <button class="share-btn" onclick="shareInsight(this, '${escapeHtml(m.content).replace(/'/g, "\\'")}')">
+                                <i data-lucide="share-2"></i>
+                                <span>Share to Insights</span>
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
             </div>
         `;
     }).join('');
+
+    // Initialize Lucide icons for share buttons
+    setTimeout(() => lucide.createIcons(), 0);
 
     scrollToBottom();
 }
@@ -216,22 +254,29 @@ function addMessageToUI(role, content) {
     const isUser = role === 'user';
     const avatar = isUser ? currentUser.name.substring(0, 2).toUpperCase() : 'AI';
     const gradient = isUser ? currentUser.avatar_gradient : 'linear-gradient(135deg, #001E50, #00A0E9)';
+    const displayContent = isUser ? escapeHtml(content) : parseMarkdown(content);
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
     messageDiv.innerHTML = `
-        <div class="message-avatar" style="background: ${gradient}">${avatar}</div>
+        <div class="message-avatar" style="background: ${gradient}"><span>${avatar}</span></div>
         <div>
-            <div class="message-content">${escapeHtml(content)}</div>
+            <div class="message-content">${displayContent}</div>
             ${role === 'assistant' ? `
                 <div class="message-actions">
                     <button class="share-btn" onclick="shareInsight(this, '${escapeHtml(content).replace(/'/g, "\\'")}')">
-                        📌 Share to Insights
+                        <i data-lucide="share-2"></i>
+                        <span>Share to Insights</span>
                     </button>
                 </div>
             ` : ''}
         </div>
     `;
+
+    // Initialize Lucide icons in this message
+    if (role === 'assistant') {
+        setTimeout(() => lucide.createIcons(), 0);
+    }
 
     container.appendChild(messageDiv);
     scrollToBottom();
@@ -245,12 +290,13 @@ function addStreamingMessage() {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant';
     messageDiv.innerHTML = `
-        <div class="message-avatar" style="background: linear-gradient(135deg, #001E50, #00A0E9)">AI</div>
+        <div class="message-avatar" style="background: linear-gradient(135deg, #001E50, #00A0E9)"><span>AI</span></div>
         <div>
             <div class="message-content"></div>
             <div class="message-actions" style="display: none;">
                 <button class="share-btn" onclick="shareInsightFromElement(this)">
-                    📌 Share to Insights
+                    <i data-lucide="share-2"></i>
+                    <span>Share to Insights</span>
                 </button>
             </div>
         </div>
@@ -262,13 +308,17 @@ function addStreamingMessage() {
 
 function updateStreamingMessage(element, content, done = false) {
     const contentDiv = element.querySelector('.message-content');
-    contentDiv.textContent = content;
+
+    // Parse markdown during streaming AND when complete
+    contentDiv.innerHTML = parseMarkdown(content);
 
     // Show share button when streaming is complete
-    if (done && content) {
+    if (done) {
         const actionsDiv = element.querySelector('.message-actions');
-        if (actionsDiv) {
+        if (actionsDiv && content) {
             actionsDiv.style.display = 'flex';
+            // Initialize Lucide icons for the share button
+            setTimeout(() => lucide.createIcons(), 0);
         }
     }
 
@@ -281,7 +331,7 @@ function showTypingIndicator() {
     indicator.id = 'typing-indicator';
     indicator.className = 'message assistant';
     indicator.innerHTML = `
-        <div class="message-avatar" style="background: linear-gradient(135deg, #001E50, #00A0E9)">AI</div>
+        <div class="message-avatar" style="background: linear-gradient(135deg, #001E50, #00A0E9)"><span>AI</span></div>
         <div>
             <div class="typing-indicator show">
                 <span></span><span></span><span></span>
@@ -325,6 +375,29 @@ function scrollToBottom() {
     container.scrollTop = container.scrollHeight;
 }
 
+function showWelcomeScreen() {
+    const container = document.getElementById('chat-messages');
+    const parsedWelcome = welcomeMessage ? parseMarkdown(welcomeMessage) : '<h1>Welcome to ConfAI!</h1><p>Start a new chat to begin.</p>';
+
+    container.innerHTML = `
+        <div class="welcome-screen">
+            <div class="welcome-content">${parsedWelcome}</div>
+            <button class="new-chat-centered-btn" onclick="createNewThread()">
+                <i data-lucide="plus"></i>
+                <span>New Chat</span>
+            </button>
+        </div>
+    `;
+
+    // Initialize Lucide icons in the welcome screen
+    setTimeout(() => lucide.createIcons(), 0);
+
+    // Hide input area when showing welcome screen
+    document.getElementById('chat-input').disabled = true;
+    document.getElementById('send-btn').disabled = true;
+    document.getElementById('thread-title').textContent = 'Welcome';
+}
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -333,8 +406,16 @@ function escapeHtml(text) {
 
 // Auto-resize textarea
 document.getElementById('chat-input').addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    this.style.height = '50px';
+    const newHeight = Math.min(Math.max(this.scrollHeight, 50), 354);
+    this.style.height = newHeight + 'px';
+
+    // Enable scrolling when content exceeds 15 lines
+    if (this.scrollHeight > 354) {
+        this.style.overflowY = 'auto';
+    } else {
+        this.style.overflowY = 'hidden';
+    }
 });
 
 // Send on Enter (Shift+Enter for new line)

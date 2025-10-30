@@ -4,6 +4,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+<script src="https://unpkg.com/lucide@latest"></script>
 {% endblock %}
 
 {% block content %}
@@ -11,9 +12,12 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>ConfAI</h2>
+            <img src="{{ url_for('static', filename='img/telekom-confai-white.png') }}" alt="ConfAI" class="sidebar-logo">
             <p>Conference Intelligence</p>
-            <button class="new-chat-btn" onclick="createNewThread()">+ New Chat</button>
+            <button class="new-chat-btn" onclick="createNewThread()">
+                <i data-lucide="plus"></i>
+                <span>New Chat</span>
+            </button>
         </div>
 
         <div class="threads-list" id="threads-list">
@@ -21,8 +25,20 @@
         </div>
 
         <div class="sidebar-footer">
-            <a href="/insights">💡 Insights Wall</a>
-            <a href="/logout">🚪 Logout</a>
+            <a href="/insights">
+                <i data-lucide="lightbulb"></i>
+                <span>Insights Wall</span>
+            </a>
+            {% if session.get('is_admin') %}
+            <a href="/admin">
+                <i data-lucide="settings"></i>
+                <span>Admin Dashboard</span>
+            </a>
+            {% endif %}
+            <a href="/logout">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </a>
         </div>
     </div>
 
@@ -65,5 +81,20 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Markdown parser -->
+<script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
+<script>
+    // Configure marked for security
+    marked.setOptions({
+        breaks: true,
+        gfm: true,
+        headerIds: false,
+        mangle: false
+    });
+</script>
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+</script>
 {% endblock %}

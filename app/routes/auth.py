@@ -122,7 +122,14 @@ def verify():
     session['name'] = user['name']
     session.permanent = True
 
-    print(f"User logged in: {email}")
+    # Check if user is admin
+    import os
+    admin_email = os.getenv('ADMIN_EMAIL', '').strip().lower()
+    if admin_email and email == admin_email:
+        session['is_admin'] = True
+        print(f"Admin user logged in: {email}")
+    else:
+        print(f"User logged in: {email}")
 
     return jsonify({
         'success': True,

@@ -116,6 +116,25 @@ def init_db():
             )
         ''')
 
+        # Settings table for app configuration
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Insert default welcome message if not exists
+        cursor.execute('''
+            INSERT OR IGNORE INTO settings (key, value)
+            VALUES ('welcome_message', '# Welcome to ConfAI! 👋
+
+I''m your conference intelligence assistant. I can help you with insights from conference materials and answer your questions.
+
+**Get started by creating a new chat!**')
+        ''')
+
         # Create indexes for performance
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_threads_user ON chat_threads(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_messages_thread ON chat_messages(thread_id)')
@@ -355,3 +374,37 @@ class Insight:
             )
             result = cursor.fetchone()
             return result['votes_used'] if result else 0
+
+
+class Settings:
+    """Settings model helper."""
+
+    @staticmethod
+    def get(key, default=None):
+        """Get a setting value by key."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT value FROM settings WHERE key = ?', (key,))
+            result = cursor.fetchone()
+            return result['value'] if result else default
+
+    @staticmethod
+    def set(key, value):
+        """Set a setting value."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO settings (key, value, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = CURRENT_TIMESTAMP
+            ''', (key, value))
+
+    @staticmethod
+    def get_all():
+        """Get all settings."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM settings')
+            return cursor.fetchall()

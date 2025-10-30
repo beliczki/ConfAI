@@ -1,18 +1,33 @@
 """Admin routes for document management."""
-from flask import Blueprint, request, jsonify
-from app.utils.helpers import admin_required
+from flask import Blueprint, request, jsonify, render_template, session
+from app.utils.helpers import admin_required, login_required
+from app.models import Settings
 from werkzeug.utils import secure_filename
 import os
+from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__)
 
-ALLOWED_EXTENSIONS = {'pdf', 'txt'}
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
 UPLOAD_FOLDER = 'documents'
+CONTEXT_FOLDER = 'documents/context'
+SYSTEM_PROMPT_FILE = 'data/system_prompt.txt'
+
+# Default system prompt
+DEFAULT_SYSTEM_PROMPT = """You are a helpful AI assistant specialized in conference insights and book knowledge.
+You have access to conference transcripts and related books.
+Respond concisely and insightfully, drawing from the provided context when relevant.
+Be professional, engaging, and help users derive meaningful insights."""
 
 
 def allowed_file(filename):
     """Check if file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def allowed_context_file(filename):
+    """Check if file extension is allowed for context files."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'txt', 'md'}
 
 
 @admin_bp.route('/api/update-transcript', methods=['POST'])
@@ -90,3 +105,351 @@ def delete_document(doc_type, filename):
         'success': True,
         'message': f'Document deleted: {filename}'
     })
+
+
+# ============================
+# ADMIN DASHBOARD ROUTES
+# ============================
+
+@admin_bp.route('/admin')
+@login_required
+@admin_required
+def admin_dashboard():
+    """Admin dashboard page."""
+    return render_template('admin.html')
+
+
+@admin_bp.route('/api/admin/system-prompt', methods=['GET'])
+@admin_required
+def get_system_prompt():
+    """Get current system prompt."""
+    try:
+        # Try to read from file
+        if os.path.exists(SYSTEM_PROMPT_FILE):
+            with open(SYSTEM_PROMPT_FILE, 'r', encoding='utf-8') as f:
+                prompt = f.read()
+        else:
+            prompt = DEFAULT_SYSTEM_PROMPT
+
+        return jsonify({
+            'success': True,
+            'prompt': prompt
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/system-prompt', methods=['POST'])
+@admin_required
+def update_system_prompt():
+    """Update system prompt."""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '').strip()
+
+        if not prompt:
+            return jsonify({'error': 'Prompt cannot be empty'}), 400
+
+        # Ensure data directory exists
+        os.makedirs('data', exist_ok=True)
+
+        # Save to file
+        with open(SYSTEM_PROMPT_FILE, 'w', encoding='utf-8') as f:
+            f.write(prompt)
+
+        print(f"System prompt updated at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': 'System prompt updated successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/welcome-message', methods=['GET'])
+@admin_required
+def get_welcome_message_admin():
+    """Get current welcome message for admin editing."""
+    try:
+        welcome_message = Settings.get('welcome_message', '# Welcome to ConfAI!\n\nStart a new chat to begin.')
+        return jsonify({
+            'success': True,
+            'message': welcome_message
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/welcome-message', methods=['POST'])
+@admin_required
+def update_welcome_message():
+    """Update welcome message."""
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+
+        if not message:
+            return jsonify({'error': 'Welcome message cannot be empty'}), 400
+
+        Settings.set('welcome_message', message)
+
+        print(f"Welcome message updated at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Welcome message updated successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/context-files', methods=['GET'])
+@admin_required
+def get_context_files():
+    """List all context files with preview."""
+    try:
+        # Ensure context folder exists
+        os.makedirs(CONTEXT_FOLDER, exist_ok=True)
+
+        files_info = []
+        total_chars = 0
+        preview_parts = []
+
+        # Get all files in context folder
+        for filename in os.listdir(CONTEXT_FOLDER):
+            filepath = os.path.join(CONTEXT_FOLDER, filename)
+
+            if os.path.isfile(filepath) and allowed_context_file(filename):
+                file_size = os.path.getsize(filepath)
+
+                # Read file content
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                char_count = len(content)
+                total_chars += char_count
+
+                files_info.append({
+                    'name': filename,
+                    'size': file_size,
+                    'chars': char_count
+                })
+
+                # Add to preview (with separator)
+                preview_parts.append(f"--- {filename} ---\n{content}\n")
+
+        # Create preview (limit to first 2000 chars for display)
+        full_preview = '\n'.join(preview_parts)
+        preview = full_preview[:2000] + ('...' if len(full_preview) > 2000 else '')
+
+        # Estimate tokens (rough estimate: chars / 4)
+        total_tokens = total_chars // 4
+
+        return jsonify({
+            'success': True,
+            'files': files_info,
+            'preview': preview,
+            'total_chars': total_chars,
+            'total_tokens': total_tokens
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/context-files', methods=['POST'])
+@admin_required
+def upload_context_files():
+    """Upload new context file(s)."""
+    try:
+        if 'files' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
+
+        files = request.files.getlist('files')
+
+        if not files or len(files) == 0:
+            return jsonify({'error': 'No files selected'}), 400
+
+        # Ensure context folder exists
+        os.makedirs(CONTEXT_FOLDER, exist_ok=True)
+
+        max_size = 500 * 1024  # 500KB
+        uploaded_files = []
+
+        for file in files:
+            if file.filename == '':
+                continue
+
+            if not allowed_context_file(file.filename):
+                return jsonify({'error': f'Invalid file type for {file.filename}. Only .txt and .md allowed'}), 400
+
+            # Check file size
+            file.seek(0, os.SEEK_END)
+            file_size = file.tell()
+            file.seek(0)
+
+            if file_size > max_size:
+                return jsonify({'error': f'File {file.filename} exceeds 500KB limit'}), 400
+
+            # Save file
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(CONTEXT_FOLDER, filename)
+            file.save(filepath)
+
+            uploaded_files.append(filename)
+
+        print(f"Uploaded context files: {uploaded_files}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Successfully uploaded {len(uploaded_files)} file(s)',
+            'files': uploaded_files
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/context-files/<filename>', methods=['DELETE'])
+@admin_required
+def delete_context_file(filename):
+    """Delete a context file."""
+    try:
+        filename = secure_filename(filename)
+        filepath = os.path.join(CONTEXT_FOLDER, filename)
+
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'File not found'}), 404
+
+        os.remove(filepath)
+
+        print(f"Deleted context file: {filename}")
+
+        return jsonify({
+            'success': True,
+            'message': f'File deleted: {filename}'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/stats', methods=['GET'])
+@admin_required
+def get_stats():
+    """Get application statistics."""
+    try:
+        from app.models import get_db
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Get database statistics
+            stats = {
+                'total_users': cursor.execute('SELECT COUNT(*) FROM users').fetchone()[0],
+                'total_threads': cursor.execute('SELECT COUNT(*) FROM chat_threads').fetchone()[0],
+                'total_insights': cursor.execute('SELECT COUNT(*) FROM insights').fetchone()[0],
+                'total_votes': cursor.execute('SELECT COUNT(*) FROM votes').fetchone()[0],
+            }
+
+            # Get context usage
+            context_chars = 0
+            if os.path.exists(CONTEXT_FOLDER):
+                for filename in os.listdir(CONTEXT_FOLDER):
+                    filepath = os.path.join(CONTEXT_FOLDER, filename)
+                    if os.path.isfile(filepath):
+                        try:
+                            with open(filepath, 'r', encoding='utf-8') as f:
+                                context_chars += len(f.read())
+                        except:
+                            pass  # Skip files that can't be read
+
+            stats['context_used'] = context_chars
+            stats['context_max'] = 200000  # Claude's context window
+
+            # Get recent activity (last 10 items)
+            recent_activity = []
+
+            # Get recent users
+            recent_users = cursor.execute('''
+                SELECT name, created_at FROM users
+                ORDER BY created_at DESC LIMIT 3
+            ''').fetchall()
+
+            for user in recent_users:
+                recent_activity.append({
+                    'type': 'user_joined',
+                    'text': f'{user["name"]} joined',
+                    'time': format_time_ago(user["created_at"])
+                })
+
+            # Get recent threads
+            recent_threads = cursor.execute('''
+                SELECT u.name, t.created_at FROM chat_threads t
+                JOIN users u ON t.user_id = u.id
+                ORDER BY t.created_at DESC LIMIT 3
+            ''').fetchall()
+
+            for thread in recent_threads:
+                recent_activity.append({
+                    'type': 'thread_created',
+                    'text': f'{thread["name"]} started a conversation',
+                    'time': format_time_ago(thread["created_at"])
+                })
+
+            # Get recent insights
+            recent_insights = cursor.execute('''
+                SELECT u.name, i.created_at FROM insights i
+                JOIN users u ON i.user_id = u.id
+                ORDER BY i.created_at DESC LIMIT 3
+            ''').fetchall()
+
+            for insight in recent_insights:
+                recent_activity.append({
+                    'type': 'insight_shared',
+                    'text': f'{insight["name"]} shared an insight',
+                    'time': format_time_ago(insight["created_at"])
+                })
+
+            # Sort by time and limit
+            stats['recent_activity'] = recent_activity[:10]
+
+            return jsonify(stats)
+    except Exception as e:
+        print(f"Error getting stats: {e}")
+        # Return empty stats on error
+        return jsonify({
+            'total_users': 0,
+            'total_threads': 0,
+            'total_insights': 0,
+            'total_votes': 0,
+            'context_used': 0,
+            'context_max': 200000,
+            'recent_activity': []
+        })
+
+
+def format_time_ago(timestamp_str):
+    """Format timestamp as relative time."""
+    try:
+        if isinstance(timestamp_str, str):
+            timestamp = datetime.fromisoformat(timestamp_str)
+        else:
+            timestamp = timestamp_str
+
+        now = datetime.now()
+        diff = now - timestamp
+
+        if diff.days == 0:
+            if diff.seconds < 60:
+                return "just now"
+            elif diff.seconds < 3600:
+                return f"{diff.seconds // 60}m ago"
+            else:
+                return f"{diff.seconds // 3600}h ago"
+        elif diff.days == 1:
+            return "yesterday"
+        elif diff.days < 7:
+            return f"{diff.days}d ago"
+        else:
+            return timestamp.strftime("%b %d")
+    except:
+        return "recently"
