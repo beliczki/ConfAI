@@ -243,8 +243,15 @@ def stream_message():
         for m in messages_history[-10:]  # Last 10 messages for context
     ]
 
-    # Get relevant context from embeddings (if available)
-    context = embedding_service.search_context(message)
+    # Get relevant context based on context mode
+    context_mode = Settings.get('context_mode', 'context_window').lower()
+    context = ""
+
+    if context_mode == 'vector_embeddings':
+        # Vector embeddings mode: use semantic search
+        context = embedding_service.search_context(message)
+        print(f"Vector embeddings search returned {len(context)} chars")
+    # In context_window mode, context is loaded directly in llm_service
 
     def generate():
         """Generator for streaming response."""

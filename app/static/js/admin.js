@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStatistics();
     loadWelcomeMessage();
     loadLLMProviderSetting();
+    loadContextModeSetting();
 
     // Setup event listeners
     setupFileUpload();
@@ -80,6 +81,7 @@ function switchTab(tabName) {
     // Load data for specific tabs when switched to
     if (tabName === 'context-files') {
         loadContextFiles();
+        updateContextModeBanner();
     } else if (tabName === 'insights') {
         loadAdminInsights();
     } else if (tabName === 'statistics') {
@@ -786,6 +788,29 @@ async function loadLLMProviderSetting() {
 }
 
 /**
+ * Load current context mode setting
+ */
+async function loadContextModeSetting() {
+    try {
+        const response = await fetch('/api/admin/context-mode');
+        if (!response.ok) {
+            console.log('Context mode setting not found, using default');
+            return;
+        }
+
+        const data = await response.json();
+        const contextModeSelect = document.getElementById('context-mode');
+
+        if (contextModeSelect && data.mode) {
+            contextModeSelect.value = data.mode;
+            console.log('Loaded context mode setting:', data.mode);
+        }
+    } catch (error) {
+        console.error('Error loading context mode setting:', error);
+    }
+}
+
+/**
  * Setup LLM provider change handler (just for UI feedback, not saving)
  */
 function setupLLMProviderChange() {
@@ -800,6 +825,7 @@ function setupLLMProviderChange() {
 async function saveSettings() {
     const provider = document.getElementById('llm-provider')?.value;
     const welcomeMessage = document.getElementById('welcome-message')?.value?.trim();
+    const contextMode = document.getElementById('context-mode')?.value;
 
     if (!provider) {
         showSettingsError('Please select a provider');
@@ -811,9 +837,14 @@ async function saveSettings() {
         return;
     }
 
+    if (!contextMode) {
+        showSettingsError('Please select a context mode');
+        return;
+    }
+
     try {
-        // Save both LLM provider and welcome message
-        const [providerResponse, welcomeResponse] = await Promise.all([
+        // Save LLM provider, welcome message, and context mode
+        const [providerResponse, welcomeResponse, contextModeResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -827,18 +858,27 @@ async function saveSettings() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ message: welcomeMessage })
+            }),
+            fetch('/api/admin/context-mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ mode: contextMode })
             })
         ]);
 
-        if (!providerResponse.ok || !welcomeResponse.ok) {
+        if (!providerResponse.ok || !welcomeResponse.ok || !contextModeResponse.ok) {
             throw new Error('Failed to save settings');
         }
 
         const providerData = await providerResponse.json();
-        console.log('Settings saved:', providerData);
+        const contextModeData = await contextModeResponse.json();
+        console.log('Settings saved:', providerData, contextModeData);
 
         // Show success message ABOVE the save button
-        showSettingsSuccess(`Settings saved successfully! Default LLM Provider: ${providerData.provider_name}`);
+        const modeName = contextMode === 'context_window' ? 'Context Window' : 'Vector Embeddings';
+        showSettingsSuccess(`Settings saved! LLM: ${providerData.provider_name}, Context: ${modeName}`);
 
     } catch (error) {
         console.error('Error saving settings:', error);
@@ -1234,5 +1274,127 @@ function updateStatistics() {
     // Re-initialize Lucide icons
     if (typeof lucide !== 'undefined') {
         setTimeout(() => lucide.createIcons(), 10);
+    }
+}
+
+// ============================
+// EMBEDDINGS MANAGEMENT
+// ============================
+
+/**
+ * Update context mode banner based on current mode
+ */
+async function updateContextModeBanner() {
+    try {
+        const response = await fetch('/api/admin/context-mode');
+        if (!response.ok) {
+            console.log('Context mode setting not found, using default');
+            return;
+        }
+
+        const data = await response.json();
+        const mode = data.mode || 'context_window';
+
+        const banner = document.getElementById('context-mode-banner');
+        const title = document.getElementById('context-mode-title');
+        const description = document.getElementById('context-mode-description');
+        const embeddingsSection = document.getElementById('embeddings-section');
+
+        if (mode === 'vector_embeddings') {
+            // Vector embeddings mode
+            if (banner) {
+                banner.style.background = '#f0fdf4';
+                banner.style.borderLeft = '4px solid #059669';
+            }
+            if (title) title.textContent = 'Vector Embeddings Mode Active';
+            if (description) description.textContent = 'Using semantic search to find relevant context chunks. Process embeddings after uploading or modifying files.';
+            if (embeddingsSection) {
+                embeddingsSection.style.display = 'block';
+                loadEmbeddingStats();
+            }
+        } else {
+            // Context window mode
+            if (banner) {
+                banner.style.background = '#f0f9ff';
+                banner.style.borderLeft = '4px solid #0ea5e9';
+            }
+            if (title) title.textContent = 'Context Window Mode Active';
+            if (description) description.textContent = 'All enabled context files are loaded directly into the AI\'s context window.';
+            if (embeddingsSection) embeddingsSection.style.display = 'none';
+        }
+
+    } catch (error) {
+        console.error('Error updating context mode banner:', error);
+    }
+}
+
+/**
+ * Load embedding statistics
+ */
+async function loadEmbeddingStats() {
+    try {
+        const response = await fetch('/api/admin/embeddings/stats');
+        const stats = await response.json();
+
+        const docCount = document.getElementById('embeddings-doc-count');
+        const chunkCount = document.getElementById('embeddings-chunk-count');
+
+        if (docCount) docCount.textContent = stats.document_count || 0;
+        if (chunkCount) chunkCount.textContent = stats.chunk_count || 0;
+
+    } catch (error) {
+        console.error('Error loading embedding stats:', error);
+    }
+}
+
+/**
+ * Process embeddings
+ */
+async function processEmbeddings() {
+    const statusEl = document.getElementById('embeddings-status');
+    const button = event.target.closest('button');
+
+    if (button) button.disabled = true;
+    if (statusEl) {
+        statusEl.textContent = 'Processing embeddings... This may take a minute.';
+        statusEl.className = 'status-message info';
+        statusEl.style.display = 'block';
+    }
+
+    try {
+        const response = await fetch('/api/admin/embeddings/process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            if (statusEl) {
+                statusEl.textContent = '✓ ' + data.message;
+                statusEl.className = 'status-message success';
+            }
+
+            // Update stats
+            loadEmbeddingStats();
+        } else {
+            throw new Error(data.error || 'Failed to process embeddings');
+        }
+
+    } catch (error) {
+        console.error('Error processing embeddings:', error);
+        if (statusEl) {
+            statusEl.textContent = '✗ Error: ' + error.message;
+            statusEl.className = 'status-message error';
+        }
+    } finally {
+        if (button) button.disabled = false;
+        if (statusEl) {
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
     }
 }

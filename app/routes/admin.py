@@ -229,6 +229,45 @@ def update_welcome_message():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/context-mode', methods=['GET'])
+@admin_required
+def get_context_mode():
+    """Get current context mode setting."""
+    try:
+        context_mode = Settings.get('context_mode', 'context_window')
+        return jsonify({
+            'success': True,
+            'mode': context_mode
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/context-mode', methods=['POST'])
+@admin_required
+def update_context_mode():
+    """Update context mode setting."""
+    try:
+        data = request.get_json()
+        mode = data.get('mode', '').strip()
+
+        # Validate mode
+        valid_modes = ['context_window', 'vector_embeddings']
+        if mode not in valid_modes:
+            return jsonify({'error': 'Invalid context mode. Must be "context_window" or "vector_embeddings"'}), 400
+
+        Settings.set('context_mode', mode)
+
+        print(f"Context mode updated to {mode} at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Context mode updated to {mode}'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/api/admin/context-files', methods=['GET'])
 @admin_required
 def get_context_files():
@@ -560,3 +599,50 @@ def delete_insight(insight_id):
         return jsonify({'success': True, 'message': 'Insight deleted successfully'})
     else:
         return jsonify({'error': 'Insight not found'}), 404
+
+
+@admin_bp.route('/api/admin/embeddings/process', methods=['POST'])
+@admin_required
+def process_embeddings():
+    """Process context files and generate embeddings."""
+    try:
+        from app.services.embedding_service import embedding_service
+
+        # Process all context files
+        success = embedding_service.process_context_files()
+
+        if success:
+            stats = embedding_service.get_stats()
+            return jsonify({
+                'success': True,
+                'message': f'Successfully processed {stats["document_count"]} documents into {stats["chunk_count"]} chunks',
+                'stats': stats
+            })
+        else:
+            return jsonify({'error': 'Failed to process embeddings'}), 500
+
+    except Exception as e:
+        print(f"Error processing embeddings: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/embeddings/stats', methods=['GET'])
+@admin_required
+def get_embedding_stats():
+    """Get embedding statistics."""
+    try:
+        from app.services.embedding_service import embedding_service
+
+        stats = embedding_service.get_stats()
+        return jsonify(stats)
+
+    except Exception as e:
+        print(f"Error getting embedding stats: {e}")
+        return jsonify({
+            'initialized': False,
+            'document_count': 0,
+            'chunk_count': 0,
+            'error': str(e)
+        }), 500

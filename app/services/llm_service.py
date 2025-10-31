@@ -85,6 +85,15 @@ Be professional, engaging, and help users derive meaningful insights."""
 
         return ""
 
+    def _get_context_mode(self) -> str:
+        """Get current context mode from database settings."""
+        try:
+            from app.models import Settings
+            return Settings.get('context_mode', 'context_window').lower()
+        except Exception as e:
+            print(f"Error reading context mode from database: {e}")
+            return 'context_window'
+
     def generate_response(
         self,
         messages: list,
@@ -95,7 +104,7 @@ Be professional, engaging, and help users derive meaningful insights."""
 
         Args:
             messages: List of message dicts with 'role' and 'content'
-            context: Additional context from embeddings
+            context: Additional context from embeddings (used in vector_embeddings mode)
             stream: Whether to stream the response
 
         Returns:
@@ -104,14 +113,20 @@ Be professional, engaging, and help users derive meaningful insights."""
         # Load system prompt from file
         system_prompt = self._load_system_prompt()
 
-        # Load context files
-        context_files = self.get_context_files()
-        if context_files:
-            system_prompt += f"\n\nContext files:\n{context_files}"
+        # Get context mode from database
+        context_mode = self._get_context_mode()
+        print(f"Context mode: {context_mode}")
 
-        # Add additional context from embeddings if provided
-        if context:
-            system_prompt += f"\n\nRelevant context:\n{context}"
+        if context_mode == 'context_window':
+            # CONTEXT WINDOW MODE: Load all context files directly
+            context_files = self.get_context_files()
+            if context_files:
+                system_prompt += f"\n\nContext files:\n{context_files}"
+        elif context_mode == 'vector_embeddings':
+            # VECTOR EMBEDDINGS MODE: Use semantic search for relevant chunks
+            # Context is provided by the caller (from embedding_service.search_context)
+            if context:
+                system_prompt += f"\n\nRelevant context:\n{context}"
 
         # Get current provider from database
         provider = self._get_provider()

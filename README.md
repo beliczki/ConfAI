@@ -1,23 +1,26 @@
-# ConfAI - LLM-Based Chat Application
+# ConfAI - AI-Powered Conference Insights Platform
 
-> A Telekom-inspired chat application for conference attendees with AI-powered responses and collaborative insights sharing.
+> A sophisticated chat application for conference attendees with multi-model AI support, vector embeddings, and collaborative insights sharing.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.1-green.svg)
 ![Claude](https://img.shields.io/badge/Claude-Sonnet_4.5-purple.svg)
+![Gemini](https://img.shields.io/badge/Gemini-2.0_Flash-blue.svg)
 ![Status](https://img.shields.io/badge/Status-Production_Ready-green.svg)
 
 ---
 
 ## 🎯 Overview
 
-ConfAI is a fully functional chat platform for conference attendees featuring:
+ConfAI is a production-ready AI chat platform designed for conference attendees, featuring:
 
-- ✅ **Email/PIN Authentication** - Secure, passwordless login system
-- ✅ **Multi-threaded Chat** - Real-time streaming with Claude Sonnet 4.5
+- ✅ **Multi-Model AI** - Support for Claude, Gemini, Grok, and Perplexity
+- ✅ **Hybrid Context System** - Choose between Context Window or Vector Embeddings
+- ✅ **Email/PIN Authentication** - Secure, passwordless login
+- ✅ **Real-time Streaming** - Word-by-word AI responses via SSE
 - ✅ **Insights Wall** - Share and vote on AI-generated insights
-- ✅ **Beautiful UI** - Telekom-inspired design with gradient avatars
-- ⚠️ **Document Embeddings** - Structure ready (implementation pending)
+- ✅ **Admin Dashboard** - Manage settings, context files, and embeddings
+- ✅ **Token Tracking** - Monitor usage across models with cache optimization
 
 **Live Demo**: http://localhost:5000
 
@@ -25,37 +28,68 @@ ConfAI is a fully functional chat platform for conference attendees featuring:
 
 ## 🚀 Quick Start
 
-### 1. Prerequisites
+### Prerequisites
 
 - Python 3.10+ installed
-- Anthropic API key (for Claude)
+- At least one AI API key (Claude, Gemini, Grok, or Perplexity)
+- 2GB RAM minimum (4GB recommended for vector embeddings)
 
-### 2. Installation
+### Installation
 
 ```bash
-# Navigate to project directory
+# Clone or navigate to project directory
 cd C:\Users\belic\Claude\confAI\ConfAI
 
-# Activate virtual environment (already created)
+# Create virtual environment (if not exists)
+python -m venv venv
+
+# Activate virtual environment
 venv\Scripts\activate  # Windows
 # source venv/bin/activate  # Linux/Mac
 
-# Install dependencies (if not already installed)
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Configuration
+### Configuration
 
-The `.env` file is already configured. Verify your API key:
+1. **Create `.env` file** (or update existing):
 
 ```bash
-# .env file (already exists)
-ANTHROPIC_API_KEY=your_key_here  # ✅ Already configured
-LLM_PROVIDER=claude              # ✅ Using Claude Sonnet 4.5
-DEBUG=True                        # ✅ Development mode
+# Flask Configuration
+FLASK_ENV=development
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+
+# Database
+DATABASE_URL=sqlite:///data/confai.db
+
+# AI Models (at least one required)
+ANTHROPIC_API_KEY=sk-ant-...          # For Claude
+GEMINI_API_KEY=...                     # For Gemini
+GROK_API_KEY=...                       # For Grok (optional)
+PERPLEXITY_API_KEY=...                 # For Perplexity (optional)
+
+# Default Settings
+LLM_PROVIDER=gemini                    # claude | gemini | grok | perplexity
+
+# Email (Optional - PINs print to console in dev mode)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+
+# Security
+ADMIN_API_KEY=change-this-in-production
 ```
 
-### 4. Run the Application
+2. **Create required directories**:
+
+```bash
+mkdir -p data documents/context
+```
+
+### Run the Application
 
 ```bash
 python run.py
@@ -63,68 +97,113 @@ python run.py
 
 The application will start on **http://localhost:5000**
 
-### 5. Login
+### First Login
 
 1. Visit http://localhost:5000
 2. Enter any email address
-3. Check the console for the 6-digit PIN
+3. Check the console output for the 6-digit PIN
 4. Enter the PIN to log in
+5. Start chatting with AI!
 
 ---
 
 ## 📦 Technology Stack
 
-**Backend:**
-- Flask 3.1.2 - Web framework
-- SQLite - Database (raw SQL, no ORM)
-- Flask-Session - Filesystem-based sessions
-- Flask-Limiter - Rate limiting (200/min, 2000/hour)
+### Backend
+- **Flask 3.1** - Modern Python web framework
+- **SQLite** - Lightweight database with raw SQL
+- **ChromaDB** - Vector database for embeddings
+- **sentence-transformers** - ML models for semantic search
 
-**AI:**
-- Anthropic Claude API - Sonnet 4.5 model
-- Server-Sent Events (SSE) - Real-time streaming
-- Context-aware responses (last 10 messages)
+### AI Integration
+- **Claude Sonnet 4.5** - Anthropic's latest model with prompt caching
+- **Gemini 2.0 Flash** - Google's fast, cost-effective model
+- **Grok** - xAI's conversational model
+- **Perplexity** - Web-connected reasoning
 
-**Frontend:**
-- Vanilla JavaScript - No frameworks
-- HTML5/CSS3 - Responsive design
-- Telekom design system - Magenta (#E20074) & Blue (#001E50)
+### Frontend
+- **Vanilla JavaScript** - No frameworks, fast loading
+- **Server-Sent Events** - Real-time streaming
+- **Responsive CSS** - Telekom-inspired design
 
 ---
 
-## 🎨 Features
+## ✨ Key Features
 
-### ✅ Authentication System
-- Email-based login with 6-digit PIN codes
-- 15-minute PIN expiration
-- Session management with secure cookies
-- Rate limiting (5 login attempts/min)
-- Automatic user creation on first login
-- Gradient avatars generated from email
+### 🤖 Multi-Model AI Support
 
-### ✅ Chat Interface
-- **Multi-threaded conversations** - Create unlimited chat threads
-- **Real-time streaming** - AI responses stream word-by-word
-- **Thread management** - Create, select, delete threads
-- **Message history** - Persistent storage in SQLite
-- **Typing indicators** - Animated dots during AI response
-- **Auto-resize input** - Textarea grows with content (max 120px)
-- **Keyboard shortcuts** - Enter to send, Shift+Enter for newline
+Switch between AI models instantly:
+- **Claude Sonnet 4.5** - Best quality, prompt caching for cost optimization
+- **Gemini 2.0 Flash** - Fastest, most cost-effective
+- **Grok** - Alternative conversational model
+- **Perplexity** - Web-connected for current information
 
-### ✅ Insights Wall
-- **Share insights** - "📌 Share to Insights" button on AI messages
-- **Card-based layout** - Responsive grid design
-- **Voting system** - Upvote 👍 / Downvote 👎 with emoji icons
-- **3 votes per user** - Enforced limit with counter
-- **Vote reveal logic** - Counts hidden until all votes cast
-- **Change votes** - Click same button to unvote
-- **Real-time updates** - UI refreshes after voting
+Model switching persists across all users and processes.
 
-### ⚠️ Document Embeddings (Placeholder)
-- Structure implemented in `embedding_service.py`
-- Ready for BAAI/bge-large-en-v1.5 model
-- Placeholder returns empty context
-- Uncomment dependencies in requirements.txt to enable
+### 🧠 Hybrid Context System
+
+#### **Context Window Mode** (Simple & Fast)
+- Loads all enabled context files directly into AI prompt
+- Best for: Small datasets, holistic understanding
+- Pros: See everything, no preprocessing
+- Cons: Limited by token limits, higher costs
+
+#### **Vector Embeddings Mode** (Smart & Scalable)
+- Uses semantic search to find relevant chunks
+- Powered by ChromaDB + sentence-transformers
+- Best for: Large datasets, specific questions
+- Pros: Scalable, cost-effective, semantic understanding
+- Cons: Requires preprocessing, may miss context
+
+**Easy switching** in Admin > Settings > Context Mode
+
+### 💬 Advanced Chat Features
+
+- **Multi-threaded conversations** - Unlimited chat threads per user
+- **Real-time streaming** - AI responses appear word-by-word
+- **Context-aware** - Includes last 10 messages for continuity
+- **Token tracking** - Monitor input, output, and cache usage per model
+- **Activity logging** - Track conversation starts and model usage
+
+### 📊 Admin Dashboard
+
+Comprehensive admin interface at `/admin`:
+
+1. **System Prompt** - Customize AI behavior
+2. **Context Files** - Upload and manage .txt/.md files
+   - Enable/disable individual files
+   - Preview file contents
+   - Track token usage
+3. **Insights Management** - Moderate user-shared insights
+4. **Statistics** - View usage metrics:
+   - Total users, threads, insights
+   - Token usage by model
+   - Cache efficiency (Claude)
+   - Recent activity log
+5. **Settings**
+   - Default LLM provider
+   - Context mode (window vs embeddings)
+   - Welcome message
+   - Rate limits
+   - Votes/shares per user
+
+### 🎯 Insights Wall
+
+Collaborative knowledge sharing:
+- **Share insights** from AI conversations
+- **Vote system** - 👍 Upvote / 👎 Downvote
+- **Limited votes** - 3 votes per user
+- **Vote reveal** - Counts hidden until all votes cast
+- **User attribution** - Gradient avatars with names
+
+### 🔒 Security
+
+- **Email/PIN authentication** - Passwordless, secure login
+- **Rate limiting** - Prevent abuse (200/min, 2000/hour)
+- **Session management** - Secure filesystem sessions
+- **Input sanitization** - 5000 character limit
+- **Ownership verification** - All operations check user ownership
+- **Admin key protection** - Admin endpoints require API key
 
 ---
 
@@ -133,304 +212,280 @@ The application will start on **http://localhost:5000**
 ```
 ConfAI/
 ├── app/
-│   ├── __init__.py              ✅ Flask app factory
-│   ├── models/__init__.py       ✅ 6 database models (raw SQL)
+│   ├── __init__.py              # Flask app factory
+│   ├── models/__init__.py       # Database models (8 tables)
 │   ├── routes/
-│   │   ├── auth.py              ✅ Email/PIN authentication
-│   │   ├── chat.py              ✅ Streaming chat with LLM
-│   │   ├── insights.py          ✅ Insights wall with voting
-│   │   └── admin.py             ✅ Document upload (admin key required)
+│   │   ├── auth.py              # Email/PIN authentication
+│   │   ├── chat.py              # Streaming chat with multi-model support
+│   │   ├── insights.py          # Insights wall with voting
+│   │   └── admin.py             # Admin dashboard and management
 │   ├── services/
-│   │   ├── llm_service.py       ✅ Claude/Grok/Perplexity integration
-│   │   ├── email_service.py     ✅ PIN email delivery (SMTP)
-│   │   └── embedding_service.py ⚠️ Placeholder implementation
-│   ├── utils/helpers.py         ✅ Utility functions & decorators
-│   ├── static/                  ⚠️ Currently using inline CSS/JS
-│   │   ├── css/                 ⚠️ Empty (future refactoring)
-│   │   └── js/                  ⚠️ Empty (future refactoring)
+│   │   ├── llm_service.py       # Multi-model LLM integration
+│   │   ├── embedding_service.py # ChromaDB vector embeddings
+│   │   └── email_service.py     # PIN email delivery
+│   ├── utils/helpers.py         # Utility functions & decorators
+│   ├── static/
+│   │   ├── css/
+│   │   │   ├── chat.css         # Chat interface styles
+│   │   │   ├── admin.css        # Admin dashboard styles
+│   │   │   └── insights.css     # Insights wall styles
+│   │   └── js/
+│   │       ├── chat.js          # Chat functionality
+│   │       ├── admin.js         # Admin functionality
+│   │       └── insights.js      # Insights functionality
 │   └── templates/
-│       ├── base.html            ✅ Base template with Telekom colors
-│       ├── login.html           ✅ Email/PIN login interface
-│       ├── chat.html            ✅ Full chat UI with streaming
-│       └── insights.html        ✅ Insights wall with voting
-├── .claude/                     ✅ Context files for development
-│   ├── project_overview.md      ✅ Complete project documentation
-│   ├── code_patterns.md         ✅ Coding conventions
-│   ├── api_reference.md         ✅ API endpoint documentation
-│   ├── next_steps.md            ✅ Development roadmap
-│   └── file_reference.md        ✅ File-by-file reference
+│       ├── base.html            # Base template
+│       ├── login.html           # Login interface
+│       ├── chat.html            # Chat interface
+│       ├── admin.html           # Admin dashboard
+│       └── insights.html        # Insights wall
 ├── documents/
-│   ├── books/                   ⚠️ Empty (ready for PDF uploads)
-│   └── transcripts/             ⚠️ Empty (ready for transcript uploads)
-├── data/confai.db               ✅ SQLite database (auto-created)
-├── venv/                        ✅ Virtual environment
-├── .env                         ✅ Environment configuration
-├── requirements.txt             ✅ Python dependencies
-├── run.py                       ✅ Application entry point
-├── SETUP.md                     ✅ Detailed setup guide
-└── README.md                    ✅ This file
+│   └── context/                 # Context files (.txt, .md)
+├── data/
+│   ├── confai.db                # SQLite database
+│   ├── chromadb/                # Vector embeddings storage
+│   ├── system_prompt.txt        # Customizable system prompt
+│   └── context_config.json      # File enable/disable config
+├── venv/                        # Virtual environment
+├── .env                         # Environment configuration
+├── requirements.txt             # Python dependencies
+├── run.py                       # Application entry point
+├── README.md                    # This file
+└── GETTING_STARTED.md           # Detailed installation guide
 ```
 
 ---
 
-## 🔑 API Endpoints
+## 🔧 Configuration
 
-### Authentication
-- `GET /` → Redirects to `/login` or `/chat`
-- `GET /login` → Login page
-- `POST /login` → Request PIN (rate limited: 5/min)
-- `POST /verify` → Verify PIN and create session (rate limited: 10/min)
-- `POST /logout` → Clear session
-- `GET /me` → Get current user info
+### Database Tables
 
-### Chat
-- `GET /chat` → Chat interface (requires auth)
-- `GET /api/threads` → List user's threads
-- `POST /api/threads` → Create new thread
-- `DELETE /api/threads/<id>` → Delete thread
-- `GET /api/threads/<id>/messages` → Get thread messages
-- `POST /api/chat` → Send message (non-streaming)
-- `POST /api/chat/stream` → Send message with SSE streaming ⭐
+The application automatically creates 8 tables:
 
-### Insights
-- `GET /insights` → Insights wall page (requires auth)
-- `GET /api/insights` → Get all insights with vote status
-- `POST /api/insights` → Share new insight
-- `POST /api/insights/<id>/vote` → Vote (upvote/downvote)
-- `DELETE /api/insights/<id>/vote` → Remove vote
+1. **users** - User accounts with email and metadata
+2. **auth_codes** - Temporary PINs with expiration
+3. **chat_threads** - Conversation threads with model tracking
+4. **chat_messages** - Individual messages
+5. **insights** - Shared AI insights
+6. **votes** - User votes on insights
+7. **activity_log** - User actions and model usage
+8. **token_usage** - Token consumption tracking by model
+9. **settings** - Application settings (key-value store)
 
-### Admin
-- `POST /api/update-transcript` → Upload document (requires `X-Admin-Key`)
+### Context Modes
 
-**Full API documentation**: See `.claude/api_reference.md`
+#### Switching Modes
 
----
+1. Go to Admin > Settings
+2. Change "Context Mode" dropdown
+3. Click "Save Settings"
 
-## 🎨 Design System
+**Context Window Mode:**
+- All enabled files loaded into prompt
+- No preprocessing required
+- Files appear in Context Files tab
 
-**Color Palette** (Telekom-inspired):
-```css
---primary: #E20074        /* Telekom Magenta */
---secondary: #001E50      /* Telekom Dark Blue */
---success: #00AB84        /* Green */
---error: #E63946          /* Red */
---background: #F5F5F5     /* Light Gray */
---surface: #FFFFFF        /* White */
---text-primary: #1A1A1A   /* Almost Black */
---text-secondary: #666666 /* Gray */
-```
+**Vector Embeddings Mode:**
+- Files must be processed first
+- Go to Context Files tab
+- Click "Process Embeddings"
+- Wait for completion (shows document/chunk count)
 
-**UI Components**:
-- Gradient avatars (5 color combinations)
-- Card-based insights with hover effects
-- Streaming message updates
-- Typing indicator animations
-- Vote buttons with emoji icons
-- Responsive sidebar (280px width)
+### Model Selection
 
----
+Change default model in Admin > Settings:
+- **Claude** - Best quality, prompt caching
+- **Gemini** - Fastest, cheapest
+- **Grok** - Alternative model
+- **Perplexity** - Web-connected
 
-## 📊 Development Status
-
-### ✅ Fully Implemented (75% Complete)
-
-**Backend** (100%):
-- ✅ Flask app factory with blueprints
-- ✅ SQLite database (6 tables, raw SQL)
-- ✅ Email/PIN authentication system
-- ✅ Session management
-- ✅ Rate limiting
-- ✅ LLM service (Claude Sonnet 4.5)
-- ✅ Email service (PIN delivery)
-- ✅ All API routes functional
-
-**Frontend** (100%):
-- ✅ Telekom-inspired design system
-- ✅ Login page with two-step flow
-- ✅ Chat interface with SSE streaming
-- ✅ Thread management UI
-- ✅ Insights wall with voting
-- ✅ Responsive design
-- ✅ All JavaScript functionality
-
-**Features** (100%):
-- ✅ Multi-threaded chat
-- ✅ Real-time AI streaming
-- ✅ Share insights from chat
-- ✅ Voting system (3 votes/user)
-- ✅ Vote reveal logic
-- ✅ Gradient avatars
-- ✅ Error handling
-
-### ⚠️ Partially Implemented (25%)
-
-**Embedding System** (20%):
-- ✅ Service structure created
-- ✅ Placeholder `search_context()` method
-- ⚠️ Needs BAAI/bge-large-en-v1.5 model
-- ⚠️ Needs PDF/TXT parsing
-- ⚠️ Needs FAISS/Pinecone integration
-
-**Frontend Polish** (0%):
-- ⚠️ CSS/JS still inline (not extracted to files)
-- ⚠️ No dark mode
-- ⚠️ No markdown rendering in messages
-
-### ❌ Not Started (0%)
-
-- ❌ Docker configuration
-- ❌ Unit tests
-- ❌ Admin dashboard UI
-- ❌ Document management interface
-- ❌ Production deployment guide
+Users can also switch models per conversation using the dropdown in chat UI.
 
 ---
 
 ## 🚀 Deployment
 
-### Development (Current Setup)
+### Development
 
 ```bash
-# Start the application
 python run.py
-
-# Access at http://localhost:5000
-# PINs printed to console in dev mode
+# Runs on http://localhost:5000
+# Debug mode enabled
+# PINs print to console
 ```
 
-### Production (TODO)
+### Production with Gunicorn
 
 ```bash
-# Use Gunicorn
+# Install Gunicorn
+pip install gunicorn
+
+# Run with 4 workers
 gunicorn --bind 0.0.0.0:5000 --workers 4 run:app
 
-# Configure .env
+# Configure production settings in .env
 FLASK_ENV=production
 DEBUG=False
-SECRET_KEY=<strong-random-key>
-SMTP_USERNAME=<your-email>
-SMTP_PASSWORD=<app-password>
+SECRET_KEY=<strong-random-key-64-chars>
 ```
 
-### Docker (TODO)
+### Production Checklist
 
-Docker configuration not yet implemented. See `.claude/next_steps.md` for roadmap.
+- [ ] Change `SECRET_KEY` to random 64-character string
+- [ ] Set `DEBUG=False`
+- [ ] Configure SMTP for email PINs
+- [ ] Use strong `ADMIN_API_KEY`
+- [ ] Consider PostgreSQL instead of SQLite
+- [ ] Set up HTTPS/TLS
+- [ ] Configure firewall rules
+- [ ] Set up monitoring/logging
+- [ ] Regular database backups
 
 ---
 
-## 🔒 Security
+## 📊 Usage Statistics
 
-**Implemented**:
-- ✅ Rate limiting (200/min, 2000/hour)
-- ✅ Input sanitization (5000 char limit)
-- ✅ Session security (filesystem storage)
-- ✅ PIN expiration (15 minutes)
-- ✅ Ownership verification on all operations
-- ✅ Admin key authentication
+### Token Tracking
 
-**Recommended for Production**:
-- ⚠️ HTTPS enforcement
-- ⚠️ Migrate to PostgreSQL
-- ⚠️ Use Redis for sessions
-- ⚠️ Implement CORS headers
-- ⚠️ Add CSRF protection
+View token usage in Admin > Statistics:
+- **Tokens Sent** - Input + cache creation tokens
+- **Tokens Received** - Output tokens
+- **Cache Tokens Read** - Cached prompt tokens (Claude only)
+- **By Model** - Breakdown per model
 
----
+### Activity Logging
 
-## 📝 Environment Variables
-
-```bash
-# Flask
-FLASK_ENV=development               # development | production
-SECRET_KEY=dev-secret-key           # Change in production!
-DEBUG=True                          # False in production
-
-# Database
-DATABASE_URL=sqlite:///data/confai.db
-
-# LLM
-ANTHROPIC_API_KEY=sk-ant-...       # ✅ Required for chat
-GROK_API_KEY=                       # Optional
-PERPLEXITY_API_KEY=                 # Optional
-LLM_PROVIDER=claude                 # claude | grok | perplexity
-
-# Email (Optional in dev, PIN printed to console)
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=
-SMTP_PASSWORD=
-EMAIL_FROM=noreply@confai.com
-
-# Security
-ADMIN_API_KEY=admin-secret-key-change-this
-RATE_LIMIT_PER_MINUTE=5             # Login rate limit
-
-# App Settings
-MAX_USERS=150
-VOTES_PER_USER=3
-```
+Track user actions:
+- New conversation starts
+- Model switches
+- Insight sharing
+- Timestamp and user attribution
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Issue: 429 Too Many Requests
-**Solution**: Rate limits increased to 200/min, 2000/hour. Restart server if needed.
+### Embeddings Processing Fails
 
-### Issue: 404 Model Not Found
-**Solution**: Updated to `claude-sonnet-4-5-20250929`. Check `llm_service.py:71`
+**Solution**: Check that:
+1. Files are uploaded to `documents/context/`
+2. Files are .txt or .md format
+3. At least 2GB RAM available
+4. No errors in console
 
-### Issue: PINs not arriving via email
-**Solution**: In development, PINs are printed to console. Configure SMTP for production.
+### Model Not Responding
 
-### Issue: Database locked
-**Solution**: SQLite is single-threaded. For production, migrate to PostgreSQL.
+**Solution**: Verify:
+1. API key is correct in `.env`
+2. API key has credits/quota
+3. Check console for error messages
+4. Try switching to different model
+
+### Context Window Too Large
+
+**Solution**:
+1. Switch to Vector Embeddings mode
+2. Or disable some context files
+3. Check token count in Admin > Context Files
+
+### Database Locked
+
+**Solution**: SQLite is single-threaded
+1. For production, migrate to PostgreSQL
+2. Or reduce concurrent users
+3. Or use connection pooling
 
 ---
 
-## 📚 Documentation
+## 📚 API Reference
 
-- **SETUP.md** - Detailed setup and configuration guide
-- **.claude/project_overview.md** - Complete project documentation
-- **.claude/code_patterns.md** - Coding conventions and patterns
-- **.claude/api_reference.md** - Full API endpoint reference
-- **.claude/next_steps.md** - Development roadmap and TODOs
-- **.claude/file_reference.md** - File-by-file documentation
+### Authentication
+- `POST /login` - Request PIN (rate limited: 5/min)
+- `POST /verify` - Verify PIN and login (rate limited: 10/min)
+- `POST /logout` - End session
+
+### Chat
+- `GET /api/threads` - List user's threads
+- `POST /api/threads` - Create new thread
+- `DELETE /api/threads/<id>` - Delete thread
+- `POST /api/chat/stream` - Send message with SSE streaming
+
+### Insights
+- `GET /api/insights` - Get all insights with vote status
+- `POST /api/insights` - Share new insight
+- `POST /api/insights/<id>/vote` - Vote (upvote/downvote)
+
+### Admin (requires `X-Admin-Key` header)
+- `GET /api/admin/stats` - Get usage statistics
+- `GET /api/admin/context-files` - List context files
+- `POST /api/admin/context-files` - Upload context files
+- `POST /api/admin/embeddings/process` - Process embeddings
+- `GET /api/admin/embeddings/stats` - Get embedding stats
 
 ---
 
-## 🎓 Learning Resources
+## 🎓 Advanced Features
 
-**Design Inspiration**:
-- `Design Guide for the LLM-Based Chat.txt`
-- `Telekom-Inspired CSS Library for Chat App.txt`
+### Prompt Caching (Claude)
 
-**Project Requirements**:
-- `Project Documentation Simple LLM-Ba.txt`
+Claude automatically caches system prompts:
+- **Cache Creation** - First request pays full cost
+- **Cache Read** - Subsequent requests save 90% on cached content
+- **24-hour TTL** - Cache expires after 24 hours
+- **Stats Tracked** - View in Admin > Statistics
+
+### Semantic Search (Vector Embeddings)
+
+When in Vector Embeddings mode:
+1. Documents chunked into 512-char segments (128-char overlap)
+2. Each chunk converted to vector embedding
+3. User query converted to embedding
+4. Top 5 most similar chunks retrieved
+5. Only relevant chunks sent to AI
+
+**Benefits:**
+- Handles large document collections
+- Finds semantic matches (not just keywords)
+- Cost-effective (only send relevant content)
+- Scalable to millions of documents
+
+---
+
+## 📖 Documentation
+
+- **README.md** - This file (overview and quick start)
+- **GETTING_STARTED.md** - Detailed installation guide
+- **requirements.txt** - Python dependencies with versions
+
+---
+
+## 🤝 Support
+
+For issues or questions:
+1. Check this README
+2. Check GETTING_STARTED.md
+3. Review console output for errors
+4. Contact administrator
 
 ---
 
 ## 📄 License
 
-Proprietary - For conference use only
-
----
-
-## 🤝 Contributing
-
-This is a private project. For questions or issues, contact the administrator.
+Proprietary - For internal conference use only
 
 ---
 
 ## ✨ Credits
 
-**Built with**:
+**Built with:**
 - Claude Sonnet 4.5 (Anthropic)
+- Gemini 2.0 Flash (Google)
 - Flask Web Framework
-- Telekom Design System
+- ChromaDB Vector Database
+- Sentence Transformers
 
-**Created for**: High-level conference attendees
+**Created for:** Conference attendees and knowledge sharing
 
 ---
 
-**🎉 Ready to Use - Start chatting with AI today!**
+**🎉 Production Ready - Start leveraging AI for conference insights today!**
