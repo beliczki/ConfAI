@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCharacterCounter();
     setupWelcomeMessageCounter();
     setupLLMProviderChange();
+    setupContextModeChange();
 
     console.log('Admin dashboard initialized');
 });
@@ -823,6 +824,50 @@ function setupLLMProviderChange() {
     // This function is now just a placeholder
     // Settings are only saved when the Save Settings button is clicked
     console.log('LLM provider dropdown initialized');
+}
+
+/**
+ * Setup context mode change handler
+ */
+function setupContextModeChange() {
+    const contextModeSelect = document.getElementById('context-mode');
+    if (contextModeSelect) {
+        contextModeSelect.addEventListener('change', async function() {
+            const newMode = this.value;
+            console.log('Context mode changed to:', newMode);
+
+            try {
+                const response = await fetch('/api/admin/context-mode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ mode: newMode })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save context mode');
+                }
+
+                const data = await response.json();
+                console.log('Context mode saved:', data);
+
+                // Update the UI to reflect the new mode
+                updateContextModeBanner();
+
+                // Show brief success feedback
+                const modeName = newMode === 'context_window' ? 'Context Window' : 'Vector Embeddings';
+                console.log(`Context mode switched to: ${modeName}`);
+
+            } catch (error) {
+                console.error('Error saving context mode:', error);
+                alert('Failed to save context mode. Please try again.');
+                // Revert the select to the previous value
+                loadContextModeSetting();
+            }
+        });
+        console.log('Context mode change handler initialized');
+    }
 }
 
 /**
