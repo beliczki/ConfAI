@@ -18,13 +18,9 @@
             <h1>Admin Dashboard</h1>
         </div>
         <div class="admin-tabs">
-            <button class="tab-btn active" onclick="switchTab('system-prompt')">
-                <i data-lucide="message-square"></i>
-                <span>System Prompt</span>
-            </button>
-            <button class="tab-btn" onclick="switchTab('context-files')">
+            <button class="tab-btn active" onclick="switchTab('context-files')">
                 <i data-lucide="folder-open"></i>
-                <span>Context Files</span>
+                <span>Context</span>
             </button>
             <button class="tab-btn" onclick="switchTab('insights')">
                 <i data-lucide="lightbulb"></i>
@@ -41,64 +37,8 @@
         </div>
     </div>
 
-    <!-- Tab: System Prompt -->
-    <div id="system-prompt" class="tab-content active">
-        <div class="section-card">
-            <h2>System Prompt Configuration</h2>
-            <p class="help-text">This prompt is sent to the AI with every conversation. Use it to define the AI's personality, knowledge, and behavior.</p>
-
-            <div class="form-group">
-                <label for="current-prompt">Current System Prompt</label>
-                <textarea id="current-prompt" rows="12" placeholder="Loading..."></textarea>
-                <div class="char-count">
-                    <span id="prompt-chars">0</span> characters
-                </div>
-            </div>
-
-            <div class="button-group">
-                <button class="btn btn-primary" onclick="saveSystemPrompt()">
-                    <i data-lucide="save"></i>
-                    <span>Save Changes</span>
-                </button>
-                <button class="btn btn-secondary" onclick="resetSystemPrompt()">
-                    <i data-lucide="rotate-ccw"></i>
-                    <span>Reset to Default</span>
-                </button>
-                <button class="btn btn-info" onclick="testSystemPrompt()">
-                    <i data-lucide="flask-conical"></i>
-                    <span>Test Prompt</span>
-                </button>
-            </div>
-
-            <div id="prompt-status" class="status-message"></div>
-        </div>
-
-        <!-- Quick Templates -->
-        <div class="section-card">
-            <h3>Quick Templates</h3>
-            <div class="template-grid">
-                <button class="template-btn" onclick="loadTemplate('conference')">
-                    <i data-lucide="presentation"></i>
-                    <span>Conference Expert</span>
-                </button>
-                <button class="template-btn" onclick="loadTemplate('helpful')">
-                    <i data-lucide="heart-handshake"></i>
-                    <span>Helpful Assistant</span>
-                </button>
-                <button class="template-btn" onclick="loadTemplate('concise')">
-                    <i data-lucide="zap"></i>
-                    <span>Concise Responder</span>
-                </button>
-                <button class="template-btn" onclick="loadTemplate('creative')">
-                    <i data-lucide="sparkles"></i>
-                    <span>Creative Thinker</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tab: Context Files -->
-    <div id="context-files" class="tab-content">
+    <!-- Tab: Context -->
+    <div id="context-files" class="tab-content active">
         <!-- Context Mode Info Banner -->
         <div class="section-card" id="context-mode-banner" style="background: #f0f9ff; border-left: 4px solid #0ea5e9; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -183,6 +123,60 @@
                             <p>Select a file to preview its content</p>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Prompts & Templates Section -->
+        <div class="section-card">
+            <h2><i data-lucide="message-square"></i> System Prompts & Templates</h2>
+            <p class="help-text">Configure the system prompt sent to the AI with every conversation, or use quick templates.</p>
+
+            <div class="form-group">
+                <label for="current-prompt">Current System Prompt</label>
+                <textarea id="current-prompt" rows="12" placeholder="Loading..."></textarea>
+                <div class="char-count">
+                    <span id="prompt-chars">0</span> characters
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="saveSystemPrompt()">
+                    <i data-lucide="save"></i>
+                    <span>Save Changes</span>
+                </button>
+                <button class="btn btn-secondary" onclick="resetSystemPrompt()">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span>Reset to Default</span>
+                </button>
+                <button class="btn btn-info" onclick="testSystemPrompt()">
+                    <i data-lucide="flask-conical"></i>
+                    <span>Test Prompt</span>
+                </button>
+            </div>
+
+            <div id="prompt-status" class="status-message"></div>
+
+            <!-- Quick Templates -->
+            <div style="margin-top: 30px;">
+                <h3>Quick Templates</h3>
+                <div class="template-grid">
+                    <button class="template-btn" onclick="loadTemplate('conference')">
+                        <i data-lucide="presentation"></i>
+                        <span>Conference Expert</span>
+                    </button>
+                    <button class="template-btn" onclick="loadTemplate('helpful')">
+                        <i data-lucide="heart-handshake"></i>
+                        <span>Helpful Assistant</span>
+                    </button>
+                    <button class="template-btn" onclick="loadTemplate('concise')">
+                        <i data-lucide="zap"></i>
+                        <span>Concise Responder</span>
+                    </button>
+                    <button class="template-btn" onclick="loadTemplate('creative')">
+                        <i data-lucide="sparkles"></i>
+                        <span>Creative Thinker</span>
+                    </button>
                 </div>
             </div>
         </div>
