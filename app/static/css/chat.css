@@ -1256,23 +1256,28 @@ button:focus-visible,
         z-index: 1000;
     }
 
-    /* Main chat takes full width */
+    /* Main chat takes full width with left margin for collapsed sidebar */
     .main-chat {
-        width: 100%;
-        margin-left: 0;
+        width: calc(100% - 60px);
+        margin-left: 60px;
     }
-    
-    /* Avatar button - hide name and chevron */
+
+    /* Avatar button - hide name and chevron, show only avatar circle */
     .avatar-dropdown-trigger span {
-        display: none;
+        display: none !important;
     }
-    
+
     .avatar-dropdown-trigger i {
-        display: none;
+        display: none !important;
     }
-    
+
     .avatar-dropdown-trigger {
         gap: 0;
         padding: 0;
+    }
+
+    /* Ensure avatar circle with initials stays visible */
+    .avatar-dropdown-trigger .user-avatar {
+        display: flex !important;
     }
 }
