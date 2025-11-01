@@ -1271,6 +1271,10 @@ button:focus-visible,
         display: none !important;
     }
 
+    .avatar-dropdown-trigger svg[data-lucide="chevron-down"] {
+        display: none !important;
+    }
+
     .avatar-dropdown-trigger {
         gap: 0;
         padding: 8px;
