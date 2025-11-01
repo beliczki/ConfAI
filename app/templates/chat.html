@@ -50,7 +50,7 @@
 
                     <div class="avatar-dropdown-menu" id="avatar-dropdown">
                         <!-- Votes and Shares Section -->
-                        <div class="dropdown-section" id="votes-shares-section" style="display: none;">
+                        <div class="dropdown-section" id="votes-shares-section">
                             <button class="dropdown-counter-btn" id="votes-header" onclick="showMyVotes()">
                                 <i data-lucide="thumbs-up"></i>
                                 <span class="votes-label">Votes casted:</span>
@@ -63,7 +63,7 @@
                             </button>
                         </div>
 
-                        <div class="dropdown-divider" id="votes-shares-divider" style="display: none;"></div>
+                        <div class="dropdown-divider" id="votes-shares-divider"></div>
 
                         <!-- Model Selector Section -->
                         <div class="dropdown-section">
@@ -181,8 +181,6 @@
     function showChat() {
         document.getElementById('chat-content').style.display = 'flex';
         document.getElementById('insights-content').style.display = 'none';
-        document.getElementById('votes-shares-section').style.display = 'none';
-        document.getElementById('votes-shares-divider').style.display = 'none';
         document.getElementById('main-title').textContent = currentThreadId ?
             document.getElementById('thread-title')?.textContent || 'Select or create a chat' :
             'Select or create a chat';
@@ -193,14 +191,6 @@
         console.log('showInsights called');
         document.getElementById('chat-content').style.display = 'none';
         document.getElementById('insights-content').style.display = 'block';
-
-        const votesSharesSection = document.getElementById('votes-shares-section');
-        const votesSharesDivider = document.getElementById('votes-shares-divider');
-        console.log('Votes shares section element:', votesSharesSection);
-        votesSharesSection.style.display = 'block';
-        votesSharesDivider.style.display = 'block';
-        console.log('Set votes shares section display to block');
-
         document.getElementById('main-title').textContent = 'Insights Wall';
 
         // Load insights when switching to insights view
