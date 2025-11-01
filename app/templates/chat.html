@@ -11,9 +11,13 @@
 {% block content %}
 <div class="chat-container">
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+            <i data-lucide="chevron-left"></i>
+        </button>
         <div class="sidebar-header">
             <img src="{{ url_for('static', filename='img/telekom-confai-white.png') }}" alt="ConfAI" class="sidebar-logo">
+            <img src="{{ url_for('static', filename='img/telekom-confai-favicon.png') }}" alt="ConfAI" class="sidebar-logo-collapsed">
             <p>Conference Intelligence</p>
             <a href="#" class="insights-wall-link" onclick="showInsights(); return false;">
                 <i data-lucide="lightbulb"></i>
@@ -158,6 +162,17 @@
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script src="{{ url_for('static', filename='js/insights.js') }}"></script>
 <script>
+    // Sidebar toggle function
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('collapsed');
+
+        // Reinitialize icons after DOM changes
+        setTimeout(() => {
+            lucide.createIcons();
+        }, 300);
+    }
+
     // View switcher functions
     function showChat() {
         document.getElementById('chat-content').style.display = 'flex';
