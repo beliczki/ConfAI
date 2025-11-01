@@ -217,11 +217,13 @@
         }
     }
 
-    // Initialize sidebar state - collapse by default on mobile
+    // Initialize sidebar state - collapse by default on mobile, open on desktop
     function initializeSidebar() {
+        const sidebar = document.getElementById('sidebar');
         if (window.innerWidth <= 1080) {
-            const sidebar = document.getElementById('sidebar');
             sidebar.classList.add('collapsed');
+        } else {
+            sidebar.classList.remove('collapsed');
         }
     }
 
@@ -232,9 +234,13 @@
     window.addEventListener('resize', function() {
         const sidebar = document.getElementById('sidebar');
         if (window.innerWidth <= 1080) {
+            // Mobile view - collapse sidebar
             if (!sidebar.classList.contains('collapsed')) {
                 sidebar.classList.add('collapsed');
             }
+        } else {
+            // Desktop view - expand sidebar
+            sidebar.classList.remove('collapsed');
         }
     });
 
