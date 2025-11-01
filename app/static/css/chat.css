@@ -87,6 +87,7 @@ button:focus-visible,
 .sidebar.collapsed .sidebar-toggle {
     justify-content: center;
     margin-bottom: 0;
+    margin-left: 10px;
 }
 
 .sidebar-header {
@@ -262,6 +263,10 @@ button:focus-visible,
     padding: 12px 0;
 }
 
+.sidebar.collapsed .threads-empty-state {
+    display: none;
+}
+
 .thread-item:hover {
     background: rgba(255,255,255,0.1);
 }
@@ -376,6 +381,9 @@ button:focus-visible,
     display: flex;
     flex-direction: column;
     min-height: 0;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+    overflow: hidden;
 }
 
 /* Insights Content */
@@ -384,6 +392,9 @@ button:focus-visible,
     display: flex;
     flex-direction: column;
     min-height: 0;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+    overflow: hidden;
 }
 
 .votes-info-bar {

@@ -252,7 +252,7 @@ async function loadThreads() {
 function renderThreads(threads) {
     const list = document.getElementById('threads-list');
     if (threads.length === 0) {
-        list.innerHTML = '<div style="padding: 20px; text-align: center; opacity: 0.7; font-size: 14px;">No chats yet</div>';
+        list.innerHTML = '<div class="threads-empty-state" style="padding: 20px; text-align: center; opacity: 0.7; font-size: 14px;">No chats yet</div>';
         return;
     }
 
