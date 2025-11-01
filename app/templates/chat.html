@@ -217,6 +217,27 @@
         }
     }
 
+    // Initialize sidebar state - collapse by default on mobile
+    function initializeSidebar() {
+        if (window.innerWidth <= 1080) {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.add('collapsed');
+        }
+    }
+
+    // Run on page load
+    initializeSidebar();
+
+    // Re-check on window resize
+    window.addEventListener('resize', function() {
+        const sidebar = document.getElementById('sidebar');
+        if (window.innerWidth <= 1080) {
+            if (!sidebar.classList.contains('collapsed')) {
+                sidebar.classList.add('collapsed');
+            }
+        }
+    });
+
     // Initialize Lucide icons
     lucide.createIcons();
 </script>

@@ -1247,7 +1247,7 @@ button:focus-visible,
 
 /* Responsive Design */
 @media (max-width: 1080px) {
-    /* Sidebar overlay mode */
+    /* Sidebar overlay mode - default to collapsed */
     .sidebar {
         position: fixed;
         top: 0;
@@ -1262,22 +1262,22 @@ button:focus-visible,
         margin-left: 60px;
     }
 
-    /* Avatar button - hide name and chevron, show only avatar circle */
-    .avatar-dropdown-trigger span {
+    /* Avatar button - hide name and chevron icon, keep padding */
+    .avatar-dropdown-trigger #user-name {
         display: none !important;
     }
 
-    .avatar-dropdown-trigger i {
+    .avatar-dropdown-trigger i[data-lucide="chevron-down"] {
         display: none !important;
     }
 
     .avatar-dropdown-trigger {
         gap: 0;
-        padding: 0;
+        padding: 8px;
     }
 
     /* Ensure avatar circle with initials stays visible */
-    .avatar-dropdown-trigger .user-avatar {
+    .user-avatar {
         display: flex !important;
     }
 }
