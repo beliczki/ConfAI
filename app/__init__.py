@@ -43,11 +43,13 @@ def create_app(config_name='development'):
     from app.routes.chat import chat_bp
     from app.routes.insights import insights_bp
     from app.routes.admin import admin_bp
+    from app.routes.designlanguage import designlanguage_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(insights_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(designlanguage_bp)
 
     # Error handlers
     @app.errorhandler(404)

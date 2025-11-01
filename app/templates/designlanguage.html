@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Language - ConfAI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/designlanguage.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="design-language-container">
+        <header class="dl-header">
+            <img src="{{ url_for('static', filename='img/telekom-confai-white.png') }}" alt="ConfAI Logo" class="dl-logo">
+            <h1>ConfAI Design Language</h1>
+            <p>Comprehensive documentation of all design elements and components</p>
+        </header>
+
+        <nav class="dl-nav">
+            <a href="#colors"><i data-lucide="palette"></i>Colors & Gradients</a>
+            <a href="#buttons"><i data-lucide="mouse-pointer-click"></i>Buttons</a>
+            <a href="#avatars"><i data-lucide="user-circle"></i>Avatars</a>
+            <a href="#tabs"><i data-lucide="layout"></i>Tabs</a>
+            <a href="#indicators"><i data-lucide="activity"></i>Indicators</a>
+            <a href="#cards"><i data-lucide="square"></i>Cards</a>
+            <a href="#forms"><i data-lucide="form-input"></i>Forms</a>
+        </nav>
+
+        <main class="dl-content">
+            <!-- COLORS & GRADIENTS -->
+            <section id="colors" class="dl-section">
+                <h2>Colors & Gradients</h2>
+                <div class="dl-card">
+                    <h3>Colors</h3>
+                    <div class="color-grid">
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #E20074;"></div>
+                        <div class="color-info">
+                            <strong>Primary</strong>
+                            <code>#E20074</code>
+                            <span class="usage">Main brand color, buttons, links</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #00A0E9;"></div>
+                        <div class="color-info">
+                            <strong>Secondary</strong>
+                            <code>#00A0E9</code>
+                            <span class="usage">Accents, secondary actions</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #0a0a0a;"></div>
+                        <div class="color-info">
+                            <strong>Background</strong>
+                            <code>#0a0a0a</code>
+                            <span class="usage">Main background</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #1a1a1a;"></div>
+                        <div class="color-info">
+                            <strong>Surface</strong>
+                            <code>#1a1a1a</code>
+                            <span class="usage">Cards, panels, elevated surfaces</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #2a2a2a;"></div>
+                        <div class="color-info">
+                            <strong>Surface Alt</strong>
+                            <code>#2a2a2a</code>
+                            <span class="usage">Hover states, input backgrounds</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #3a3a3a;"></div>
+                        <div class="color-info">
+                            <strong>Border</strong>
+                            <code>#3a3a3a</code>
+                            <span class="usage">Borders, dividers</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #e0e0e0;"></div>
+                        <div class="color-info">
+                            <strong>Text Primary</strong>
+                            <code>#e0e0e0</code>
+                            <span class="usage">Main text color</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #999;"></div>
+                        <div class="color-info">
+                            <strong>Text Secondary</strong>
+                            <code>#999</code>
+                            <span class="usage">Muted text, timestamps</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #10b981;"></div>
+                        <div class="color-info">
+                            <strong>Success</strong>
+                            <code>#10b981</code>
+                            <span class="usage">Success states, positive actions</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #ef4444;"></div>
+                        <div class="color-info">
+                            <strong>Danger</strong>
+                            <code>#ef4444</code>
+                            <span class="usage">Destructive actions, errors</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: #ffa726;"></div>
+                        <div class="color-info">
+                            <strong>Warning</strong>
+                            <code>#ffa726</code>
+                            <span class="usage">Warnings, caution states</span>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>AI Model Gradients</h3>
+                    <div class="color-grid">
+                    <div class="color-item">
+                        <div class="color-circle" style="background: linear-gradient(135deg, #D2691E, #CC785C);"></div>
+                        <div class="color-info">
+                            <strong>Claude</strong>
+                            <code>#D2691E → #CC785C</code>
+                            <span class="usage">Claude AI avatar</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: linear-gradient(135deg, #001E50, #00A0E9);"></div>
+                        <div class="color-info">
+                            <strong>Gemini</strong>
+                            <code>#001E50 → #00A0E9</code>
+                            <span class="usage">Gemini AI avatar</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: linear-gradient(135deg, #4A5568, #718096);"></div>
+                        <div class="color-info">
+                            <strong>Grok</strong>
+                            <code>#4A5568 → #718096</code>
+                            <span class="usage">Grok AI avatar</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: linear-gradient(135deg, #0D9488, #14B8A6);"></div>
+                        <div class="color-info">
+                            <strong>Perplexity</strong>
+                            <code>#0D9488 → #14B8A6</code>
+                            <span class="usage">Perplexity AI avatar</span>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>Dialog Icon Gradients</h3>
+                    <div class="color-grid">
+                    <div class="color-item">
+                        <div class="color-circle" style="background: linear-gradient(135deg, #667eea, #764ba2);"></div>
+                        <div class="color-info">
+                            <strong>Info</strong>
+                            <code>#667eea → #764ba2</code>
+                            <span class="usage">Info dialog icons</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: linear-gradient(135deg, #00c853, #00897b);"></div>
+                        <div class="color-info">
+                            <strong>Success</strong>
+                            <code>#00c853 → #00897b</code>
+                            <span class="usage">Success dialog icons</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f);"></div>
+                        <div class="color-info">
+                            <strong>Error</strong>
+                            <code>#ff6b6b → #ee5a6f</code>
+                            <span class="usage">Error dialog icons</span>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-circle" style="background: linear-gradient(135deg, #ffa726, #fb8c00);"></div>
+                        <div class="color-info">
+                            <strong>Warning</strong>
+                            <code>#ffa726 → #fb8c00</code>
+                            <span class="usage">Warning dialog icons</span>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BUTTONS -->
+            <section id="buttons" class="dl-section">
+                <h2>Buttons</h2>
+                <div class="dl-card">
+                    <h3>Sidebar Buttons</h3>
+                    <div class="component-showcase">
+                        <button class="dl-btn-insights"><i data-lucide="lightbulb"></i><span>Insights Wall</span></button>
+                        <button class="dl-btn-new-chat"><i data-lucide="plus"></i><span>New Chat</span></button>
+                    </div>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>Primary Button</h3>
+                    <div class="component-showcase">
+                        <button class="dl-btn-primary">Primary Button</button>
+                        <button class="dl-btn-primary" disabled>Disabled</button>
+                    </div>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>Danger Button</h3>
+                    <div class="component-showcase">
+                        <button class="dl-btn-danger"><i data-lucide="trash-2"></i><span>Delete</span></button>
+                        <button class="dl-btn-danger"><i data-lucide="x-circle"></i><span>Revoke</span></button>
+                    </div>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>Secondary Button</h3>
+                    <div class="component-showcase">
+                        <button class="dl-btn-secondary">Cancel</button>
+                    </div>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>Icon Buttons</h3>
+                    <div class="component-showcase">
+                        <button class="dl-btn-icon"><i data-lucide="settings"></i></button>
+                        <button class="dl-btn-icon"><i data-lucide="user"></i></button>
+                        <button class="dl-btn-icon"><i data-lucide="log-out"></i></button>
+                    </div>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>Vote/Share Counters</h3>
+                    <div class="component-showcase">
+                        <div class="dl-counter">
+                            <i data-lucide="thumbs-up"></i>
+                            <span class="count">3/3</span>
+                        </div>
+                        <div class="dl-counter">
+                            <i data-lucide="share-2"></i>
+                            <span class="count">2/3</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AVATARS -->
+            <section id="avatars" class="dl-section">
+                <h2>Avatars</h2>
+                <div class="dl-card">
+                    <h3>AI Model Avatars</h3>
+                    <div class="component-showcase">
+                        <div class="dl-avatar" style="background: linear-gradient(135deg, #D2691E, #CC785C);"><span>AI</span></div>
+                        <div class="dl-avatar" style="background: linear-gradient(135deg, #001E50, #00A0E9);"><span>AI</span></div>
+                        <div class="dl-avatar" style="background: linear-gradient(135deg, #4A5568, #718096);"><span>AI</span></div>
+                        <div class="dl-avatar" style="background: linear-gradient(135deg, #0D9488, #14B8A6);"><span>AI</span></div>
+                    </div>
+                    <p class="section-description">Claude (Dark Orange) | Gemini (Blue) | Grok (Grey) | Perplexity (Teal)</p>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>User Avatar</h3>
+                    <div class="component-showcase">
+                        <div class="dl-avatar" style="background: linear-gradient(135deg, #E20074, #00A0E9);"><span>U</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TABS -->
+            <section id="tabs" class="dl-section">
+                <h2>Tabs</h2>
+                <div class="dl-card">
+                    <div class="component-showcase">
+                        <div class="dl-tabs">
+                            <button class="dl-tab active">Chat</button>
+                            <button class="dl-tab">Insights</button>
+                            <button class="dl-tab">Settings</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- INDICATORS -->
+            <section id="indicators" class="dl-section">
+                <h2>Status Indicators</h2>
+                <div class="dl-card">
+                    <h3>Shared Status</h3>
+                    <div class="component-showcase">
+                        <div class="dl-status-indicator">
+                            <i data-lucide="check-circle"></i>
+                            <span>Shared</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CARDS -->
+            <section id="cards" class="dl-section">
+                <h2>Cards</h2>
+                <div class="dl-card">
+                    <h3>Insight Card</h3>
+                    <div class="component-showcase">
+                        <div class="dl-card">
+                            <div class="dl-card-date">Dec 15, 2:30 PM</div>
+                            <div class="dl-card-content">
+                                <h4>Sample Insight</h4>
+                                <p>This is an example of an insight card with content.</p>
+                            </div>
+                            <div class="dl-card-footer">
+                                <button class="dl-btn-primary"><i data-lucide="sparkles"></i><span>Remix</span></button>
+                                <div class="vote-controls">
+                                    <button class="vote-btn">👍</button>
+                                    <span class="vote-count">5</span>
+                                    <button class="vote-btn">👎</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FORMS -->
+            <section id="forms" class="dl-section">
+                <h2>Form Elements</h2>
+                <div class="dl-card">
+                    <h3>Input Fields</h3>
+                    <div class="component-showcase">
+                        <input type="text" class="dl-input" placeholder="Enter text...">
+                        <textarea class="dl-input" placeholder="Enter longer text..." rows="3"></textarea>
+                    </div>
+
+                    <div class="dl-divider"></div>
+
+                    <h3>Dropdown/Select</h3>
+                    <div class="component-showcase">
+                        <select class="dl-select">
+                            <option>Option 1</option>
+                            <option>Option 2</option>
+                            <option>Option 3</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
