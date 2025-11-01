@@ -632,6 +632,56 @@ button:focus-visible,
     font-size: 14px;
 }
 
+/* Dropdown Counter Buttons */
+.dropdown-counter-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.dropdown-counter-btn:last-child {
+    margin-bottom: 0;
+}
+
+.dropdown-counter-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-counter-btn i {
+    width: 16px;
+    height: 16px;
+    color: var(--primary);
+}
+
+.dropdown-counter-btn .votes-label {
+    color: #e0e0e0;
+    font-weight: 500;
+    font-size: 14px;
+    flex: 1;
+    text-align: left;
+    margin-left: 8px;
+}
+
+.dropdown-counter-btn #votes-count-header,
+.dropdown-counter-btn #shares-count-header {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 14px;
+}
+
 .user-avatar {
     width: 32px;
     height: 32px;

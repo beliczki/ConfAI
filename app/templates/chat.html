@@ -40,17 +40,6 @@
         <div class="chat-header">
             <h1 id="main-title">Select or create a chat</h1>
             <div class="user-info">
-                <button class="insight-counter-btn" id="votes-header" style="display: none;" onclick="showMyVotes()">
-                    <i data-lucide="thumbs-up"></i>
-                    <span class="votes-label">Votes casted:</span>
-                    <span id="votes-count-header">0/3</span>
-                </button>
-                <button class="insight-counter-btn" id="shares-header" style="display: none;" onclick="showMyShares()">
-                    <i data-lucide="share-2"></i>
-                    <span class="votes-label">Shares:</span>
-                    <span id="shares-count-header">0/3</span>
-                </button>
-
                 <!-- Avatar Dropdown -->
                 <div class="avatar-dropdown-container">
                     <button class="avatar-dropdown-trigger" onclick="toggleAvatarDropdown(event)">
@@ -60,6 +49,22 @@
                     </button>
 
                     <div class="avatar-dropdown-menu" id="avatar-dropdown">
+                        <!-- Votes and Shares Section -->
+                        <div class="dropdown-section" id="votes-shares-section" style="display: none;">
+                            <button class="dropdown-counter-btn" id="votes-header" onclick="showMyVotes()">
+                                <i data-lucide="thumbs-up"></i>
+                                <span class="votes-label">Votes casted:</span>
+                                <span id="votes-count-header">0/3</span>
+                            </button>
+                            <button class="dropdown-counter-btn" id="shares-header" onclick="showMyShares()">
+                                <i data-lucide="share-2"></i>
+                                <span class="votes-label">Shares:</span>
+                                <span id="shares-count-header">0/3</span>
+                            </button>
+                        </div>
+
+                        <div class="dropdown-divider" id="votes-shares-divider" style="display: none;"></div>
+
                         <!-- Model Selector Section -->
                         <div class="dropdown-section">
                             <div class="dropdown-section-label">
@@ -176,7 +181,8 @@
     function showChat() {
         document.getElementById('chat-content').style.display = 'flex';
         document.getElementById('insights-content').style.display = 'none';
-        document.getElementById('votes-header').style.display = 'none';
+        document.getElementById('votes-shares-section').style.display = 'none';
+        document.getElementById('votes-shares-divider').style.display = 'none';
         document.getElementById('main-title').textContent = currentThreadId ?
             document.getElementById('thread-title')?.textContent || 'Select or create a chat' :
             'Select or create a chat';
@@ -188,12 +194,12 @@
         document.getElementById('chat-content').style.display = 'none';
         document.getElementById('insights-content').style.display = 'block';
 
-        const votesHeader = document.getElementById('votes-header');
-        const sharesHeader = document.getElementById('shares-header');
-        console.log('Votes header element:', votesHeader);
-        votesHeader.style.display = 'flex';
-        sharesHeader.style.display = 'flex';
-        console.log('Set votes header display to flex');
+        const votesSharesSection = document.getElementById('votes-shares-section');
+        const votesSharesDivider = document.getElementById('votes-shares-divider');
+        console.log('Votes shares section element:', votesSharesSection);
+        votesSharesSection.style.display = 'block';
+        votesSharesDivider.style.display = 'block';
+        console.log('Set votes shares section display to block');
 
         document.getElementById('main-title').textContent = 'Insights Wall';
 
