@@ -87,11 +87,15 @@
             margin-top: 8px;
         }
     </style>
+    <!-- Dialog System CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dialog.css') }}">
     {% block styles %}{% endblock %}
 </head>
 <body>
     {% block content %}{% endblock %}
 
+    <!-- Dialog System JS -->
+    <script src="{{ url_for('static', filename='js/dialog.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

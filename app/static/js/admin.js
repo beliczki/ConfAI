@@ -158,8 +158,11 @@ async function saveSystemPrompt() {
 /**
  * Reset system prompt to default
  */
-function resetSystemPrompt() {
-    if (!confirm('Are you sure you want to reset the system prompt to default? This will discard any custom changes.')) {
+async function resetSystemPrompt() {
+    if (!await showConfirm('Are you sure you want to reset the system prompt to default? This will discard any custom changes.', {
+        confirmText: 'Reset',
+        confirmStyle: 'danger'
+    })) {
         return;
     }
 
@@ -185,7 +188,7 @@ function testSystemPrompt() {
     }
 
     // For now, just show a preview
-    alert('System Prompt Preview:\n\n' + prompt + '\n\n(Testing functionality will be implemented in a future update)');
+    showDialog('System Prompt Preview:\n\n' + prompt + '\n\n(Testing functionality will be implemented in a future update)', 'info');
 }
 
 /**
@@ -259,12 +262,12 @@ async function handleFileSelect(files) {
         const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
 
         if (!allowedExtensions.includes(ext)) {
-            alert(`File "${file.name}" has an invalid extension. Only .txt and .md files are allowed.`);
+            showDialog(`File "${file.name}" has an invalid extension. Only .txt and .md files are allowed.`, 'error');
             return;
         }
 
         if (file.size > maxSize) {
-            alert(`File "${file.name}" is too large. Maximum size is 500KB.`);
+            showDialog(`File "${file.name}" is too large. Maximum size is 500KB.`, 'error');
             return;
         }
     }
@@ -294,7 +297,7 @@ async function handleFileSelect(files) {
 
     } catch (error) {
         console.error('Error uploading files:', error);
-        alert('Failed to upload files. Please try again.');
+        showDialog('Failed to upload files. Please try again.', 'error');
     }
 }
 
@@ -512,7 +515,10 @@ async function deleteSelectedFile() {
  * Delete a context file
  */
 async function deleteContextFile(filename) {
-    if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+    if (!await showConfirm(`Are you sure you want to delete "${filename}"?`, {
+        confirmText: 'Delete',
+        confirmStyle: 'danger'
+    })) {
         return;
     }
 
@@ -531,7 +537,7 @@ async function deleteContextFile(filename) {
 
     } catch (error) {
         console.error('Error deleting file:', error);
-        alert('Failed to delete file. Please try again.');
+        showDialog('Failed to delete file. Please try again.', 'error');
     }
 }
 
@@ -1087,7 +1093,10 @@ function renderAdminInsights(insights) {
  * Delete an insight
  */
 async function deleteInsight(insightId) {
-    if (!confirm('Are you sure you want to delete this insight? This action cannot be undone.')) {
+    if (!await showConfirm('Are you sure you want to delete this insight? This action cannot be undone.', {
+        confirmText: 'Delete',
+        confirmStyle: 'danger'
+    })) {
         return;
     }
 
@@ -1112,13 +1121,13 @@ async function deleteInsight(insightId) {
                 listEl.style.display = 'none';
             }
 
-            alert('Insight deleted successfully');
+            showDialog('Insight deleted successfully', 'success');
         } else {
-            alert(`Error: ${data.error}`);
+            showDialog(`Error: ${data.error}`, 'error');
         }
     } catch (error) {
         console.error('Error deleting insight:', error);
-        alert('Failed to delete insight');
+        showDialog('Failed to delete insight', 'error');
     }
 }
 
@@ -1164,7 +1173,10 @@ async function deleteFileByIndex(index) {
     const file = currentFiles[index];
     if (!file) return;
 
-    if (!confirm('Delete ' + file.name + '?')) return;
+    if (!await showConfirm('Delete ' + file.name + '?', {
+        confirmText: 'Delete',
+        confirmStyle: 'danger'
+    })) return;
 
     await deleteContextFile(file.name);
 
@@ -1217,7 +1229,7 @@ async function toggleFileEnabled(index) {
 
     } catch (error) {
         console.error('Error toggling file:', error);
-        alert('Failed to toggle file status');
+        showDialog('Failed to toggle file status', 'error');
     }
 }
 

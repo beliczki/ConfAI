@@ -1,5 +1,5 @@
 .insights-header {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    background: var(--primary);
     color: white;
     padding: 30px 20px;
     text-align: center;
@@ -259,9 +259,9 @@
 }
 
 .revoke-btn {
-    background: #ef4444;
+    background: none;
     border: 2px solid #ef4444;
-    color: white;
+    color: #ef4444;
     border-radius: 8px;
     padding: 8px 16px;
     cursor: pointer;
@@ -274,8 +274,9 @@
 }
 
 .revoke-btn:hover {
-    background: #dc2626;
-    border-color: #dc2626;
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
 }
 
 .vote-count {

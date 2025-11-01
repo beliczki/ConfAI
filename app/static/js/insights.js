@@ -164,14 +164,14 @@ function createInsightCard(insight) {
         // User is viewing their votes - show revoke button
         const revokeVoteBtn = document.createElement('button');
         revokeVoteBtn.className = 'revoke-btn';
-        revokeVoteBtn.textContent = 'Revoke Vote';
+        revokeVoteBtn.innerHTML = '<i data-lucide="x-circle"></i><span>Revoke Vote</span>';
         revokeVoteBtn.onclick = () => handleVote(insight.id, insight.user_vote); // Clicking same vote removes it
         voteControls.appendChild(revokeVoteBtn);
     } else if (currentFilter === 'shares' && insight.is_owner) {
         // User is viewing their shares - show unshare button
         const unshareBtn = document.createElement('button');
         unshareBtn.className = 'revoke-btn';
-        unshareBtn.textContent = 'Unshare';
+        unshareBtn.innerHTML = '<i data-lucide="x-circle"></i><span>Unshare</span>';
         unshareBtn.onclick = () => handleUnshare(insight.id);
         voteControls.appendChild(unshareBtn);
     } else {
