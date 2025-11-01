@@ -1254,14 +1254,8 @@ button:focus-visible,
         left: 0;
         height: 100vh;
         z-index: 1000;
-        transform: translateX(0);
-        transition: transform 0.3s ease;
     }
-    
-    .sidebar.collapsed {
-        transform: translateX(-100%);
-    }
-    
+
     /* Main chat takes full width */
     .main-chat {
         width: 100%;
