@@ -1244,3 +1244,41 @@ button:focus-visible,
 .message-content > *:last-child {
     margin-bottom: 0;
 }
+
+/* Responsive Design */
+@media (max-width: 1080px) {
+    /* Sidebar overlay mode */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(0);
+        transition: transform 0.3s ease;
+    }
+    
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+    
+    /* Main chat takes full width */
+    .main-chat {
+        width: 100%;
+        margin-left: 0;
+    }
+    
+    /* Avatar button - hide name and chevron */
+    .avatar-dropdown-trigger span {
+        display: none;
+    }
+    
+    .avatar-dropdown-trigger i {
+        display: none;
+    }
+    
+    .avatar-dropdown-trigger {
+        gap: 0;
+        padding: 0;
+    }
+}
