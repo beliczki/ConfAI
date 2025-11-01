@@ -112,7 +112,7 @@ button:focus-visible,
 }
 
 .sidebar-logo-collapsed {
-    max-height: 2rem;
+    max-height: 2.5rem;
     width: auto;
     margin: 10px;
     display: none;
@@ -976,7 +976,6 @@ button:focus-visible,
 /* Chat Input */
 .chat-input-area {
     padding: 20px;
-    border-top: 1px solid #3a3a3a;
     background: #1a1a1a;
 }
 
