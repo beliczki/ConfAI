@@ -259,9 +259,11 @@ function renderThreads(threads) {
     list.innerHTML = threads.map(t => `
         <div class="thread-item ${t.id === currentThreadId ? 'active' : ''}"
              onclick="selectThread(${t.id}, '${t.title}')">
-            <i class="thread-icon" data-lucide="message-circle"></i>
+            <i class="thread-icon" data-lucide="message-square"></i>
             <span class="thread-title">${t.title}</span>
-            <button class="thread-delete" onclick="event.stopPropagation(); deleteThread(${t.id})">×</button>
+            <button class="thread-delete" onclick="event.stopPropagation(); deleteThread(${t.id})">
+                <i data-lucide="trash-2"></i>
+            </button>
         </div>
     `).join('');
 

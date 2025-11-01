@@ -12,10 +12,10 @@
 <div class="chat-container">
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
-            <i data-lucide="menu"></i>
-        </button>
         <div class="sidebar-header">
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+                <i data-lucide="menu"></i>
+            </button>
             <img src="{{ url_for('static', filename='img/telekom-confai-white.png') }}" alt="ConfAI" class="sidebar-logo">
             <p>Conference Intelligence</p>
             <img src="{{ url_for('static', filename='img/telekom-confai-favicon.png') }}" alt="ConfAI" class="sidebar-logo-collapsed">
@@ -23,12 +23,11 @@
                 <i data-lucide="lightbulb"></i>
                 <span>Insights Wall</span>
             </a>
+            <button class="new-chat-btn" onclick="showChat(); createNewThread();">
+                <i data-lucide="plus"></i>
+                <span>New Chat</span>
+            </button>
         </div>
-
-        <button class="new-chat-btn" onclick="showChat(); createNewThread();">
-            <i data-lucide="plus"></i>
-            <span>New Chat</span>
-        </button>
 
         <div class="threads-list" id="threads-list">
             <!-- Threads will be loaded here -->
