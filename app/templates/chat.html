@@ -30,45 +30,6 @@
             <!-- Threads will be loaded here -->
         </div>
 
-        <div class="sidebar-footer">
-            {% if session.get('is_admin') %}
-            <a href="/admin">
-                <i data-lucide="settings"></i>
-                <span>Admin Dashboard</span>
-            </a>
-            {% endif %}
-
-            <!-- Model Selector -->
-            <div class="model-selector">
-                <button class="model-selector-btn" onclick="toggleModelDropdown()">
-                    <i data-lucide="cpu"></i>
-                    <span id="current-model-name">Loading...</span>
-                </button>
-                <div class="model-dropdown" id="model-dropdown">
-                    <div class="model-option" onclick="selectModel('claude')">
-                        <i data-lucide="brain"></i>
-                        <span>Claude</span>
-                    </div>
-                    <div class="model-option" onclick="selectModel('gemini')">
-                        <i data-lucide="sparkles"></i>
-                        <span>Gemini</span>
-                    </div>
-                    <div class="model-option" onclick="selectModel('grok')">
-                        <i data-lucide="zap"></i>
-                        <span>Grok</span>
-                    </div>
-                    <div class="model-option" onclick="selectModel('perplexity')">
-                        <i data-lucide="search"></i>
-                        <span>Perplexity</span>
-                    </div>
-                </div>
-            </div>
-
-            <a href="/logout">
-                <i data-lucide="log-out"></i>
-                <span>Logout</span>
-            </a>
-        </div>
     </div>
 
     <!-- Main Content Area -->
@@ -86,8 +47,51 @@
                     <span class="votes-label">Shares:</span>
                     <span id="shares-count-header">0/3</span>
                 </button>
-                <div class="user-avatar" id="user-avatar"></div>
-                <span id="user-name"></span>
+
+                <!-- Avatar Dropdown -->
+                <div class="avatar-dropdown-container">
+                    <button class="avatar-dropdown-trigger" onclick="toggleAvatarDropdown(event)">
+                        <div class="user-avatar" id="user-avatar"></div>
+                        <span id="user-name"></span>
+                        <i data-lucide="chevron-down"></i>
+                    </button>
+
+                    <div class="avatar-dropdown-menu" id="avatar-dropdown">
+                        <!-- Model Selector Section -->
+                        <div class="dropdown-section">
+                            <div class="dropdown-section-label">
+                                <i data-lucide="cpu"></i>
+                                <span>AI Model</span>
+                            </div>
+                            <div class="model-selector-inline">
+                                <button class="model-selector-btn-inline" onclick="toggleModelDropdown(event)">
+                                    <span id="current-model-name-header">Loading...</span>
+                                    <i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="model-dropdown" id="model-dropdown">
+                                    <!-- Models will be dynamically loaded here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dropdown-divider"></div>
+
+                        {% if session.get('is_admin') %}
+                        <!-- Admin Dashboard Link -->
+                        <a href="/admin" class="dropdown-item">
+                            <i data-lucide="settings"></i>
+                            <span>Admin Dashboard</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        {% endif %}
+
+                        <!-- Logout -->
+                        <a href="/logout" class="dropdown-item dropdown-item-danger">
+                            <i data-lucide="log-out"></i>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
 

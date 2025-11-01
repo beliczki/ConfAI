@@ -286,6 +286,14 @@ async function handleVote(insightId, voteType) {
 
         // If already voted the same way, unvote
         if (insight.user_vote === voteType) {
+            // Confirm before revoking vote
+            const confirmed = await showConfirm('Remove your vote from this insight?', {
+                confirmText: 'Remove Vote',
+                confirmStyle: 'danger'
+            });
+
+            if (!confirmed) return;
+
             const response = await fetch(`/api/insights/${insightId}/vote`, {
                 method: 'DELETE'
             });
@@ -335,12 +343,15 @@ async function handleVote(insightId, voteType) {
         renderInsights();
 
     } catch (error) {
-        alert(`Error: ${error.message}`);
+        showDialog(`Error: ${error.message}`, 'error');
     }
 }
 
 async function handleUnshare(insightId) {
-    if (!confirm('Remove this insight from the Insights Wall?')) return;
+    if (!await showConfirm('Remove this insight from the Insights Wall?', {
+        confirmText: 'Remove',
+        confirmStyle: 'danger'
+    })) return;
 
     try {
         const response = await fetch(`/api/insights/${insightId}/unshare`, {
@@ -356,10 +367,10 @@ async function handleUnshare(insightId) {
         // Reload insights to update the list
         await loadInsights();
 
-        alert('Insight unshared successfully');
+        // showDialog('Insight unshared successfully', 'success');
     } catch (error) {
         console.error('Error unsharing insight:', error);
-        alert(`Error: ${error.message}`);
+        showDialog(`Error: ${error.message}`, 'error');
     }
 }
 

@@ -4,6 +4,9 @@ let welcomeMessage = null;
 let sharedMessages = {}; // Track which messages are shared {message_id: insight_id}
 let shareCount = 0; // Track how many shares user has used
 let messageContents = {}; // Store original markdown content by message ID
+let messageCount = 0; // Track number of messages in thread
+let conversationHistory = []; // Store first two exchanges for auto-rename
+let currentModel = null; // Track current thread's model
 
 // Helper function to parse markdown safely
 function parseMarkdown(text) {
@@ -12,6 +15,17 @@ function parseMarkdown(text) {
     }
     // Fallback to plain text if marked is not loaded
     return escapeHtml(text);
+}
+
+// Helper function to get AI avatar gradient based on model
+function getAIGradient(model) {
+    const gradients = {
+        'gemini': 'linear-gradient(135deg, #001E50, #00A0E9)', // Blue gradient
+        'claude': 'linear-gradient(135deg, #CC785C, #E8956D)', // Orange gradient
+        'grok': 'linear-gradient(135deg, #4A5568, #718096)', // Grey gradient
+        'perplexity': 'linear-gradient(135deg, #0D9488, #14B8A6)' // Teal gradient
+    };
+    return gradients[model] || gradients['gemini']; // Default to gemini blue
 }
 
 // Load user info and threads on page load
@@ -55,10 +69,17 @@ async function loadModelInfo() {
         const response = await fetch('/api/config');
         if (response.ok) {
             const data = await response.json();
-            const modelNameEl = document.getElementById('current-model-name');
-            if (modelNameEl) {
-                modelNameEl.textContent = data.provider_name;
+            // Update model name in header dropdown
+            const modelNameHeaderEl = document.getElementById('current-model-name-header');
+            if (modelNameHeaderEl) {
+                modelNameHeaderEl.textContent = data.provider_name;
             }
+
+            // Build model dropdown based on availability
+            if (data.available_providers) {
+                buildModelDropdown(data.available_providers, data.provider);
+            }
+
             // Re-initialize Lucide icons
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
@@ -69,7 +90,68 @@ async function loadModelInfo() {
     }
 }
 
-function toggleModelDropdown() {
+function buildModelDropdown(availableProviders, currentProvider) {
+    const dropdown = document.getElementById('model-dropdown');
+    if (!dropdown) return;
+
+    const models = [
+        { id: 'claude', name: 'Claude', icon: 'brain' },
+        { id: 'gemini', name: 'Gemini', icon: 'sparkles' },
+        { id: 'grok', name: 'Grok', icon: 'zap' },
+        { id: 'perplexity', name: 'Perplexity', icon: 'search' }
+    ];
+
+    dropdown.innerHTML = models.map(model => {
+        const isAvailable = availableProviders[model.id];
+        const isActive = model.id === currentProvider;
+        const disabledClass = !isAvailable ? ' model-unavailable' : '';
+        const activeClass = isActive ? ' active' : '';
+        const onClick = isAvailable ? `onclick="selectModel('${model.id}')"` : '';
+
+        return `
+            <div class="model-option${disabledClass}${activeClass}" ${onClick}>
+                <i data-lucide="${model.icon}"></i>
+                <span>${model.name}</span>
+                ${isAvailable ? '<span class="model-ready-badge">ready</span>' : ''}
+            </div>
+        `;
+    }).join('');
+
+    // Re-initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+function toggleAvatarDropdown(event) {
+    // Stop event from bubbling to document click listener
+    if (event) {
+        event.stopPropagation();
+    }
+
+    console.log('toggleAvatarDropdown called');
+    const dropdown = document.getElementById('avatar-dropdown');
+    if (!dropdown) {
+        console.error('Avatar dropdown element not found in DOM');
+        return;
+    }
+
+    const isVisible = dropdown.style.display === 'block';
+    console.log('Current visibility:', isVisible, '-> Setting to:', !isVisible);
+    dropdown.style.display = isVisible ? 'none' : 'block';
+
+    // Re-initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+function toggleModelDropdown(event) {
+    // Stop event from bubbling to document click listener
+    if (event) {
+        event.stopPropagation();
+    }
+
     const dropdown = document.getElementById('model-dropdown');
     const isVisible = dropdown.style.display === 'block';
     dropdown.style.display = isVisible ? 'none' : 'block';
@@ -82,13 +164,13 @@ function toggleModelDropdown() {
 
 async function selectModel(provider) {
     try {
-        // Close dropdown
+        // Close only the model dropdown, keep avatar dropdown open
         document.getElementById('model-dropdown').style.display = 'none';
 
         // Show loading state
-        const modelNameEl = document.getElementById('current-model-name');
-        const originalText = modelNameEl.textContent;
-        modelNameEl.textContent = 'Switching...';
+        const modelNameHeaderEl = document.getElementById('current-model-name-header');
+        const originalText = modelNameHeaderEl.textContent;
+        modelNameHeaderEl.textContent = 'Switching...';
 
         // Send update request
         const response = await fetch('/api/config', {
@@ -99,7 +181,10 @@ async function selectModel(provider) {
 
         if (response.ok) {
             const data = await response.json();
-            modelNameEl.textContent = data.provider_name;
+            modelNameHeaderEl.textContent = data.provider_name;
+
+            // Update current model for gradient
+            currentModel = provider;
 
             // Show success message
             console.log(data.message);
@@ -110,26 +195,35 @@ async function selectModel(provider) {
             }
         } else {
             // Revert on error
-            modelNameEl.textContent = originalText;
+            modelNameHeaderEl.textContent = originalText;
             const error = await response.json();
-            alert('Failed to switch model: ' + (error.error || 'Unknown error'));
+            showDialog('Failed to switch model: ' + (error.error || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Failed to switch model:', error);
-        alert('Failed to switch model');
+        showDialog('Failed to switch model', 'error');
     }
 }
 
-// Close dropdown when clicking outside
-document.addEventListener('click', function(event) {
-    const dropdown = document.getElementById('model-dropdown');
-    const button = document.querySelector('.model-selector-btn');
+// Close dropdowns when clicking outside (wrapped in DOMContentLoaded to ensure elements exist)
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Setting up click-outside listener for avatar dropdown');
 
-    if (dropdown && button &&
-        !dropdown.contains(event.target) &&
-        !button.contains(event.target)) {
-        dropdown.style.display = 'none';
-    }
+    document.addEventListener('click', function(event) {
+        const avatarDropdown = document.getElementById('avatar-dropdown');
+        const avatarContainer = document.querySelector('.avatar-dropdown-container');
+
+        // Close avatar dropdown only if clicking completely outside the avatar container
+        if (avatarDropdown && avatarContainer &&
+            !avatarContainer.contains(event.target)) {
+            avatarDropdown.style.display = 'none';
+            // Also close model dropdown when avatar dropdown closes
+            const modelDropdown = document.getElementById('model-dropdown');
+            if (modelDropdown) {
+                modelDropdown.style.display = 'none';
+            }
+        }
+    });
 });
 
 async function loadThreads() {
@@ -169,16 +263,24 @@ function renderThreads(threads) {
 
 async function createNewThread() {
     try {
+        // Generate title with current date and time (without year)
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const title = `Chat ${month}-${day} ${hours}:${minutes}`;
+
         const response = await fetch('/api/threads', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({title: 'New Chat'})
+            body: JSON.stringify({title: title})
         });
 
         if (response.ok) {
             const data = await response.json();
             await loadThreads();
-            selectThread(data.thread_id, 'New Chat');
+            selectThread(data.thread_id, title);
         }
     } catch (error) {
         console.error('Failed to create thread:', error);
@@ -206,6 +308,19 @@ async function loadMessages(threadId) {
         const response = await fetch(`/api/threads/${threadId}/messages`);
         if (response.ok) {
             const data = await response.json();
+
+            // Count user messages to track prompt count
+            const userMessages = data.messages.filter(m => m.role === 'user');
+            messageCount = userMessages.length;
+
+            // Store first two user prompts for auto-rename
+            conversationHistory = userMessages.slice(0, 2).map(m => m.content);
+
+            // Store current model from first assistant message
+            const assistantMsg = data.messages.find(m => m.role === 'assistant');
+            if (assistantMsg && assistantMsg.model) {
+                currentModel = assistantMsg.model;
+            }
 
             // Check which messages are shared
             await checkSharedStatus(data.messages);
@@ -263,7 +378,7 @@ function renderMessages(messages) {
     container.innerHTML = messages.map(m => {
         const isUser = m.role === 'user';
         const avatar = isUser ? currentUser.name.substring(0, 2).toUpperCase() : 'AI';
-        const gradient = isUser ? currentUser.avatar_gradient : 'linear-gradient(135deg, #001E50, #00A0E9)';
+        const gradient = isUser ? currentUser.avatar_gradient : getAIGradient(m.model);
         const content = isUser ? escapeHtml(m.content) : parseMarkdown(m.content);
 
         // Store original markdown content in JavaScript object for assistant messages
@@ -323,8 +438,24 @@ async function sendMessage() {
 
     if (!message) return;
 
-    // Clear input
+    // Store user prompt in conversation history
+    conversationHistory.push(message);
+    messageCount++;
+
+    // Auto-rename based on prompt(s)
+    // After 1st prompt: rename based on first prompt only
+    // After 2nd prompt: rename based on both prompts
+    if (messageCount === 1 || messageCount === 2) {
+        // Trigger rename immediately after sending prompt
+        setTimeout(async () => {
+            const prompts = conversationHistory.slice(0, messageCount);
+            await autoRenameThreadByPrompts(prompts);
+        }, 100);
+    }
+
+    // Clear input and reset height
     input.value = '';
+    input.style.height = '50px';
     input.rows = 1;
 
     // Add user message to UI immediately
@@ -462,10 +593,13 @@ function addStreamingMessage() {
     // Check if share limit is reached
     const shareLimitReached = shareCount >= 3;
 
+    // Use current model's gradient
+    const gradient = getAIGradient(currentModel);
+
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant';
     messageDiv.innerHTML = `
-        <div class="message-avatar" style="background: linear-gradient(135deg, #001E50, #00A0E9)"><span>AI</span></div>
+        <div class="message-avatar" style="background: ${gradient}"><span>AI</span></div>
         <div>
             <div class="message-content"></div>
             <div class="message-actions" style="display: none;">
@@ -508,11 +642,15 @@ function updateStreamingMessage(element, content, done = false, messageId = null
 
 function showTypingIndicator() {
     const container = document.getElementById('chat-messages');
+
+    // Use current model's gradient
+    const gradient = getAIGradient(currentModel);
+
     const indicator = document.createElement('div');
     indicator.id = 'typing-indicator';
     indicator.className = 'message assistant';
     indicator.innerHTML = `
-        <div class="message-avatar" style="background: linear-gradient(135deg, #001E50, #00A0E9)"><span>AI</span></div>
+        <div class="message-avatar" style="background: ${gradient}"><span>AI</span></div>
         <div>
             <div class="typing-indicator show">
                 <span></span><span></span><span></span>
@@ -529,7 +667,10 @@ function hideTypingIndicator() {
 }
 
 async function deleteThread(threadId) {
-    if (!confirm('Delete this chat?')) return;
+    if (!await showConfirm('Delete this chat?', {
+        confirmText: 'Delete',
+        confirmStyle: 'danger'
+    })) return;
 
     try {
         const response = await fetch(`/api/threads/${threadId}`, {
@@ -612,7 +753,7 @@ async function shareInsight(button, content, messageId) {
     console.log('shareInsight called with content:', content?.substring(0, 50));
 
     if (!content || content.length < 10) {
-        alert('Insight is too short to share');
+        showDialog('Insight is too short to share', 'warning');
         return;
     }
 
@@ -663,7 +804,7 @@ async function shareInsight(button, content, messageId) {
 
     } catch (error) {
         console.error('Error sharing insight:', error);
-        alert(`Error sharing insight: ${error.message}`);
+        showDialog(`Error sharing insight: ${error.message}`, 'error');
         button.innerHTML = '<i data-lucide="share-2"></i><span>Share to Insights Wall</span>';
         button.disabled = false;
         lucide.createIcons();
@@ -671,7 +812,10 @@ async function shareInsight(button, content, messageId) {
 }
 
 async function unshareInsight(button, insightId) {
-    if (!confirm('Remove this insight from the Insights Wall?')) return;
+    if (!await showConfirm('Remove this insight from the Insights Wall?', {
+        confirmText: 'Remove',
+        confirmStyle: 'danger'
+    })) return;
 
     button.disabled = true;
     button.innerHTML = '<i data-lucide="loader"></i><span>Removing...</span>';
@@ -711,7 +855,7 @@ async function unshareInsight(button, insightId) {
 
     } catch (error) {
         console.error('Error unsharing insight:', error);
-        alert(`Error unsharing insight: ${error.message}`);
+        showDialog(`Error unsharing insight: ${error.message}`, 'error');
         button.disabled = false;
         button.innerHTML = '<i data-lucide="x-circle"></i><span>Unshare</span>';
         lucide.createIcons();
@@ -726,11 +870,40 @@ function shareInsightFromElement(button) {
     const content = messageContents[messageId];
 
     if (!content) {
-        alert('Unable to share this message. Please try again.');
+        showDialog('Unable to share this message. Please try again.', 'error');
         console.error('No content found for message ID:', messageId);
         return;
     }
 
     console.log('shareInsightFromElement - original markdown content length:', content.length, 'messageId:', messageId);
     shareInsight(button, content, messageId);
+}
+
+async function autoRenameThreadByPrompts(prompts) {
+    try {
+        console.log(`Auto-renaming thread based on ${prompts.length} prompt(s)...`);
+
+        const renameResponse = await fetch(`/api/threads/${currentThreadId}/rename`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                prompts: prompts
+            })
+        });
+
+        if (renameResponse.ok) {
+            const data = await renameResponse.json();
+            console.log('Thread renamed to:', data.new_title);
+
+            // Update the title in the UI
+            document.getElementById('main-title').textContent = data.new_title;
+
+            // Reload threads to show new title in sidebar
+            await loadThreads();
+        } else {
+            console.error('Failed to auto-rename thread');
+        }
+    } catch (error) {
+        console.error('Error auto-renaming thread:', error);
+    }
 }

@@ -42,9 +42,18 @@ def get_config():
         'perplexity': 'Perplexity'
     }
 
+    # Check which providers are configured (have API keys)
+    available_providers = {
+        'claude': bool(os.getenv('ANTHROPIC_API_KEY')),
+        'gemini': bool(os.getenv('GEMINI_API_KEY')),
+        'grok': bool(os.getenv('GROK_API_KEY')),
+        'perplexity': bool(os.getenv('PERPLEXITY_API_KEY'))
+    }
+
     return jsonify({
         'provider': provider,
-        'provider_name': provider_names.get(provider, provider.title())
+        'provider_name': provider_names.get(provider, provider.title()),
+        'available_providers': available_providers
     })
 
 
@@ -152,6 +161,69 @@ def delete_thread(thread_id):
     return jsonify({'success': True})
 
 
+@chat_bp.route('/api/threads/<int:thread_id>/rename', methods=['POST'])
+@login_required
+def auto_rename_thread(thread_id):
+    """Auto-rename thread using Gemini based on user prompts."""
+    # Verify ownership
+    thread = ChatThread.get_by_id(thread_id)
+    if not thread or thread['user_id'] != session['user_id']:
+        return jsonify({'error': 'Thread not found'}), 404
+
+    data = request.json
+    prompts = data.get('prompts', [])
+
+    if not prompts or len(prompts) == 0:
+        return jsonify({'error': 'At least one prompt is required'}), 400
+
+    try:
+        # Use Gemini to generate a concise 2-3 word title
+        import google.generativeai as genai
+        import os
+
+        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+        # Build prompt based on number of user prompts
+        if len(prompts) == 1:
+            gemini_prompt = f"""Based on this user question, generate a very concise 2-3 word title.
+Return ONLY the title, no quotes, no extra text.
+
+User question: {prompts[0][:300]}
+
+Title:"""
+        else:
+            gemini_prompt = f"""Based on these user questions, generate a very concise 2-3 word title that captures the main topic.
+Return ONLY the title, no quotes, no extra text.
+
+First question: {prompts[0][:200]}
+Second question: {prompts[1][:200]}
+
+Title:"""
+
+        response = model.generate_content(gemini_prompt)
+        new_title = response.text.strip().replace('"', '').replace("'", "")
+
+        # Limit to 3 words max
+        words = new_title.split()
+        if len(words) > 3:
+            new_title = ' '.join(words[:3])
+
+        # Update thread title
+        ChatThread.update_title(thread_id, new_title)
+
+        print(f"Auto-renamed thread {thread_id} to: {new_title} (based on {len(prompts)} prompt(s))")
+
+        return jsonify({
+            'success': True,
+            'new_title': new_title
+        })
+
+    except Exception as e:
+        print(f"Error auto-renaming thread: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @chat_bp.route('/api/threads/<int:thread_id>/messages', methods=['GET'])
 @login_required
 def get_messages(thread_id):
@@ -162,6 +234,7 @@ def get_messages(thread_id):
         return jsonify({'error': 'Thread not found'}), 404
 
     messages = ChatMessage.get_by_thread(thread_id)
+    model_used = thread['model_used']  # Get the model used for this thread
 
     return jsonify({
         'messages': [
@@ -169,7 +242,8 @@ def get_messages(thread_id):
                 'id': m['id'],
                 'role': m['role'],
                 'content': m['content'],
-                'created_at': m['created_at']
+                'created_at': m['created_at'],
+                'model': model_used if m['role'] == 'assistant' else None  # Add model for assistant messages
             } for m in messages
         ]
     })
@@ -258,6 +332,9 @@ def stream_message():
         try:
             # Get current model
             current_model = Settings.get('llm_provider', os.getenv('LLM_PROVIDER', 'gemini')).lower()
+
+            # Update thread's model to current model
+            ChatThread.update_model(thread_id, current_model)
 
             # Get streaming response from LLM
             # The provider will be read from database each time

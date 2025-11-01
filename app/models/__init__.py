@@ -261,6 +261,26 @@ class ChatThread:
             return cursor.fetchone()
 
     @staticmethod
+    def update_title(thread_id, new_title):
+        """Update thread title."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'UPDATE chat_threads SET title = ? WHERE id = ?',
+                (new_title, thread_id)
+            )
+
+    @staticmethod
+    def update_model(thread_id, model):
+        """Update thread model."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'UPDATE chat_threads SET model_used = ? WHERE id = ?',
+                (model, thread_id)
+            )
+
+    @staticmethod
     def delete(thread_id):
         """Delete a thread."""
         with get_db() as conn:
