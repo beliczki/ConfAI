@@ -21,7 +21,7 @@ function parseMarkdown(text) {
 function getAIGradient(model) {
     const gradients = {
         'gemini': 'linear-gradient(135deg, #001E50, #00A0E9)', // Blue gradient
-        'claude': 'linear-gradient(135deg, #CC785C, #E8956D)', // Orange gradient
+        'claude': 'linear-gradient(135deg, #D2691E, #CC785C)', // Dark orange gradient
         'grok': 'linear-gradient(135deg, #4A5568, #718096)', // Grey gradient
         'perplexity': 'linear-gradient(135deg, #0D9488, #14B8A6)' // Teal gradient
     };
@@ -69,6 +69,10 @@ async function loadModelInfo() {
         const response = await fetch('/api/config');
         if (response.ok) {
             const data = await response.json();
+
+            // Set current model for gradient on new chats
+            currentModel = data.provider;
+
             // Update model name in header dropdown
             const modelNameHeaderEl = document.getElementById('current-model-name-header');
             if (modelNameHeaderEl) {
@@ -255,10 +259,14 @@ function renderThreads(threads) {
     list.innerHTML = threads.map(t => `
         <div class="thread-item ${t.id === currentThreadId ? 'active' : ''}"
              onclick="selectThread(${t.id}, '${t.title}')">
-            <span>${t.title}</span>
+            <i class="thread-icon" data-lucide="message-circle"></i>
+            <span class="thread-title">${t.title}</span>
             <button class="thread-delete" onclick="event.stopPropagation(); deleteThread(${t.id})">×</button>
         </div>
     `).join('');
+
+    // Reinitialize icons after updating thread list
+    lucide.createIcons();
 }
 
 async function createNewThread() {

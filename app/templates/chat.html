@@ -13,12 +13,12 @@
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
-            <i data-lucide="chevron-left"></i>
+            <i data-lucide="menu"></i>
         </button>
         <div class="sidebar-header">
             <img src="{{ url_for('static', filename='img/telekom-confai-white.png') }}" alt="ConfAI" class="sidebar-logo">
-            <img src="{{ url_for('static', filename='img/telekom-confai-favicon.png') }}" alt="ConfAI" class="sidebar-logo-collapsed">
             <p>Conference Intelligence</p>
+            <img src="{{ url_for('static', filename='img/telekom-confai-favicon.png') }}" alt="ConfAI" class="sidebar-logo-collapsed">
             <a href="#" class="insights-wall-link" onclick="showInsights(); return false;">
                 <i data-lucide="lightbulb"></i>
                 <span>Insights Wall</span>
