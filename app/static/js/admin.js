@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadLLMProviderSetting();
     loadContextModeSetting();
     loadEmbeddingSettings();
+    loadConversationStarters();
 
     // Setup event listeners
     setupFileUpload();
@@ -775,6 +776,34 @@ async function loadWelcomeMessage() {
 }
 
 /**
+ * Load conversation starters
+ */
+async function loadConversationStarters() {
+    try {
+        const response = await fetch('/api/admin/conversation-starters', {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load conversation starters');
+        }
+
+        const data = await response.json();
+
+        for (let i = 0; i < 4; i++) {
+            const input = document.getElementById(`starter-${i + 1}`);
+            if (input && data.starters[i]) {
+                input.value = data.starters[i];
+            }
+        }
+
+        console.log('Conversation starters loaded successfully');
+    } catch (error) {
+        console.error('Error loading conversation starters:', error);
+    }
+}
+
+/**
  * Save the welcome message to the server
  */
 async function saveWelcomeMessage() {
@@ -1001,6 +1030,17 @@ async function saveSettings() {
     const chunkOverlap = document.getElementById('chunk-overlap')?.value;
     const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
 
+    // Get conversation starters
+    const starters = [];
+    for (let i = 1; i <= 4; i++) {
+        const starter = document.getElementById(`starter-${i}`)?.value?.trim();
+        if (!starter) {
+            showSettingsError(`Conversation starter ${i} cannot be empty`);
+            return;
+        }
+        starters.push(starter);
+    }
+
     if (!provider) {
         showSettingsError('Please select a provider');
         return;
@@ -1012,8 +1052,8 @@ async function saveSettings() {
     }
 
     try {
-        // Save LLM provider, welcome message, and embeddings settings
-        const [providerResponse, welcomeResponse, embeddingsResponse] = await Promise.all([
+        // Save LLM provider, welcome message, embeddings settings, and conversation starters
+        const [providerResponse, welcomeResponse, embeddingsResponse, startersResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -1039,10 +1079,18 @@ async function saveSettings() {
                     chunk_overlap: parseInt(chunkOverlap),
                     chunks_to_retrieve: parseInt(chunksToRetrieve)
                 })
+            }),
+            fetch('/api/admin/conversation-starters', {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ starters: starters })
             })
         ]);
 
-        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok) {
+        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !startersResponse.ok) {
             throw new Error('Failed to save settings');
         }
 

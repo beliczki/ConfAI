@@ -1084,6 +1084,39 @@ input:checked + .toggle-slider-small:before {
     height: 20px;
 }
 
+/* Conversation Starters */
+.conversation-starters {
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    background: transparent;
+}
+
+.starter-btn {
+    background: #2a2a2a;
+    border: 2px solid #3a3a3a;
+    color: #e0e0e0;
+    padding: 14px 18px;
+    border-radius: 12px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: all 0.2s;
+}
+
+.starter-btn:hover {
+    background: #3a3a3a;
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 166, 81, 0.2);
+}
+
+.starter-btn:active {
+    transform: translateY(0);
+}
+
 /* Chat Input */
 .chat-input-area {
     padding: 20px;

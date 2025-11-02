@@ -34,6 +34,7 @@ function getAIGradient(model) {
 document.addEventListener('DOMContentLoaded', async () => {
     await loadUserInfo();
     await loadWelcomeMessage();
+    await loadConversationStarters();
     await loadModelInfo();
     await loadThreads();
 });
@@ -63,6 +64,53 @@ async function loadWelcomeMessage() {
     } catch (error) {
         console.error('Failed to load welcome message:', error);
         welcomeMessage = '# Welcome to ConfAI!\n\nStart a new chat to begin.';
+    }
+}
+
+let conversationStarters = [];
+
+async function loadConversationStarters() {
+    try {
+        const response = await fetch('/api/conversation-starters');
+        if (response.ok) {
+            const data = await response.json();
+            conversationStarters = data.starters || [];
+        }
+    } catch (error) {
+        console.error('Failed to load conversation starters:', error);
+        conversationStarters = [];
+    }
+}
+
+function showConversationStarters() {
+    const container = document.getElementById('conversation-starters');
+    if (!container || conversationStarters.length === 0) return;
+
+    container.innerHTML = '';
+    conversationStarters.forEach((starter, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'starter-btn';
+        btn.textContent = starter;
+        btn.onclick = () => useConversationStarter(starter);
+        container.appendChild(btn);
+    });
+
+    container.style.display = 'grid';
+}
+
+function hideConversationStarters() {
+    const container = document.getElementById('conversation-starters');
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
+function useConversationStarter(text) {
+    const input = document.getElementById('chat-input');
+    if (input) {
+        input.value = text;
+        input.focus();
+        hideConversationStarters();
     }
 }
 
@@ -384,8 +432,12 @@ function renderMessages(messages) {
 
     if (messages.length === 0) {
         container.innerHTML = '<div class="empty-state"><h3>Start the conversation!</h3><p>Ask me anything about the conference materials.</p></div>';
+        showConversationStarters();
         return;
     }
+
+    // Hide conversation starters when there are messages
+    hideConversationStarters();
 
     container.innerHTML = messages.map(m => {
         const isUser = m.role === 'user';

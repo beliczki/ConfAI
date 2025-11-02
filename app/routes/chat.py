@@ -28,6 +28,21 @@ def get_welcome_message():
     })
 
 
+@chat_bp.route('/api/conversation-starters', methods=['GET'])
+@login_required
+def get_conversation_starters():
+    """Get conversation starters for empty chats."""
+    starters = [
+        Settings.get('starter_1', 'Ask 3 questions about me so you can personalize the conference content to me...'),
+        Settings.get('starter_2', 'Tell me what 3 thoughts should I remember from this conference? Think of 12 candidates and then boil it down to 3 for me.'),
+        Settings.get('starter_3', 'How can my marketing team be future proof? How the conference helps me to answer?'),
+        Settings.get('starter_4', 'I have a hypothesis based on what I heard at the conference, can you help me validating?')
+    ]
+    return jsonify({
+        'starters': starters
+    })
+
+
 @chat_bp.route('/api/config', methods=['GET'])
 @login_required
 def get_config():
