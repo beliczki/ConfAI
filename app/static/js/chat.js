@@ -1,4 +1,5 @@
 let currentThreadId = null;
+let currentThreadTitle = null; // Track current thread title
 let currentUser = null;
 let welcomeMessage = null;
 let sharedMessages = {}; // Track which messages are shared {message_id: insight_id}
@@ -37,7 +38,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadConversationStarters();
     await loadModelInfo();
     await loadThreads();
+
+    // Check URL for thread ID and auto-select if present
+    checkAndLoadThreadFromURL();
 });
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.threadId) {
+        // Find the thread title from the sidebar and select it
+        const threadElement = document.querySelector(`.thread-item[onclick*="${event.state.threadId}"]`);
+        if (threadElement) {
+            const titleElement = threadElement.querySelector('.thread-title');
+            const title = titleElement ? titleElement.textContent : 'Chat';
+            selectThread(event.state.threadId, title);
+        }
+    }
+});
+
+// Check URL for thread parameter and load it
+function checkAndLoadThreadFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const threadId = urlParams.get('thread');
+
+    if (threadId) {
+        // Find the thread in the loaded threads and select it
+        const threadElement = document.querySelector(`.thread-item[onclick*="${threadId}"]`);
+        if (threadElement) {
+            const titleElement = threadElement.querySelector('.thread-title');
+            const title = titleElement ? titleElement.textContent : 'Chat';
+            // Use a small delay to ensure threads are fully loaded
+            setTimeout(() => {
+                selectThread(parseInt(threadId), title);
+            }, 100);
+        }
+    }
+}
 
 async function loadUserInfo() {
     try {
@@ -349,9 +385,15 @@ async function createNewThread() {
 
 async function selectThread(threadId, title) {
     currentThreadId = threadId;
+    currentThreadTitle = title;
     document.getElementById('main-title').textContent = title;
     document.getElementById('chat-input').disabled = false;
     document.getElementById('send-btn').disabled = false;
+
+    // Update URL with thread ID
+    const url = new URL(window.location);
+    url.searchParams.set('thread', threadId);
+    window.history.pushState({threadId: threadId}, '', url);
 
     // Show chat view
     showChat();
@@ -982,7 +1024,8 @@ async function autoRenameThreadByPrompts(prompts) {
             const data = await renameResponse.json();
             console.log('Thread renamed to:', data.new_title);
 
-            // Update the title in the UI
+            // Update the title in the UI and global variable
+            currentThreadTitle = data.new_title;
             document.getElementById('main-title').textContent = data.new_title;
 
             // Reload threads to show new title in sidebar

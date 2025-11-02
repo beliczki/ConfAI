@@ -223,9 +223,10 @@
     function showChat() {
         document.getElementById('chat-content').style.display = 'flex';
         document.getElementById('insights-content').style.display = 'none';
-        document.getElementById('main-title').textContent = currentThreadId ?
-            document.getElementById('thread-title')?.textContent || 'Select or create a chat' :
-            'Select or create a chat';
+        // Only set title if there's no current thread (preserve title set by selectThread)
+        if (!currentThreadId || !currentThreadTitle) {
+            document.getElementById('main-title').textContent = 'Select or create a chat';
+        }
         lucide.createIcons();
     }
 
