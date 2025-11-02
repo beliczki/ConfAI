@@ -120,7 +120,7 @@ def get_threads():
         'threads': [
             {
                 'id': t['id'],
-                'hash_id': t.get('hash_id'),
+                'hash_id': t['hash_id'] if 'hash_id' in t.keys() else None,
                 'title': t['title'],
                 'created_at': t['created_at'],
                 'updated_at': t['updated_at']

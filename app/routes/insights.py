@@ -76,7 +76,7 @@ def get_insights():
         'insights': [
             {
                 'id': i['id'],
-                'title': i.get('title'),
+                'title': i['title'] if 'title' in i.keys() else None,
                 'content': i['content'],
                 'user_name': i['user_name'],
                 'avatar_gradient': i['avatar_gradient'],
