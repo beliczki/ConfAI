@@ -1392,7 +1392,7 @@ function updateStatistics() {
 // ============================
 
 /**
- * Update context mode banner based on current mode
+ * Update embeddings section visibility based on current mode
  */
 async function updateContextModeBanner() {
     try {
@@ -1405,36 +1405,21 @@ async function updateContextModeBanner() {
         const data = await response.json();
         const mode = data.mode || 'context_window';
 
-        const banner = document.getElementById('context-mode-banner');
-        const title = document.getElementById('context-mode-title');
-        const description = document.getElementById('context-mode-description');
         const embeddingsSection = document.getElementById('embeddings-section');
 
         if (mode === 'vector_embeddings') {
-            // Vector embeddings mode
-            if (banner) {
-                banner.style.background = '#f0fdf4';
-                banner.style.borderLeft = '4px solid #059669';
-            }
-            if (title) title.textContent = 'Vector Embeddings Mode Active';
-            if (description) description.textContent = 'Using semantic search to find relevant context chunks. Process embeddings after uploading or modifying files.';
+            // Show embeddings section in vector mode
             if (embeddingsSection) {
                 embeddingsSection.style.display = 'block';
                 loadEmbeddingStats();
             }
         } else {
-            // Context window mode
-            if (banner) {
-                banner.style.background = '#f0f9ff';
-                banner.style.borderLeft = '4px solid #0ea5e9';
-            }
-            if (title) title.textContent = 'Context Window Mode Active';
-            if (description) description.textContent = 'All enabled context files are loaded directly into the AI\'s context window.';
+            // Hide embeddings section in context window mode
             if (embeddingsSection) embeddingsSection.style.display = 'none';
         }
 
     } catch (error) {
-        console.error('Error updating context mode banner:', error);
+        console.error('Error updating context mode UI:', error);
     }
 }
 
