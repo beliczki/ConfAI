@@ -197,13 +197,15 @@ def _run_migrations(cursor):
     # Check if hash_id column exists in chat_threads
     if 'hash_id' not in columns:
         print("Running migration: Adding hash_id column to chat_threads")
-        cursor.execute('ALTER TABLE chat_threads ADD COLUMN hash_id TEXT UNIQUE')
+        cursor.execute('ALTER TABLE chat_threads ADD COLUMN hash_id TEXT')
         # Generate hash_ids for existing threads
         import secrets
         cursor.execute('SELECT id FROM chat_threads')
         for row in cursor.fetchall():
             hash_id = secrets.token_urlsafe(16)
             cursor.execute('UPDATE chat_threads SET hash_id = ? WHERE id = ?', (hash_id, row[0]))
+        # Create unique index
+        cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_threads_hash_id ON chat_threads(hash_id)')
         print("Migration completed: hash_id column added and populated")
 
     # Check if title column exists in insights
