@@ -45,12 +45,27 @@
             <p class="help-text">Choose how context files are processed and used by the AI.</p>
 
             <div class="form-group">
-                <label for="context-mode">Context Mode</label>
-                <select id="context-mode">
-                    <option value="context_window">Context Window (Simple & Fast)</option>
-                    <option value="vector_embeddings">Vector Embeddings (Smart & Scalable)</option>
-                </select>
-                <p class="help-text" style="margin-top: 8px; font-size: 13px; color: #666;">
+                <div class="context-mode-toggle-container">
+                    <div class="context-mode-option" id="mode-context-window">
+                        <div class="mode-icon"><i data-lucide="file-text"></i></div>
+                        <div class="mode-details">
+                            <strong>Context Window</strong>
+                            <span>Simple & Fast</span>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="context-mode-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div class="context-mode-option" id="mode-vector-embeddings">
+                        <div class="mode-icon"><i data-lucide="database"></i></div>
+                        <div class="mode-details">
+                            <strong>Vector Embeddings</strong>
+                            <span>Smart & Scalable</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="help-text" style="margin-top: 16px; font-size: 13px; color: #666;">
                     <strong>Context Window:</strong> Uses all context files directly in the prompt.<br>
                     <strong>Vector Embeddings:</strong> Uses semantic search to find relevant content.
                 </p>

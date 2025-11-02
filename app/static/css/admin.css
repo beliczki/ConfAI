@@ -1574,3 +1574,119 @@
     padding: 6px 12px;
     font-size: 13px;
 }
+
+/* Context Mode Toggle Switch */
+.context-mode-toggle-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px;
+    background: #0a0a0a;
+    border-radius: 12px;
+    border: 1px solid #3a3a3a;
+}
+
+.context-mode-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    background: #1a1a1a;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.context-mode-option.active {
+    border-color: var(--primary);
+    background: rgba(226, 0, 116, 0.1);
+}
+
+.mode-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e0e0e0;
+}
+
+.context-mode-option.active .mode-icon {
+    background: var(--primary);
+    color: white;
+}
+
+.mode-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mode-details strong {
+    font-size: 15px;
+    color: #e0e0e0;
+}
+
+.mode-details span {
+    font-size: 12px;
+    color: #999;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #2a2a2a;
+    transition: 0.3s;
+    border-radius: 34px;
+    border: 2px solid #3a3a3a;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: #999;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+    background-color: white;
+}
+
+.toggle-switch:hover .toggle-slider {
+    border-color: var(--primary);
+}

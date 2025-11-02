@@ -806,10 +806,15 @@ async function loadContextModeSetting() {
         }
 
         const data = await response.json();
-        const contextModeSelect = document.getElementById('context-mode');
+        const toggle = document.getElementById('context-mode-toggle');
 
-        if (contextModeSelect && data.mode) {
-            contextModeSelect.value = data.mode;
+        if (toggle && data.mode) {
+            // Set toggle state: checked = vector_embeddings, unchecked = context_window
+            toggle.checked = (data.mode === 'vector_embeddings');
+
+            // Update UI to show active state
+            updateModeOptionsUI(data.mode);
+
             console.log('Loaded context mode setting:', data.mode);
         }
     } catch (error) {
@@ -830,43 +835,91 @@ function setupLLMProviderChange() {
  * Setup context mode change handler
  */
 function setupContextModeChange() {
-    const contextModeSelect = document.getElementById('context-mode');
-    if (contextModeSelect) {
-        contextModeSelect.addEventListener('change', async function() {
-            const newMode = this.value;
-            console.log('Context mode changed to:', newMode);
+    const toggle = document.getElementById('context-mode-toggle');
+    const windowOption = document.getElementById('mode-context-window');
+    const embeddingsOption = document.getElementById('mode-vector-embeddings');
 
-            try {
-                const response = await fetch('/api/admin/context-mode', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ mode: newMode })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to save context mode');
-                }
-
-                const data = await response.json();
-                console.log('Context mode saved:', data);
-
-                // Update the UI to reflect the new mode
-                updateContextModeBanner();
-
-                // Show brief success feedback
-                const modeName = newMode === 'context_window' ? 'Context Window' : 'Vector Embeddings';
-                console.log(`Context mode switched to: ${modeName}`);
-
-            } catch (error) {
-                console.error('Error saving context mode:', error);
-                alert('Failed to save context mode. Please try again.');
-                // Revert the select to the previous value
-                loadContextModeSetting();
-            }
+    if (toggle) {
+        // Handle toggle change
+        toggle.addEventListener('change', async function() {
+            const newMode = this.checked ? 'vector_embeddings' : 'context_window';
+            await saveContextMode(newMode);
+            updateModeOptionsUI(newMode);
         });
-        console.log('Context mode change handler initialized');
+
+        // Handle clicking on mode options
+        if (windowOption) {
+            windowOption.addEventListener('click', function() {
+                toggle.checked = false;
+                saveContextMode('context_window');
+                updateModeOptionsUI('context_window');
+            });
+        }
+
+        if (embeddingsOption) {
+            embeddingsOption.addEventListener('click', function() {
+                toggle.checked = true;
+                saveContextMode('vector_embeddings');
+                updateModeOptionsUI('vector_embeddings');
+            });
+        }
+
+        console.log('Context mode toggle initialized');
+    }
+}
+
+/**
+ * Save context mode to server
+ */
+async function saveContextMode(newMode) {
+    console.log('Context mode changed to:', newMode);
+
+    try {
+        const response = await fetch('/api/admin/context-mode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ mode: newMode })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save context mode');
+        }
+
+        const data = await response.json();
+        console.log('Context mode saved:', data);
+
+        // Update the UI to reflect the new mode
+        updateContextModeBanner();
+
+        // Show brief success feedback
+        const modeName = newMode === 'context_window' ? 'Context Window' : 'Vector Embeddings';
+        console.log(`Context mode switched to: ${modeName}`);
+
+    } catch (error) {
+        console.error('Error saving context mode:', error);
+        alert('Failed to save context mode. Please try again.');
+        // Revert to previous state
+        loadContextModeSetting();
+    }
+}
+
+/**
+ * Update mode options UI to show active state
+ */
+function updateModeOptionsUI(mode) {
+    const windowOption = document.getElementById('mode-context-window');
+    const embeddingsOption = document.getElementById('mode-vector-embeddings');
+
+    if (windowOption && embeddingsOption) {
+        if (mode === 'context_window') {
+            windowOption.classList.add('active');
+            embeddingsOption.classList.remove('active');
+        } else {
+            windowOption.classList.remove('active');
+            embeddingsOption.classList.add('active');
+        }
     }
 }
 
