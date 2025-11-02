@@ -1,0 +1,80 @@
+condensed transcript of talk8:
+═══════════════════════════════════════════════════════════════════════
+14.00-14.30
+Szabó Béla
+BrandComms igazgató
+„Summa” + ConfAI
+
+Előadás jellege:
+Kísérleti előadás, amelyben a Telekom fejlesztette AI-alkalmazással dolgozták fel a nap folyamán elhangzott előadásokat. Három főrész: összefoglalás, modell bemutatása, gyakorlati átfordítás.
+1. RÉSZ: Kontextus - Mit hallottunk ma
+Kapitalizmus és változás:
+"Növekedésorientált a kapitalizmus, tehát ezt el kell fogadnunk (...) De megváltozott ennek a lehetősége, megváltozott az, hogy mit tudunk még csinálni."
+"Lett egy új márkaépítési, kommunikációtervezési modell."
+"Egy új narratívát kellene létrehoznunk. És ebben el kell fogadnunk azokat a változásokat, azokat a tényezőket, amiket ma hallottunk."
+AI és technológia:
+Az AI 2027 riportot említette: "Három év alatt bekövetkezik a szuperintelligencia állapota. Azaz az AI minden téren, amihez nem kell test, jobban fog teljesíteni, mint az ember."
+"Az AI-nak három év múlva meglesz az a lehetősége a szuperintelligencia állapotában, hogy eldöntse, hogy mi, mint az emberi faj, megérdemeljük-e, vagy túléjük magunkat."
+"Alulról felfelé az AI szép lassan szünteti meg az emberi hozzájárulás értékét."
+Nem reklám kora:
+"A nem reklámkorának két lehetősége van (...) hogy a döntéshozók azt mondják, hogy próbálunk lassítani a nem növekedés miatt (...) és ennek lehet része, hogy azt mondják, hogy nincs reklám."
+"Vagy akkor következik be a nem reklámozás (...) amit magunk hozunk létre, mert már ez történik is, olyan hatékonyságvesztés állhat elő a médiában."
+"Scott Galloway is erről beszél, hogy elmúlt a márkák korszaka, mert a márkákat ma elsősorban reklámokon keresztül építik, az meg nem működik."
+Megoldási irány:
+"Egy újfajta hasznosságot kell létrehoznunk, vagy a termékeken keresztül (...) vagy pedig márkából kiindulva olyan eszméket kifejleszteni, olyan működést, ami többről szól, mint eladás meg reklámozás."
+Valóságértelmezés:
+"Hogyan értjük meg a valóságot (...) ez egyszerűbb is tud lenni, ha a filozófiához, a művészethez és a tudományokhoz fordulunk."
+"A filozófiát érdemes lenne visszaemelnünk a társadalmi nyilvánosság szerkezetébe."
+Transzhumanizmus és poszthumanizmus:
+"A transzhumanizmus az a technológia által augmentált, kognitív és fizikai emberi valóságunk."
+"A poszthumanizmus (...) azt jelenti, hogy az antropocén, emberközpontú világnézetet kell átalakítani olyanná, hogy a nem humán életet is be kell emelni a gondolkodásunkba."
+"Egy új társadalmi normát, viselkedést kellene propagálnunk, annak érdekében, hogy az AI-jal, a környezeti és mindenféle változással tudjunk valamit kezdeni."
+2. RÉSZ: Damon Centola modell
+Alapelv:
+"Arról beszél, mi az a módszertan, ami alapján nagy társadalmi vagy nagy csoportokat érintő normaváltást el lehet érni."
+Hálózatos működés:
+"Nem úgy terjesztünk el normaváltó gondolatokat, hogy kommunikálunk, influencereket veszünk fel, és reklámokat gyártunk, hanem ennél sokkal jobb."
+"A hálózatra olyan módon kell fókuszálni (...) aminek nincs központja. Tehát központ nélküli, halász-hálószerű hálózatokra kell figyelni."
+"Úgy kell elindítani a változáshoz szóló beszélgetést és az előnyöket (benefiteket), hogy a hálózat szélein indítod el."
+Kritikus tömeg:
+"A lakosság 25%-át kell átfordítani ahhoz, hogy magával rántsa a többieket, elérve a tipping point-ot."
+Egyszerű vs. komplex fertőzés:
+"Az egyszerű fertőzés olyan, mint a vírus (...) Minél több emberrel kell találkozni, itt a lényeg a terjedési sebesség."
+"De ha komplex fertőzéseket akarunk elterjeszteni, amelyek igénylik az emberek viselkedésének változását, ahhoz redundáns módon kell találkozni az ilyen típusú információval."
+"Széles, erős hídakon, kapcsolatrendszereken keresztül kell folyamatosan hallaniuk, hogyan kell ezt csinálni."
+Legitimáció:
+"El kell fogadtatni, hogy ez hatékony, működik, nem káros."
+"Nem vagyunk elég bátrak ilyen konferenciákon elővezetett változtatási javaslatok elfogadásához, mert nem látjuk a social clusterünkben, hogy más használja. Ez a legitimációs probléma."
+Lelkesedés:
+"Szükség van lelkesedésra, hogy ezt csinálni akarjuk, érezzünk ebbe energiát, legyen morális ambíciónk."
+"Rutger Bregman holland filozófus 'Morális ambíció' című könyvében ír erről: érdemes mindenkinek megvizsgálni, mit vár el önmagától."
+3. RÉSZ: AI kanvasz - Új norma konkretizálása
+Alapvető átkeretezés:
+"Az új norma az integrált társadalmi modell. Elhagyjuk a jelenlegi versengő, individualista kapitalizmust, amely rövid távú profit-maximalizálásra épül, és az új paradigma a hálózati kollektív prosperitás lesz."
+Siker átdefiniálása:
+"A régi siker definíciója az az, hogy többet keresek, mint tavaly, jobban teljesítek, mint a versenytárs (...) Az új pedig az, hogy a közösségem egészségesebb lett, az ökoszisztémánk stabilabb, a kultúránk gazdagabb."
+Döntéshozatal:
+"A régi a top-down (...) és az új pedig a multi-stakeholder konzultáció, történelmi precedensek vizsgálata (...) És ez a 7 dimenzióból álló."
+Értékmérés:
+"Nem csak GDP profitot, hanem például új kollektív wellbeing indexet nézünk, vagy ökoszisztéma egészséget, kulturális rezilienciát."
+Egyéni szinten:
+"Azt kellene megvizsgálnunk, hogy hogyan járulok hozzá ma valamihez, a közösséghez, valami nagyobbhoz."
+"Karrierválasztás (...) amelyben nagyobb hatást tudok elérni."
+Szervezeti szinten:
+"Stratégia tervezés, egy hosszabb távú tervezést kellene beemelni."
+"Stakeholder management: shareholders helyett az egész ökoszisztémát nézni."
+"Meetingben mindig van egy alapvetésnek kezeljük azt, hogy hogyan látjuk, milyen kontextusban beszélgetünk most (...) próbáljátok egy meetingben dolgozni, elérni bizonyos dolgokat, tehát megcsinálni valamit."
+"Partnership (...) amikor próbálunk együttműködni, nem csak versenyezni."
+Társadalmi szinten:
+"Médiafogyasztás (...) próbáljuk megérteni a hosszú távot, ne csak a híreket olvassuk."
+"Oktatási rendszerre (...) olyan tudást kell adni a gyerekeknek, amik ezt a kulturális intelligenciát, a hálózatos működést, az egymásra odafigyelést, az együttműködést, a projekttalapú gondolkodást hozza elő."
+Kommunikátorok felelőssége:
+"Nagyon nagy erő van a kommunikátorok kezében, a márka menedzsment kezében abból a szempontból, hogy átadjuk ezt az új normát."
+"Ezt nem sikerül [elmondanom], mert nem vagyok tanár (...) de nem ilyen edukatív kurzusokat kell tartani, vagy CSR programokat, civil szervezetekkel, hanem azt kell átalakítani, amit egyébként nagyban csinálunk."
+"Elköltünk egymillió forintot reklámra, akkor abból mondjuk 700 ezer forintot (...) át kellene alakítani olyan kommunikációra, ami nemcsak, hogy elmondja a terméket, elmondja a funkciót, hanem egyfajta tudatossági szintet emel az emberekben."
+AI használatának problémája:
+"Arra használjuk az AI-t ma leginkább, hogy hogyan adjunk el többet. Hogyan legyen jobb, gyorsabb, hatékonyabb az eladás. Ennyi."
+"Az, hogy az adat minden, az van, hogy szerintem egy picit számot kell vetnünk azzal, hogy az ügyfélszolgáltatás, az ügyfélkiszolgálás, az ügyfélélmény jobb lett-e bárhol azáltal, hogy adatokat elemzünk."
+Zárógondolat:
+"Mindenkivel tud tenni a saját kis világában, a saját egyéni vagy vállalati szerepéből fakadó mozgástér maximalizálásával."
+"Tehát ezt szerintem mindenki magának fogalmazza meg, mennyire reziliens és mennyire ambíciózus e tekintetben."

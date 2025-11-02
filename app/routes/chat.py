@@ -120,6 +120,7 @@ def get_threads():
         'threads': [
             {
                 'id': t['id'],
+                'hash_id': t.get('hash_id'),
                 'title': t['title'],
                 'created_at': t['created_at'],
                 'updated_at': t['updated_at']
@@ -147,7 +148,7 @@ def create_thread():
     }
     model_display_name = model_names.get(current_model, current_model.title())
 
-    thread_id = ChatThread.create(user_id, title, current_model)
+    thread_id, hash_id = ChatThread.create(user_id, title, current_model)
 
     # Log activity (user name will be added by the display logic)
     ActivityLog.log(
@@ -159,7 +160,8 @@ def create_thread():
 
     return jsonify({
         'success': True,
-        'thread_id': thread_id
+        'thread_id': thread_id,
+        'hash_id': hash_id
     })
 
 

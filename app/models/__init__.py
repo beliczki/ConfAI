@@ -254,13 +254,15 @@ class ChatThread:
     @staticmethod
     def create(user_id, title='New Chat', model_used=None):
         """Create a new chat thread."""
+        import secrets
+        hash_id = secrets.token_urlsafe(16)
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                'INSERT INTO chat_threads (user_id, title, model_used) VALUES (?, ?, ?)',
-                (user_id, title, model_used)
+                'INSERT INTO chat_threads (user_id, title, model_used, hash_id) VALUES (?, ?, ?, ?)',
+                (user_id, title, model_used, hash_id)
             )
-            return cursor.lastrowid
+            return cursor.lastrowid, hash_id
 
     @staticmethod
     def get_by_user(user_id):
@@ -272,6 +274,14 @@ class ChatThread:
                 (user_id,)
             )
             return cursor.fetchall()
+
+    @staticmethod
+    def get_by_hash_id(hash_id):
+        """Get thread by hash_id."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM chat_threads WHERE hash_id = ?', (hash_id,))
+            return cursor.fetchone()
 
     @staticmethod
     def get_by_id(thread_id):

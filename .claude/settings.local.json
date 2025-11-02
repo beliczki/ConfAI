@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where:*)",
+      "Bash(venvScriptspython.exe run.py)",
+      "Bash(ping:*)",
+      "Bash(nul)",
+      "Bash(./venv/Scripts/python.exe:*)",
+      "Bash(curl:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(del nul)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
