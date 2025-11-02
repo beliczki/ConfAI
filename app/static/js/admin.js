@@ -1520,7 +1520,7 @@ async function processEmbeddings() {
 /**
  * Open file preview dialog
  */
-async function openFilePreview(fileIndex) {
+function openFilePreview(fileIndex) {
     const file = currentFiles[fileIndex];
     if (!file) return;
 
@@ -1539,21 +1539,7 @@ async function openFilePreview(fileIndex) {
     if (chars) chars.textContent = file.chars.toLocaleString();
     if (tokens) tokens.textContent = Math.ceil(file.chars / 4).toLocaleString();
 
-    // Load file content if not already loaded
-    if (!file.content) {
-        try {
-            const response = await fetch(`/api/admin/context-files/${encodeURIComponent(file.name)}`, {
-                headers: getAuthHeaders()
-            });
-            if (response.ok) {
-                const data = await response.json();
-                file.content = data.content;
-            }
-        } catch (error) {
-            console.error('Error loading file content:', error);
-        }
-    }
-
+    // Display file content (already loaded from initial GET request)
     if (content) {
         content.textContent = file.content || 'No content available';
     }
