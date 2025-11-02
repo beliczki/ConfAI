@@ -22,7 +22,7 @@ ConfAI is a production-ready AI chat platform designed for conference attendees,
 - ✅ **Admin Dashboard** - Manage settings, context files, and embeddings
 - ✅ **Token Tracking** - Monitor usage across models with cache optimization
 
-**Live Demo**: http://localhost:5000
+**Access**: Run locally or deploy to your server
 
 ---
 
@@ -38,14 +38,14 @@ ConfAI is a production-ready AI chat platform designed for conference attendees,
 
 ```bash
 # Clone or navigate to project directory
-cd C:\Users\belic\Claude\confAI\ConfAI
+cd /path/to/ConfAI
 
 # Create virtual environment (if not exists)
 python -m venv venv
 
 # Activate virtual environment
 venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Linux/Mac
+source venv/bin/activate  # Linux/Mac
 
 # Install dependencies
 pip install -r requirements.txt
@@ -95,13 +95,13 @@ mkdir -p data documents/context
 python run.py
 ```
 
-The application will start on **http://localhost:5000**
+The application will start on **port 5000**
 
 ### First Login
 
-1. Visit http://localhost:5000
+1. Visit the application URL
 2. Enter any email address
-3. Check the console output for the 6-digit PIN
+3. Check the console output for the 6-digit PIN (in development mode)
 4. Enter the PIN to log in
 5. Start chatting with AI!
 
@@ -309,7 +309,7 @@ Users can also switch models per conversation using the dropdown in chat UI.
 
 ```bash
 python run.py
-# Runs on http://localhost:5000
+# Runs on port 5000
 # Debug mode enabled
 # PINs print to console
 ```

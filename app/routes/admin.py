@@ -229,6 +229,40 @@ def update_welcome_message():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/new-chat-text', methods=['GET'])
+@admin_required
+def get_new_chat_text_admin():
+    """Get current new chat instructions text for admin editing."""
+    try:
+        new_chat_text = Settings.get('new_chat_text', 'Start the conversation!\n\nAsk me anything about the conference materials.')
+        return jsonify({
+            'success': True,
+            'text': new_chat_text
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/new-chat-text', methods=['POST'])
+@admin_required
+def update_new_chat_text():
+    """Update new chat instructions text."""
+    try:
+        data = request.get_json()
+        text = data.get('text', '').strip()
+
+        Settings.set('new_chat_text', text)
+
+        print(f"New chat text updated at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': 'New chat text updated successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/api/admin/conversation-starters', methods=['GET'])
 @admin_required
 def get_conversation_starters():

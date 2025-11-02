@@ -32,6 +32,18 @@
     </div>
 </div>
 
+<div class="sort-controls">
+    <label>Sort by:</label>
+    <div class="sort-buttons">
+        <button id="sort-time" class="sort-btn active" onclick="sortInsights('time')">
+            Time
+        </button>
+        <button id="sort-votes" class="sort-btn" onclick="sortInsights('votes')" style="display: none;">
+            Votes
+        </button>
+    </div>
+</div>
+
 <div class="insights-container">
     <div id="loading" class="loading">
         <div class="loading-spinner"></div>

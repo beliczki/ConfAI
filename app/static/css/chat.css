@@ -415,7 +415,7 @@ button:focus-visible,
 .insights-main {
     flex: 1;
     overflow-y: scroll;
-    padding: 20px 40px 20px 10px;
+    padding: 20px;
     background: #2a2a2a;
     min-height: 0;
     height: 100%;
@@ -1020,6 +1020,73 @@ input:checked + .toggle-slider-small:before {
     color: #e0e0e0;
 }
 
+.empty-state h1,
+.empty-state h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: #e0e0e0;
+}
+
+.empty-state p {
+    font-size: 16px;
+    color: #888;
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.empty-state strong {
+    color: #e0e0e0;
+    font-weight: 600;
+}
+
+.empty-state em {
+    color: #b0b0b0;
+    font-style: italic;
+}
+
+.empty-state a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.empty-state a:hover {
+    text-decoration: underline;
+}
+
+.empty-state-starters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    max-width: 700px;
+    margin: 24px auto 0;
+    padding: 0;
+}
+
+.empty-state-starter-tile {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    color: #b0b0b0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.4;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.empty-state-starter-tile:hover {
+    background: #3a3a3a;
+    border-color: var(--primary);
+    color: #e0e0e0;
+    transform: translateY(-1px);
+}
+
+.empty-state-starter-tile:active {
+    transform: translateY(0);
+}
+
 /* Welcome Screen */
 .welcome-screen {
     display: flex;
@@ -1086,11 +1153,13 @@ input:checked + .toggle-slider-small:before {
 
 /* Conversation Starters */
 .conversation-starters {
-    padding: 16px 20px;
+    padding: 20px;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 12px;
     background: transparent;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
 .starter-btn {
@@ -1138,9 +1207,9 @@ input:checked + .toggle-slider-small:before {
     font-family: inherit;
     font-size: 15px;
     line-height: 22px;
-    height: 50px;
+    min-height: 50px;
     max-height: 354px;
-    overflow-y: hidden;
+    overflow-y: auto;
     transition: border-color 0.2s;
     background: #2a2a2a;
     color: #e0e0e0;

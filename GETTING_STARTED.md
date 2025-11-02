@@ -47,7 +47,7 @@ Before installing ConfAI, ensure you have:
 
 ```bash
 # Navigate to your project directory
-cd C:\Users\belic\Claude\confAI\ConfAI
+cd /path/to/ConfAI
 
 # Or clone from repository if available
 # git clone <repository-url>
@@ -184,10 +184,7 @@ You should see:
 
 ### Step 2: Access the Application
 
-Open your browser and navigate to:
-```
-http://localhost:5000
-```
+Open your browser and navigate to the application URL (default: port 5000)
 
 ### Step 3: First Login
 
@@ -205,10 +202,7 @@ http://localhost:5000
 
 ### Step 1: Access Admin Dashboard
 
-Navigate to:
-```
-http://localhost:5000/admin
-```
+Navigate to the admin dashboard at `/admin`
 
 **Authentication**: You'll need to authenticate admin API requests. The admin dashboard handles this automatically if you're logged in as an admin user.
 

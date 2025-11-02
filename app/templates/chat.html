@@ -125,10 +125,10 @@
                         I can help you with insights from conference materials and answer your questions.
                     </p>
                 </div>
-            </div>
 
-            <!-- Conversation Starters -->
-            <div id="conversation-starters" class="conversation-starters" style="display: none;">
+                <!-- Conversation Starters -->
+                <div id="conversation-starters" class="conversation-starters" style="display: none;">
+                </div>
             </div>
 
             <div class="chat-input-area">
@@ -204,6 +204,9 @@
         headerIds: false,
         mangle: false
     });
+
+    // Pass hash_id from backend to frontend
+    const initialHashId = {{ ('"%s"' % hash_id) | safe if hash_id else 'null' }};
 </script>
 <script src="{{ url_for('static', filename='js/chat.js') }}?v=1.0.3"></script>
 <script src="{{ url_for('static', filename='js/insights.js') }}"></script>

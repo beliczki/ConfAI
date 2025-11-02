@@ -76,7 +76,7 @@ Use the `X-Admin-Key` header with your `ADMIN_API_KEY`:
 
 ```bash
 curl -H "X-Admin-Key: your-admin-key" \
-     http://localhost:5000/api/admin/system-prompt
+     http://your-domain.com/api/admin/system-prompt
 ```
 
 ## API Endpoints

@@ -12,10 +12,11 @@ chat_bp = Blueprint('chat', __name__)
 
 
 @chat_bp.route('/chat')
+@chat_bp.route('/chat/<hash_id>')
 @login_required
-def chat_page():
+def chat_page(hash_id=None):
     """Main chat interface."""
-    return render_template('chat.html')
+    return render_template('chat.html', hash_id=hash_id)
 
 
 @chat_bp.route('/api/welcome', methods=['GET'])
@@ -40,6 +41,16 @@ def get_conversation_starters():
     ]
     return jsonify({
         'starters': starters
+    })
+
+
+@chat_bp.route('/api/new-chat-text', methods=['GET'])
+@login_required
+def get_new_chat_text():
+    """Get the new chat instructions text."""
+    new_chat_text = Settings.get('new_chat_text', 'Start the conversation!\n\nAsk me anything about the conference materials.')
+    return jsonify({
+        'text': new_chat_text
     })
 
 

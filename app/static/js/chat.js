@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadUserInfo();
     await loadWelcomeMessage();
     await loadConversationStarters();
+    await loadNewChatText();
     await loadModelInfo();
     await loadThreads();
 
@@ -51,26 +52,30 @@ window.addEventListener('popstate', (event) => {
         if (threadElement) {
             const titleElement = threadElement.querySelector('.thread-title');
             const title = titleElement ? titleElement.textContent : 'Chat';
-            selectThread(event.state.threadId, title);
+            const hashId = event.state.hashId || null;
+            selectThread(event.state.threadId, title, hashId);
         }
     }
 });
 
 // Check URL for thread parameter and load it
-function checkAndLoadThreadFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const threadId = urlParams.get('thread');
-
-    if (threadId) {
-        // Find the thread in the loaded threads and select it
-        const threadElement = document.querySelector(`.thread-item[onclick*="${threadId}"]`);
-        if (threadElement) {
-            const titleElement = threadElement.querySelector('.thread-title');
-            const title = titleElement ? titleElement.textContent : 'Chat';
-            // Use a small delay to ensure threads are fully loaded
-            setTimeout(() => {
-                selectThread(parseInt(threadId), title);
-            }, 100);
+async function checkAndLoadThreadFromURL() {
+    // Use initialHashId from template if available
+    if (typeof initialHashId !== 'undefined' && initialHashId) {
+        // Look up thread by hash_id
+        try {
+            const response = await fetch('/api/threads');
+            if (response.ok) {
+                const data = await response.json();
+                const thread = data.threads.find(t => t.hash_id === initialHashId);
+                if (thread) {
+                    setTimeout(() => {
+                        selectThread(thread.id, thread.title, thread.hash_id);
+                    }, 100);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load thread by hash_id:', error);
         }
     }
 }
@@ -104,6 +109,7 @@ async function loadWelcomeMessage() {
 }
 
 let conversationStarters = [];
+let newChatText = '';
 
 async function loadConversationStarters() {
     try {
@@ -118,11 +124,26 @@ async function loadConversationStarters() {
     }
 }
 
+async function loadNewChatText() {
+    try {
+        const response = await fetch('/api/new-chat-text');
+        if (response.ok) {
+            const data = await response.json();
+            newChatText = data.text || '';
+        }
+    } catch (error) {
+        console.error('Failed to load new chat text:', error);
+        newChatText = '';
+    }
+}
+
 function showConversationStarters() {
     const container = document.getElementById('conversation-starters');
     if (!container || conversationStarters.length === 0) return;
 
     container.innerHTML = '';
+
+    // Add conversation starter buttons
     conversationStarters.forEach((starter, index) => {
         const btn = document.createElement('button');
         btn.className = 'starter-btn';
@@ -145,6 +166,7 @@ function useConversationStarter(text) {
     const input = document.getElementById('chat-input');
     if (input) {
         input.value = text;
+        autoResizeTextarea(input);
         input.focus();
         hideConversationStarters();
     }
@@ -325,7 +347,7 @@ async function loadThreads() {
 
             // Auto-select first thread if exists, otherwise show welcome screen
             if (data.threads.length > 0 && !currentThreadId) {
-                selectThread(data.threads[0].id, data.threads[0].title);
+                selectThread(data.threads[0].id, data.threads[0].title, data.threads[0].hash_id);
             } else if (data.threads.length === 0) {
                 showWelcomeScreen();
             }
@@ -344,7 +366,7 @@ function renderThreads(threads) {
 
     list.innerHTML = threads.map(t => `
         <div class="thread-item ${t.id === currentThreadId ? 'active' : ''}"
-             onclick="selectThread(${t.id}, '${t.title}')">
+             onclick="selectThread(${t.id}, '${t.title}', '${t.hash_id || ''}')">
             <i class="thread-icon" data-lucide="message-square"></i>
             <span class="thread-title">${t.title}</span>
             <button class="thread-delete" onclick="event.stopPropagation(); deleteThread(${t.id})">
@@ -376,24 +398,30 @@ async function createNewThread() {
         if (response.ok) {
             const data = await response.json();
             await loadThreads();
-            selectThread(data.thread_id, title);
+            selectThread(data.thread_id, title, data.hash_id);
         }
     } catch (error) {
         console.error('Failed to create thread:', error);
     }
 }
 
-async function selectThread(threadId, title) {
+async function selectThread(threadId, title, hashId = null) {
     currentThreadId = threadId;
     currentThreadTitle = title;
     document.getElementById('main-title').textContent = title;
     document.getElementById('chat-input').disabled = false;
     document.getElementById('send-btn').disabled = false;
 
-    // Update URL with thread ID
-    const url = new URL(window.location);
-    url.searchParams.set('thread', threadId);
-    window.history.pushState({threadId: threadId}, '', url);
+    // Update URL with hash_id if available, otherwise use numeric ID
+    if (hashId) {
+        const url = `/chat/${hashId}`;
+        window.history.pushState({threadId: threadId, hashId: hashId}, '', url);
+    } else {
+        // Fallback for threads without hash_id (shouldn't happen after migration)
+        const url = new URL(window.location);
+        url.searchParams.set('thread', threadId);
+        window.history.pushState({threadId: threadId}, '', url);
+    }
 
     // Show chat view
     showChat();
@@ -473,7 +501,33 @@ function renderMessages(messages) {
     const container = document.getElementById('chat-messages');
 
     if (messages.length === 0) {
-        container.innerHTML = '<div class="empty-state"><h3>Start the conversation!</h3><p>Ask me anything about the conference materials.</p></div>';
+        // Use editable new chat text if available, otherwise use default
+        const emptyStateText = newChatText || 'Start the conversation!\n\nAsk me anything about the conference materials.';
+        const parsedText = parseMarkdown(emptyStateText);
+
+        // Create empty state with new chat instructions
+        const emptyStateDiv = document.createElement('div');
+        emptyStateDiv.className = 'empty-state';
+        emptyStateDiv.innerHTML = parsedText;
+
+        // Add conversation starters as tiles if available
+        if (conversationStarters && conversationStarters.length > 0) {
+            const startersGrid = document.createElement('div');
+            startersGrid.className = 'empty-state-starters';
+
+            conversationStarters.forEach((starter) => {
+                const starterTile = document.createElement('button');
+                starterTile.className = 'empty-state-starter-tile';
+                starterTile.textContent = starter;
+                starterTile.onclick = () => useConversationStarter(starter);
+                startersGrid.appendChild(starterTile);
+            });
+
+            emptyStateDiv.appendChild(startersGrid);
+        }
+
+        container.innerHTML = '';
+        container.appendChild(emptyStateDiv);
         showConversationStarters();
         return;
     }
@@ -585,7 +639,6 @@ async function sendMessage() {
     // Clear input and reset height
     input.value = '';
     input.style.height = '50px';
-    input.rows = 1;
 
     // Add user message to UI immediately
     addMessageToUI('user', message);
@@ -674,7 +727,7 @@ function addMessageToUI(role, content) {
     const isUser = role === 'user';
     const avatar = isUser ? currentUser.name.substring(0, 2).toUpperCase() : 'AI';
     const gradient = isUser ? currentUser.avatar_gradient : 'linear-gradient(135deg, #001E50, #00A0E9)';
-    const displayContent = isUser ? escapeHtml(content) : parseMarkdown(content);
+    const displayContent = parseMarkdown(content);
     // Store original markdown content in data attribute for sharing
     const originalContent = content.replace(/"/g, '&quot;');
 
@@ -856,17 +909,16 @@ function escapeHtml(text) {
 }
 
 // Auto-resize textarea
-document.getElementById('chat-input').addEventListener('input', function() {
-    this.style.height = '50px';
-    const newHeight = Math.min(Math.max(this.scrollHeight, 50), 354);
-    this.style.height = newHeight + 'px';
+function autoResizeTextarea(textarea) {
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    // Calculate new height (min 50px, max 354px)
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, 50), 354);
+    textarea.style.height = newHeight + 'px';
+}
 
-    // Enable scrolling when content exceeds 15 lines
-    if (this.scrollHeight > 354) {
-        this.style.overflowY = 'auto';
-    } else {
-        this.style.overflowY = 'hidden';
-    }
+document.getElementById('chat-input').addEventListener('input', function() {
+    autoResizeTextarea(this);
 });
 
 // Send on Enter (Shift+Enter for new line)
@@ -1114,7 +1166,7 @@ function closeDebugContextDialog(clearInput = true) {
         const input = document.getElementById('chat-input');
         if (input) {
             input.value = '';
-            input.style.height = 'auto';
+            input.style.height = '50px';
         }
         // Clear stored message
         storedDebugMessage = null;
@@ -1129,6 +1181,7 @@ function sendFromDebugDialog() {
     if (storedDebugMessage) {
         const input = document.getElementById('chat-input');
         input.value = storedDebugMessage;
+        autoResizeTextarea(input);
     }
 
     // Set bypass flag

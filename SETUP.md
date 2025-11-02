@@ -40,7 +40,7 @@
 ### 1. Activate Virtual Environment
 
 ```bash
-cd "C:\Users\belic\Claude\confAI\ConfAI"
+cd /path/to/ConfAI
 
 # Windows
 venv\Scripts\activate
@@ -84,11 +84,11 @@ SMTP_PASSWORD=your_app_password
 python run.py
 ```
 
-The application will start on `http://localhost:5000`
+The application will start on port 5000
 
 ### 5. Test the Login
 
-1. Open `http://localhost:5000` in your browser
+1. Open the application URL in your browser
 2. Enter any valid email address
 3. Check the console output for the PIN code
 4. Enter the 6-digit PIN
@@ -218,14 +218,14 @@ ConfAI/
 
 ### Test Authentication
 ```bash
-curl -X POST http://localhost:5000/login \
+curl -X POST http://your-domain.com/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com"}'
 ```
 
 Check console for PIN, then verify:
 ```bash
-curl -X POST http://localhost:5000/verify \
+curl -X POST http://your-domain.com/verify \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","pin":"123456"}'
 ```
@@ -233,13 +233,13 @@ curl -X POST http://localhost:5000/verify \
 ### Test API Endpoints
 ```bash
 # Create thread (requires login cookie)
-curl -X POST http://localhost:5000/api/threads \
+curl -X POST http://your-domain.com/api/threads \
   -H "Content-Type: application/json" \
   -H "Cookie: session=..." \
   -d '{"title":"Test Chat"}'
 
 # Upload document (requires admin key)
-curl -X POST http://localhost:5000/api/update-transcript \
+curl -X POST http://your-domain.com/api/update-transcript \
   -H "X-Admin-Key: admin-secret-key-change-this" \
   -F "file=@document.pdf" \
   -F "type=transcript"

@@ -1,6 +1,7 @@
 let votesRemaining = 3;
 let insights = [];
 let currentFilter = 'all';
+let currentSort = 'time';
 let votesUsed = 0;
 let sharesUsed = 0;
 
@@ -47,6 +48,16 @@ async function loadInsights() {
             shareCountHeader.textContent = `${sharesUsed}/3`;
         }
 
+        // Show/hide "sort by votes" button based on whether all votes are casted
+        const sortVotesBtn = document.getElementById('sort-votes');
+        if (sortVotesBtn) {
+            if (votesUsed === 3) {
+                sortVotesBtn.style.display = 'block';
+            } else {
+                sortVotesBtn.style.display = 'none';
+            }
+        }
+
         const loadingEl = document.getElementById('insights-loading');
         if (loadingEl) loadingEl.style.display = 'none';
 
@@ -75,7 +86,7 @@ function renderInsights() {
     grid.innerHTML = '';
 
     // Filter insights based on current filter
-    console.log('renderInsights called with filter:', currentFilter);
+    console.log('renderInsights called with filter:', currentFilter, 'and sort:', currentSort);
     let filteredInsights = insights;
     if (currentFilter === 'votes') {
         // Show only insights the user has voted on
@@ -89,6 +100,21 @@ function renderInsights() {
         console.log('All insights is_owner values:', insights.map(i => ({id: i.id, is_owner: i.is_owner})));
     } else {
         console.log('All filter: showing all', insights.length, 'insights');
+    }
+
+    // Sort insights based on current sort
+    if (currentSort === 'votes') {
+        // Sort by net votes (descending)
+        filteredInsights.sort((a, b) => {
+            const aVotes = a.net_votes || 0;
+            const bVotes = b.net_votes || 0;
+            return bVotes - aVotes;
+        });
+    } else {
+        // Sort by time (newest first)
+        filteredInsights.sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
     }
 
     filteredInsights.forEach(insight => {
@@ -109,9 +135,21 @@ function createInsightCard(insight) {
     card.className = 'insight-card';
     card.dataset.insightId = insight.id;
 
-    // Create date badge for top right
+    // Create header with vote count (if visible) and date
+    const header = document.createElement('div');
+    header.className = 'insight-header';
+
+    // Add vote count if visible
+    if (insight.net_votes !== null && insight.net_votes !== undefined) {
+        const voteCountBadge = document.createElement('span');
+        voteCountBadge.className = 'insight-vote-badge';
+        voteCountBadge.textContent = `Score: ${insight.net_votes > 0 ? '+' : ''}${insight.net_votes}`;
+        header.appendChild(voteCountBadge);
+    }
+
+    // Create date badge
     const dateBadge = document.createElement('div');
-    dateBadge.className = 'insight-date-badge';
+    dateBadge.className = 'insight-date-badge-header';
     const createdDate = new Date(insight.created_at);
     dateBadge.textContent = createdDate.toLocaleDateString('en-US', {
         month: 'short',
@@ -119,6 +157,9 @@ function createInsightCard(insight) {
         hour: '2-digit',
         minute: '2-digit'
     });
+    header.appendChild(dateBadge);
+
+    card.appendChild(header);
 
     // Add title if available
     if (insight.title) {
@@ -162,7 +203,7 @@ function createInsightCard(insight) {
     const remixBtn = document.createElement('button');
     remixBtn.className = 'remix-btn';
     remixBtn.innerHTML = '<i data-lucide="sparkles"></i><span>Remix this idea</span>';
-    remixBtn.onclick = () => remixIdea(insight.content);
+    remixBtn.onclick = () => remixIdea(insight.content, insight.title);
 
     const voteControls = document.createElement('div');
     voteControls.className = 'vote-controls';
@@ -189,45 +230,34 @@ function createInsightCard(insight) {
         upvoteBtn.className = 'vote-btn upvote';
         if (insight.user_vote === 'up') {
             upvoteBtn.classList.add('voted');
+            upvoteBtn.title = 'Already voted (revoke from My Votes menu)';
+        } else {
+            upvoteBtn.title = votesRemaining === 0 ? 'No votes remaining' : 'Upvote this insight';
         }
-        upvoteBtn.disabled = votesRemaining === 0 && !insight.user_vote;
+        // Disable if no votes remaining OR already voted on this insight
+        upvoteBtn.disabled = votesRemaining === 0 || insight.user_vote !== null;
         upvoteBtn.onclick = () => handleVote(insight.id, 'up');
 
-        // Show upvote count if available
-        if (insight.upvotes !== null && insight.upvotes !== undefined) {
-            upvoteBtn.innerHTML = `👍 ${insight.upvotes}`;
-        } else {
-            upvoteBtn.innerHTML = '👍';
-        }
-
-        // Vote count separator (net votes)
-        const voteCount = document.createElement('span');
-        voteCount.className = 'vote-count';
-        if (insight.net_votes !== null && insight.net_votes !== undefined) {
-            voteCount.textContent = insight.net_votes;
-        } else {
-            voteCount.textContent = '?';
-            voteCount.classList.add('hidden');
-        }
+        // Show upvote button (no count)
+        upvoteBtn.innerHTML = '👍';
 
         // Downvote button with count
         const downvoteBtn = document.createElement('button');
         downvoteBtn.className = 'vote-btn downvote';
         if (insight.user_vote === 'down') {
             downvoteBtn.classList.add('voted');
+            downvoteBtn.title = 'Already voted (revoke from My Votes menu)';
+        } else {
+            downvoteBtn.title = votesRemaining === 0 ? 'No votes remaining' : 'Downvote this insight';
         }
-        downvoteBtn.disabled = votesRemaining === 0 && !insight.user_vote;
+        // Disable if no votes remaining OR already voted on this insight
+        downvoteBtn.disabled = votesRemaining === 0 || insight.user_vote !== null;
         downvoteBtn.onclick = () => handleVote(insight.id, 'down');
 
-        // Show downvote count if available
-        if (insight.downvotes !== null && insight.downvotes !== undefined) {
-            downvoteBtn.innerHTML = `👎 ${insight.downvotes}`;
-        } else {
-            downvoteBtn.innerHTML = '👎';
-        }
+        // Show downvote button (no count)
+        downvoteBtn.innerHTML = '👎';
 
         voteControls.appendChild(upvoteBtn);
-        voteControls.appendChild(voteCount);
         voteControls.appendChild(downvoteBtn);
     }
 
@@ -236,16 +266,6 @@ function createInsightCard(insight) {
     // Only append vote controls if they have content
     if (voteControls.children.length > 0) {
         footer.appendChild(voteControls);
-    }
-
-    // Move date badge to footer when votes are visible, otherwise keep it in top right
-    if (insight.net_votes !== null && insight.net_votes !== undefined) {
-        // Remove absolute positioning class and add to footer
-        dateBadge.className = 'insight-date-badge-inline';
-        footer.appendChild(dateBadge);
-    } else {
-        // Keep absolute positioning in top right
-        card.appendChild(dateBadge);
     }
 
     card.appendChild(content);
@@ -359,6 +379,7 @@ async function handleVote(insightId, voteType) {
 
         // Update UI
         const totalVotes = 3;
+        const previousVotesUsed = votesUsed;
         votesUsed = totalVotes - votesRemaining;
 
         // Update vote counter in header
@@ -373,7 +394,16 @@ async function handleVote(insightId, voteType) {
             voteCountElem.textContent = `${votesUsed}/3`;
         }
 
-        renderInsights();
+        // Check if user just reached vote limit
+        const justReachedLimit = previousVotesUsed < 3 && votesUsed === 3;
+
+        // Reload insights to get updated vote counts from server
+        await loadInsights();
+
+        // Show dialog if user just reached vote limit
+        if (justReachedLimit) {
+            showDialog('You have cast all your votes! Now you can see which insights have the most votes.', 'success');
+        }
 
     } catch (error) {
         showDialog(`Error: ${error.message}`, 'error');
@@ -425,7 +455,25 @@ function filterInsights(filter) {
     renderInsights();
 }
 
-async function remixIdea(content) {
+function sortInsights(sort) {
+    currentSort = sort;
+    console.log('Sorting insights by:', sort);
+
+    // Update active sort button
+    const sortButtons = document.querySelectorAll('.sort-btn');
+    if (sortButtons.length > 0) {
+        sortButtons.forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById(`sort-${sort}`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    // Re-render with sort
+    renderInsights();
+}
+
+async function remixIdea(content, title = null) {
     // Switch to chat view
     if (typeof showChat === 'function') {
         showChat();
@@ -440,15 +488,22 @@ async function remixIdea(content) {
         await createNewThread();
     }
 
+    // Format the remix text with title if available
+    let remixText = content;
+    if (title) {
+        remixText = `# ${title}\n\n${content}`;
+    }
+
     // Set the content in the input box
     const input = document.getElementById('chat-input');
     if (input) {
-        input.value = content;
+        input.value = remixText;
         input.focus();
 
-        // Auto-resize textarea
+        // Auto-resize textarea up to max-height (354px)
         input.style.height = 'auto';
-        input.style.height = input.scrollHeight + 'px';
+        const newHeight = Math.min(input.scrollHeight, 354);
+        input.style.height = newHeight + 'px';
     }
 }
 

@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadContextFiles();
     loadStatistics();
     loadWelcomeMessage();
+    loadNewChatText();
     loadLLMProviderSetting();
     loadContextModeSetting();
     loadEmbeddingSettings();
@@ -70,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupFileUpload();
     setupCharacterCounter();
     setupWelcomeMessageCounter();
+    setupNewChatTextCounter();
     setupLLMProviderChange();
     setupContextModeChange();
 
@@ -852,6 +854,33 @@ async function loadWelcomeMessage() {
 }
 
 /**
+ * Load the new chat text from the server
+ */
+async function loadNewChatText() {
+    try {
+        const response = await fetch('/api/admin/new-chat-text', {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load new chat text');
+        }
+
+        const data = await response.json();
+
+        const textarea = document.getElementById('new-chat-text');
+        if (textarea) {
+            textarea.value = data.text || '';
+            updateCharCount('new-chat-text', 'new-chat-chars');
+        }
+
+        console.log('New chat text loaded successfully');
+    } catch (error) {
+        console.error('Error loading new chat text:', error);
+    }
+}
+
+/**
  * Load conversation starters
  */
 async function loadConversationStarters() {
@@ -924,6 +953,18 @@ function setupWelcomeMessageCounter() {
     if (textarea) {
         textarea.addEventListener('input', () => {
             updateCharCount('welcome-message', 'welcome-chars');
+        });
+    }
+}
+
+/**
+ * Setup character counter for new chat text textarea
+ */
+function setupNewChatTextCounter() {
+    const textarea = document.getElementById('new-chat-text');
+    if (textarea) {
+        textarea.addEventListener('input', () => {
+            updateCharCount('new-chat-text', 'new-chat-chars');
         });
     }
 }
@@ -1102,6 +1143,7 @@ function updateModeOptionsUI(mode) {
 async function saveSettings() {
     const provider = document.getElementById('llm-provider')?.value;
     const welcomeMessage = document.getElementById('welcome-message')?.value?.trim();
+    const newChatText = document.getElementById('new-chat-text')?.value?.trim();
     const chunkSize = document.getElementById('chunk-size')?.value;
     const chunkOverlap = document.getElementById('chunk-overlap')?.value;
     const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
@@ -1128,8 +1170,8 @@ async function saveSettings() {
     }
 
     try {
-        // Save LLM provider, welcome message, embeddings settings, and conversation starters
-        const [providerResponse, welcomeResponse, embeddingsResponse, startersResponse] = await Promise.all([
+        // Save LLM provider, welcome message, new chat text, embeddings settings, and conversation starters
+        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, startersResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -1143,6 +1185,13 @@ async function saveSettings() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ message: welcomeMessage })
+            }),
+            fetch('/api/admin/new-chat-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: newChatText || '' })
             }),
             fetch('/api/admin/embedding-settings', {
                 method: 'POST',

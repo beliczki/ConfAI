@@ -377,9 +377,9 @@ Be professional, engaging, and help users derive meaningful insights."""
                                 if chunk.strip() and chunk != "[DONE]":
                                     import json
                                     try:
-                                        data = json.loads(chunk)
-                                        if "choices" in data and len(data["choices"]) > 0:
-                                            delta = data["choices"][0].get("delta", {})
+                                        chunk_data = json.loads(chunk)
+                                        if "choices" in chunk_data and len(chunk_data["choices"]) > 0:
+                                            delta = chunk_data["choices"][0].get("delta", {})
                                             if "content" in delta:
                                                 yield delta["content"]
                                     except json.JSONDecodeError:
