@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadWelcomeMessage();
     loadLLMProviderSetting();
     loadContextModeSetting();
+    loadEmbeddingSettings();
 
     // Setup event listeners
     setupFileUpload();
@@ -328,76 +329,94 @@ async function loadContextFiles() {
 }
 
 /**
- * Display the list of context files in new simple layout
+ * Display the list of context files in two-column layout
  */
 function displayFilesList(files) {
-    const filesContainer = document.getElementById('files-list-container');
-    const emptyState = document.getElementById('files-empty-state');
-    const fileCount = document.getElementById('file-count');
-    const fileCountStat = document.getElementById('file-count-stat');
+    const windowFilesContainer = document.getElementById('window-files-list');
+    const vectorFilesContainer = document.getElementById('vector-files-list');
 
-    if (!filesContainer) return;
+    if (!windowFilesContainer || !vectorFilesContainer) return;
 
-    // Update file counts
-    if (fileCount) fileCount.textContent = files.length;
-    if (fileCountStat) fileCountStat.textContent = files.length;
+    // Separate files by mode (default to window mode if not specified)
+    const windowFiles = files.filter(f => f.mode !== 'vector');
+    const vectorFiles = files.filter(f => f.mode === 'vector');
+
+    // Display window mode files
+    displayFileColumn(windowFilesContainer, windowFiles, 'window');
+
+    // Display vector mode files
+    displayFileColumn(vectorFilesContainer, vectorFiles, 'vector');
+
+    // Update statistics
+    updateStatistics();
+}
+
+/**
+ * Display files in a specific column
+ */
+function displayFileColumn(container, files, mode) {
+    if (!container) return;
+
+    // Clear existing content
+    container.innerHTML = '';
 
     if (files.length === 0) {
-        if (emptyState) emptyState.style.display = 'block';
-        // Clear any existing file items
-        const existingItems = filesContainer.querySelectorAll('.file-list-item');
-        existingItems.forEach(item => item.remove());
+        container.innerHTML = `
+            <div class="empty-state-small">
+                <i data-lucide="inbox"></i>
+                <p>No files in ${mode} mode</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') {
+            setTimeout(() => lucide.createIcons(), 10);
+        }
         return;
     }
 
-    // Hide empty state
-    if (emptyState) emptyState.style.display = 'none';
-
-    // Create file list items
+    // Create file items
     const filesHTML = files.map((file, index) => {
-        const fileNameEscaped = escapeHtml(file.name).replace(/'/g, "\\'");
-        const isEnabled = file.enabled !== false; // Default to enabled if not specified
+        const fileIndex = currentFiles.indexOf(file);
+        const isEnabled = file.enabled !== false;
+        const otherMode = mode === 'window' ? 'vector' : 'window';
+
         return `
-        <div class="file-list-item" data-file-index="${index}" onclick="viewFileContent(${index})">
-            <div class="file-item-name-row">
-                <i data-lucide="file-text"></i>
-                <span class="file-item-name-text">${escapeHtml(file.name)}</span>
+        <div class="file-column-item" data-file-index="${fileIndex}">
+            <div class="file-column-item-header">
+                <div class="file-column-item-name">
+                    <i data-lucide="file-text"></i>
+                    ${escapeHtml(file.name)}
+                </div>
+                <div class="file-column-item-actions">
+                    <button onclick="openFilePreview(${fileIndex})" title="Preview file">
+                        <i data-lucide="eye"></i>
+                    </button>
+                    <button onclick="moveFileToMode(${fileIndex}, '${otherMode}')" title="Move to ${otherMode} mode">
+                        <i data-lucide="arrow-${mode === 'window' ? 'right' : 'left'}"></i>
+                    </button>
+                    <button class="btn-delete" onclick="deleteFileByIndex(${fileIndex})" title="Delete file">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
             </div>
-            <div class="file-item-stats">
-                <button class="file-checkbox-btn ${isEnabled ? 'checked' : ''}" onclick="event.stopPropagation(); toggleFileEnabled(${index})" title="${isEnabled ? 'Enabled in context' : 'Disabled from context'}">
-                    <i data-lucide="${isEnabled ? 'check-square' : 'square'}"></i>
-                </button>
+            <div class="file-column-item-info">
                 <span>${formatFileSize(file.size)}</span>
-                <span>•</span>
                 <span>${file.chars.toLocaleString()} chars</span>
-                <span>•</span>
                 <span>${Math.ceil(file.chars / 4).toLocaleString()} tokens</span>
-                <button class="btn-file-delete" onclick="event.stopPropagation(); deleteFileByIndex(${index})">
-                    <i data-lucide="trash-2"></i>
-                </button>
+            </div>
+            <div class="file-column-item-checkbox">
+                <input type="checkbox" id="enable-${fileIndex}" ${isEnabled ? 'checked' : ''}
+                       onchange="toggleFileEnabled(${fileIndex})">
+                <label for="enable-${fileIndex}">Include in context</label>
             </div>
         </div>
         `;
     }).join('');
 
-    // Insert after empty state or replace existing items
-    const existingItems = filesContainer.querySelectorAll('.file-list-item');
-    if (existingItems.length > 0) {
-        existingItems.forEach(item => item.remove());
-    }
-    filesContainer.insertAdjacentHTML('beforeend', filesHTML);
+    container.innerHTML = filesHTML;
 
     // Re-initialize Lucide icons
     if (typeof lucide !== 'undefined') {
         setTimeout(() => lucide.createIcons(), 10);
-    }
-
-    // Update statistics
-    updateStatistics();
-
-    // Automatically select the first file
-    if (files.length > 0) {
-        viewFileContent(0);
     }
 }
 
@@ -1493,3 +1512,200 @@ async function processEmbeddings() {
         }
     }
 }
+
+// ============================
+// FILE MODE MANAGEMENT
+// ============================
+
+/**
+ * Open file preview dialog
+ */
+async function openFilePreview(fileIndex) {
+    const file = currentFiles[fileIndex];
+    if (!file) return;
+
+    const dialog = document.getElementById('file-preview-dialog');
+    const filename = document.getElementById('preview-dialog-filename');
+    const content = document.getElementById('preview-dialog-content');
+    const size = document.getElementById('preview-dialog-size');
+    const chars = document.getElementById('preview-dialog-chars');
+    const tokens = document.getElementById('preview-dialog-tokens');
+
+    if (!dialog) return;
+
+    // Set dialog content
+    if (filename) filename.textContent = file.name;
+    if (size) size.textContent = formatFileSize(file.size);
+    if (chars) chars.textContent = file.chars.toLocaleString();
+    if (tokens) tokens.textContent = Math.ceil(file.chars / 4).toLocaleString();
+
+    // Load file content if not already loaded
+    if (!file.content) {
+        try {
+            const response = await fetch(`/api/admin/context-files/${encodeURIComponent(file.name)}`, {
+                headers: getAuthHeaders()
+            });
+            if (response.ok) {
+                const data = await response.json();
+                file.content = data.content;
+            }
+        } catch (error) {
+            console.error('Error loading file content:', error);
+        }
+    }
+
+    if (content) {
+        content.textContent = file.content || 'No content available';
+    }
+
+    // Show dialog
+    dialog.style.display = 'flex';
+
+    // Reinitialize icons
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => lucide.createIcons(), 10);
+    }
+}
+
+/**
+ * Close file preview dialog
+ */
+function closeFilePreview() {
+    const dialog = document.getElementById('file-preview-dialog');
+    if (dialog) {
+        dialog.style.display = 'none';
+    }
+}
+
+/**
+ * Move file to different mode (window <-> vector)
+ */
+async function moveFileToMode(fileIndex, newMode) {
+    const file = currentFiles[fileIndex];
+    if (!file) return;
+
+    try {
+        const response = await fetch(`/api/admin/context-files/${encodeURIComponent(file.name)}/mode`, {
+            method: 'PUT',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ mode: newMode })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update file mode');
+        }
+
+        // Update local file object
+        file.mode = newMode;
+
+        // Refresh display
+        displayFilesList(currentFiles);
+
+        console.log(`Moved ${file.name} to ${newMode} mode`);
+
+    } catch (error) {
+        console.error('Error moving file:', error);
+        alert('Failed to move file. Please try again.');
+    }
+}
+
+/**
+ * Save embedding settings (chunk size and retrieval count)
+ */
+async function saveEmbeddingSettings() {
+    const chunkSize = document.getElementById('chunk-size')?.value;
+    const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
+
+    if (!chunkSize || !chunksToRetrieve) {
+        alert('Please fill in all embedding settings');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/embedding-settings', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chunk_size: parseInt(chunkSize),
+                chunks_to_retrieve: parseInt(chunksToRetrieve)
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save embedding settings');
+        }
+
+        const data = await response.json();
+        console.log('Embedding settings saved:', data);
+
+        // Show success message
+        const statusEl = document.getElementById('embeddings-status');
+        if (statusEl) {
+            statusEl.textContent = '✓ Settings saved successfully';
+            statusEl.className = 'status-message success';
+            statusEl.style.display = 'block';
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 3000);
+        }
+
+    } catch (error) {
+        console.error('Error saving embedding settings:', error);
+        alert('Failed to save settings. Please try again.');
+    }
+}
+
+/**
+ * Load embedding settings
+ */
+async function loadEmbeddingSettings() {
+    try {
+        const response = await fetch('/api/admin/embedding-settings', {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            console.log('No embedding settings found, using defaults');
+            return;
+        }
+
+        const data = await response.json();
+
+        const chunkSize = document.getElementById('chunk-size');
+        const chunksToRetrieve = document.getElementById('chunks-to-retrieve');
+
+        if (chunkSize && data.chunk_size) {
+            chunkSize.value = data.chunk_size;
+        }
+
+        if (chunksToRetrieve && data.chunks_to_retrieve) {
+            chunksToRetrieve.value = data.chunks_to_retrieve;
+        }
+
+        console.log('Loaded embedding settings:', data);
+
+    } catch (error) {
+        console.error('Error loading embedding settings:', error);
+    }
+}
+
+// Close preview dialog when clicking outside
+document.addEventListener('click', function(e) {
+    const dialog = document.getElementById('file-preview-dialog');
+    if (dialog && e.target === dialog) {
+        closeFilePreview();
+    }
+});
+
+// Close preview dialog with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeFilePreview();
+    }
+});
