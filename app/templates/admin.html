@@ -70,24 +70,40 @@
 
         <!-- Vector Embeddings Section (only shown when in embeddings mode) -->
         <div class="section-card" id="embeddings-section" style="display: none;">
-            <h3><i data-lucide="database"></i> Vector Embeddings</h3>
-            <p class="help-text">Process context files into vector embeddings for semantic search.</p>
+            <h3><i data-lucide="database"></i> Vector Embeddings Settings</h3>
+            <p class="help-text">Configure chunking and retrieval settings for vector embeddings.</p>
 
-            <div style="display: flex; gap: 20px; margin: 20px 0;">
-                <div style="flex: 1; padding: 15px; background: #f9fafb; border-radius: 8px;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0;">
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 24px; font-weight: bold; color: #059669;" id="embeddings-doc-count">0</div>
                     <div style="font-size: 14px; color: #666;">Documents</div>
                 </div>
-                <div style="flex: 1; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px;">
                     <div style="font-size: 24px; font-weight: bold; color: #0ea5e9;" id="embeddings-chunk-count">0</div>
                     <div style="font-size: 14px; color: #666;">Chunks</div>
                 </div>
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px;">
+                    <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">Chunk Size (chars)</label>
+                    <input type="number" id="chunk-size" value="1000" min="200" max="4000" step="100"
+                           style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; font-weight: bold;">
+                </div>
+                <div style="padding: 15px; background: #f9fafb; border-radius: 8px;">
+                    <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">Chunks to Retrieve</label>
+                    <input type="number" id="chunks-to-retrieve" value="5" min="1" max="20"
+                           style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; font-weight: bold;">
+                </div>
             </div>
 
-            <button class="btn btn-primary" onclick="processEmbeddings()">
-                <i data-lucide="play"></i>
-                <span>Process Embeddings</span>
-            </button>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="saveEmbeddingSettings()">
+                    <i data-lucide="save"></i>
+                    <span>Save Settings</span>
+                </button>
+                <button class="btn btn-secondary" onclick="processEmbeddings()">
+                    <i data-lucide="play"></i>
+                    <span>Process Embeddings</span>
+                </button>
+            </div>
             <div id="embeddings-status" class="status-message"></div>
         </div>
 
@@ -96,49 +112,72 @@
             <div class="section-header-with-stats">
                 <div>
                     <h2><i data-lucide="folder"></i> Manage Files</h2>
-                    <p class="help-text">Upload, view, and manage context files that will be included in every conversation.<br>
-                    <small style="color: #E20074; font-style: italic;">Only checked files are included in the AI context.</small></p>
+                    <p class="help-text">Upload and organize files for different context modes.</p>
                 </div>
                 <div class="context-stats-compact">
                     Context chars: <span id="context-total-chars">0</span> | tokens: <span id="context-total-tokens">0</span>
                 </div>
             </div>
 
-            <div class="files-workspace">
-                <!-- Left: File List -->
-                <div class="files-list-panel">
-                    <div class="files-list-header">
-                        <h3>Uploaded Files (<span id="file-count">0</span>)</h3>
-                    </div>
+            <!-- Upload Area -->
+            <div class="upload-zone" id="drop-zone" style="margin-bottom: 20px;">
+                <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
+                <i data-lucide="upload"></i>
+                <span>Drop files here or click to upload</span>
+                <small>.txt, .md (Max 500KB)</small>
+            </div>
 
-                    <div class="files-list-scroll" id="files-list-container">
-                        <div class="empty-state-small" id="files-empty-state">
+            <!-- Two-Column File Layout -->
+            <div class="files-two-column">
+                <!-- Left: Window Mode Files -->
+                <div class="file-column">
+                    <div class="file-column-header">
+                        <h3><i data-lucide="file-text"></i> Window Mode Files</h3>
+                        <p class="help-text-small">Full files added to prompt (costly but informed)</p>
+                    </div>
+                    <div class="file-column-list" id="window-files-list">
+                        <div class="empty-state-small">
                             <i data-lucide="inbox"></i>
-                            <p>No files uploaded yet</p>
+                            <p>No files in window mode</p>
                         </div>
-                        <!-- Files will be listed here -->
-                    </div>
-
-                    <!-- Upload Area at Bottom of File List -->
-                    <div class="upload-zone" id="drop-zone">
-                        <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
-                        <i data-lucide="upload"></i>
-                        <span>Drop files here or click to upload</span>
-                        <small>.txt, .md (Max 500KB)</small>
                     </div>
                 </div>
 
-                <!-- Right: Preview Panel -->
-                <div class="preview-panel-main">
-                    <div class="preview-panel-header">
-                        <h3><i data-lucide="eye"></i> File Preview</h3>
+                <!-- Right: Vector Mode Files -->
+                <div class="file-column">
+                    <div class="file-column-header">
+                        <h3><i data-lucide="database"></i> Vector Mode Files</h3>
+                        <p class="help-text-small">Chunked for semantic search (scalable but narrow)</p>
                     </div>
-                    <div class="preview-panel-content" id="main-preview-content">
-                        <div class="empty-state-preview">
-                            <i data-lucide="file-text"></i>
-                            <p>Select a file to preview its content</p>
+                    <div class="file-column-list" id="vector-files-list">
+                        <div class="empty-state-small">
+                            <i data-lucide="inbox"></i>
+                            <p>No files in vector mode</p>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Preview Dialog -->
+        <div id="file-preview-dialog" class="dialog-overlay" style="display: none;">
+            <div class="dialog-container" style="max-width: 800px; max-height: 80vh;">
+                <div class="dialog-header">
+                    <h3><i data-lucide="eye"></i> File Preview: <span id="preview-dialog-filename">-</span></h3>
+                    <button class="dialog-close" onclick="closeFilePreview()">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <div class="dialog-body" style="max-height: 60vh; overflow-y: auto;">
+                    <pre id="preview-dialog-content" style="white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.5; margin: 0; padding: 20px; background: #f9fafb; border-radius: 8px;"></pre>
+                </div>
+                <div class="dialog-footer">
+                    <div style="font-size: 12px; color: #666;">
+                        <span id="preview-dialog-size">-</span> |
+                        <span id="preview-dialog-chars">-</span> characters |
+                        <span id="preview-dialog-tokens">-</span> tokens
+                    </div>
+                    <button class="btn btn-secondary" onclick="closeFilePreview()">Close</button>
                 </div>
             </div>
         </div>
