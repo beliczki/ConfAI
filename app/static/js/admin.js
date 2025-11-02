@@ -12,25 +12,39 @@ if (window.adminDashboardInitialized) {
 
 // Template definitions for quick system prompt templates
 const PROMPT_TEMPLATES = {
-    conference: `You are a helpful AI assistant specialized in conference insights and book knowledge.
+    current: null, // Will be loaded from database
+
+    conference: {
+        base: `You are a helpful AI assistant specialized in conference insights and book knowledge.
 You have access to conference transcripts and related books.
 Respond concisely and insightfully, drawing from the provided context when relevant.
 Be professional, engaging, and help users derive meaningful insights.`,
+        safety: `Always provide accurate information. If you're unsure, say so. Do not make up facts or provide misleading information. Respect user privacy and maintain professional boundaries.`
+    },
 
-    helpful: `You are a friendly and helpful AI assistant.
+    helpful: {
+        base: `You are a friendly and helpful AI assistant.
 Your goal is to provide accurate, thoughtful, and useful responses.
 Be conversational, empathetic, and always aim to understand the user's needs.
 Draw from the provided context when it's relevant to the conversation.`,
+        safety: `Always provide accurate information. If you're unsure, say so. Do not make up facts or provide misleading information. Respect user privacy and maintain professional boundaries.`
+    },
 
-    concise: `You are a concise AI assistant that provides clear, direct answers.
+    concise: {
+        base: `You are a concise AI assistant that provides clear, direct answers.
 Keep responses brief and to the point.
 Use the provided context to give accurate information.
 Avoid unnecessary elaboration unless specifically requested.`,
+        safety: `Always provide accurate information. If you're unsure, say so. Do not make up facts or provide misleading information. Respect user privacy and maintain professional boundaries.`
+    },
 
-    creative: `You are a creative and innovative AI assistant.
+    creative: {
+        base: `You are a creative and innovative AI assistant.
 Think outside the box and provide unique perspectives.
 Use the provided context as inspiration for creative insights.
-Be engaging, thought-provoking, and encourage exploration of ideas.`
+Be engaging, thought-provoking, and encourage exploration of ideas.`,
+        safety: `Always provide accurate information. If you're unsure, say so. Do not make up facts or provide misleading information. Respect user privacy and maintain professional boundaries.`
+    }
 };
 
 // Global state
@@ -118,10 +132,34 @@ async function loadSystemPrompt() {
         const data = await response.json();
         currentSystemPrompt = data.prompt;
 
-        const textarea = document.getElementById('current-prompt');
-        if (textarea) {
-            textarea.value = currentSystemPrompt;
-            updateCharCount('current-prompt', 'prompt-chars');
+        // Split prompt into base and safety (split at first safety instruction marker)
+        const safetyMarker = '\n\nSafety Instructions:\n';
+        let baseInstructions = currentSystemPrompt;
+        let safetyInstructions = 'Always provide accurate information. If you\'re unsure, say so. Do not make up facts or provide misleading information. Respect user privacy and maintain professional boundaries.';
+
+        if (currentSystemPrompt.includes(safetyMarker)) {
+            const parts = currentSystemPrompt.split(safetyMarker);
+            baseInstructions = parts[0];
+            safetyInstructions = parts[1] || safetyInstructions;
+        }
+
+        // Store current as template for 'Current' button
+        PROMPT_TEMPLATES.current = {
+            base: baseInstructions,
+            safety: safetyInstructions
+        };
+
+        const baseTextarea = document.getElementById('base-instructions');
+        const safetyTextarea = document.getElementById('safety-instructions');
+
+        if (baseTextarea) {
+            baseTextarea.value = baseInstructions;
+            updateCharCount('base-instructions', 'base-chars');
+        }
+
+        if (safetyTextarea) {
+            safetyTextarea.value = safetyInstructions;
+            updateCharCount('safety-instructions', 'safety-chars');
         }
     } catch (error) {
         console.error('Error loading system prompt:', error);
@@ -133,13 +171,24 @@ async function loadSystemPrompt() {
  * Save the system prompt to the server
  */
 async function saveSystemPrompt() {
-    const textarea = document.getElementById('current-prompt');
-    const newPrompt = textarea.value.trim();
+    const baseTextarea = document.getElementById('base-instructions');
+    const safetyTextarea = document.getElementById('safety-instructions');
 
-    if (!newPrompt) {
-        showStatus('prompt-status', 'System prompt cannot be empty', 'error');
+    const baseInstructions = baseTextarea.value.trim();
+    const safetyInstructions = safetyTextarea.value.trim();
+
+    if (!baseInstructions) {
+        showStatus('prompt-status', 'Base instructions cannot be empty', 'error');
         return;
     }
+
+    if (!safetyInstructions) {
+        showStatus('prompt-status', 'Safety instructions cannot be empty', 'error');
+        return;
+    }
+
+    // Combine the instructions with a marker
+    const combinedPrompt = `${baseInstructions}\n\nSafety Instructions:\n${safetyInstructions}`;
 
     try {
         const response = await fetch('/api/admin/system-prompt', {
@@ -148,7 +197,7 @@ async function saveSystemPrompt() {
                 'Content-Type': 'application/json',
                 ...getAuthHeaders()
             },
-            body: JSON.stringify({ prompt: newPrompt })
+            body: JSON.stringify({ prompt: combinedPrompt })
         });
 
         if (!response.ok) {
@@ -156,11 +205,18 @@ async function saveSystemPrompt() {
         }
 
         const data = await response.json();
-        currentSystemPrompt = newPrompt;
-        showStatus('prompt-status', 'System prompt saved successfully!', 'success');
+        currentSystemPrompt = combinedPrompt;
+
+        // Update current template
+        PROMPT_TEMPLATES.current = {
+            base: baseInstructions,
+            safety: safetyInstructions
+        };
+
+        showStatus('prompt-status', 'Instructions saved successfully!', 'success');
     } catch (error) {
         console.error('Error saving system prompt:', error);
-        showStatus('prompt-status', 'Failed to save system prompt', 'error');
+        showStatus('prompt-status', 'Failed to save instructions', 'error');
     }
 }
 
@@ -168,36 +224,46 @@ async function saveSystemPrompt() {
  * Reset system prompt to default
  */
 async function resetSystemPrompt() {
-    if (!await showConfirm('Are you sure you want to reset the system prompt to default? This will discard any custom changes.', {
+    if (!await showConfirm('Are you sure you want to reset the instructions to default? This will discard any custom changes.', {
         confirmText: 'Reset',
         confirmStyle: 'danger'
     })) {
         return;
     }
 
-    const defaultPrompt = PROMPT_TEMPLATES.conference;
-    const textarea = document.getElementById('current-prompt');
+    const defaultTemplate = PROMPT_TEMPLATES.conference;
+    const baseTextarea = document.getElementById('base-instructions');
+    const safetyTextarea = document.getElementById('safety-instructions');
 
-    if (textarea) {
-        textarea.value = defaultPrompt;
-        updateCharCount('current-prompt', 'prompt-chars');
-        showStatus('prompt-status', 'System prompt reset to default. Click "Save Changes" to apply.', 'info');
+    if (baseTextarea) {
+        baseTextarea.value = defaultTemplate.base;
+        updateCharCount('base-instructions', 'base-chars');
     }
+
+    if (safetyTextarea) {
+        safetyTextarea.value = defaultTemplate.safety;
+        updateCharCount('safety-instructions', 'safety-chars');
+    }
+
+    showStatus('prompt-status', 'Instructions reset to default. Click "Save Changes" to apply.', 'info');
 }
 
 /**
  * Test the system prompt (placeholder for future implementation)
  */
 function testSystemPrompt() {
-    const prompt = document.getElementById('current-prompt').value.trim();
+    const basePrompt = document.getElementById('base-instructions').value.trim();
+    const safetyPrompt = document.getElementById('safety-instructions').value.trim();
 
-    if (!prompt) {
-        showStatus('prompt-status', 'Cannot test an empty prompt', 'error');
+    if (!basePrompt || !safetyPrompt) {
+        showStatus('prompt-status', 'Cannot test empty instructions', 'error');
         return;
     }
 
+    const combinedPrompt = `${basePrompt}\n\nSafety Instructions:\n${safetyPrompt}`;
+
     // For now, just show a preview
-    showDialog('System Prompt Preview:\n\n' + prompt + '\n\n(Testing functionality will be implemented in a future update)', 'info');
+    showDialog('System Instructions Preview:\n\n' + combinedPrompt + '\n\n(Testing functionality will be implemented in a future update)', 'info');
 }
 
 /**
@@ -209,12 +275,22 @@ function loadTemplate(templateName) {
         return;
     }
 
-    const textarea = document.getElementById('current-prompt');
-    if (textarea) {
-        textarea.value = PROMPT_TEMPLATES[templateName];
-        updateCharCount('current-prompt', 'prompt-chars');
-        showStatus('prompt-status', `Template "${templateName}" loaded. Click "Save Changes" to apply.`, 'info');
+    const template = PROMPT_TEMPLATES[templateName];
+    const baseTextarea = document.getElementById('base-instructions');
+    const safetyTextarea = document.getElementById('safety-instructions');
+
+    if (baseTextarea && template.base) {
+        baseTextarea.value = template.base;
+        updateCharCount('base-instructions', 'base-chars');
     }
+
+    if (safetyTextarea && template.safety) {
+        safetyTextarea.value = template.safety;
+        updateCharCount('safety-instructions', 'safety-chars');
+    }
+
+    const displayName = templateName === 'current' ? 'Current (from database)' : templateName.charAt(0).toUpperCase() + templateName.slice(1);
+    showStatus('prompt-status', `Template "${displayName}" loaded. Click "Save Changes" to apply.`, 'info');
 }
 
 // ============================
@@ -1180,10 +1256,17 @@ function getAuthHeaders() {
  * Setup character counter for textareas
  */
 function setupCharacterCounter() {
-    const textarea = document.getElementById('current-prompt');
-    if (textarea) {
-        textarea.addEventListener('input', () => {
-            updateCharCount('current-prompt', 'prompt-chars');
+    const baseTextarea = document.getElementById('base-instructions');
+    if (baseTextarea) {
+        baseTextarea.addEventListener('input', () => {
+            updateCharCount('base-instructions', 'base-chars');
+        });
+    }
+
+    const safetyTextarea = document.getElementById('safety-instructions');
+    if (safetyTextarea) {
+        safetyTextarea.addEventListener('input', () => {
+            updateCharCount('safety-instructions', 'safety-chars');
         });
     }
 }
