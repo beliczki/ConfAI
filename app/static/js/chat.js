@@ -7,6 +7,8 @@ let messageContents = {}; // Store original markdown content by message ID
 let messageCount = 0; // Track number of messages in thread
 let conversationHistory = []; // Store first two exchanges for auto-rename
 let currentModel = null; // Track current thread's model
+let debugContextBypass = false; // Flag to bypass debug context dialog when sending from dialog
+let storedDebugMessage = null; // Store message when showing debug dialog
 
 // Helper function to parse markdown safely
 function parseMarkdown(text) {
@@ -441,12 +443,35 @@ function renderMessages(messages) {
 }
 
 async function sendMessage() {
-    if (!currentThreadId) return;
+    console.log('sendMessage called');
+    if (!currentThreadId) {
+        console.log('No currentThreadId, returning');
+        return;
+    }
 
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
+    console.log('Message:', message);
 
-    if (!message) return;
+    if (!message) {
+        console.log('Empty message, returning');
+        return;
+    }
+
+    // Check if debug context mode is enabled
+    const debugToggle = document.getElementById('debug-context-toggle');
+    console.log('Debug toggle:', debugToggle, 'Checked:', debugToggle?.checked, 'Bypass:', debugContextBypass);
+    if (debugToggle && debugToggle.checked && !debugContextBypass) {
+        console.log('Debug mode enabled, showing dialog');
+        // Store message for later use and show debug context dialog
+        storedDebugMessage = message;
+        await showDebugContextDialog(message);
+        return;
+    }
+
+    // Reset bypass flag and stored message for next message
+    debugContextBypass = false;
+    storedDebugMessage = null;
 
     // Store user prompt in conversation history
     conversationHistory.push(message);
@@ -917,3 +942,115 @@ async function autoRenameThreadByPrompts(prompts) {
         console.error('Error auto-renaming thread:', error);
     }
 }
+
+// =============================================================================
+// Debug Context Functions
+// =============================================================================
+
+/**
+ * Toggle debug context mode
+ */
+function toggleDebugContext(event) {
+    event.stopPropagation();
+    const checkbox = document.getElementById('debug-context-toggle');
+    const isEnabled = checkbox.checked;
+    
+    // Save state to localStorage
+    localStorage.setItem('debugContextEnabled', isEnabled);
+    
+    console.log('Debug context mode:', isEnabled ? 'enabled' : 'disabled');
+}
+
+/**
+ * Show debug context dialog with full LLM input
+ */
+async function showDebugContextDialog(userMessage) {
+    // Show dialog immediately with loading message
+    const dialog = document.getElementById('debug-context-dialog');
+    const overlay = document.getElementById('debug-context-overlay');
+    const contentEl = document.getElementById('debug-context-content');
+
+    // Show loading message
+    contentEl.textContent = 'Loading context...\n\nPlease wait while we gather:\n- System prompt\n- Always-in-context files\n- Semantic search results\n- Conversation history';
+
+    // Show dialog
+    overlay.classList.add('active');
+    dialog.classList.add('active');
+
+    try {
+        // Fetch the debug context from backend
+        const response = await fetch('/api/chat/debug-context', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                thread_id: currentThreadId,
+                message: userMessage
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch debug context');
+        }
+
+        const data = await response.json();
+
+        // Update dialog content with actual data
+        contentEl.textContent = JSON.stringify(data, null, 2);
+
+    } catch (error) {
+        console.error('Error showing debug context:', error);
+        contentEl.textContent = 'Error loading debug context:\n\n' + error.message;
+    }
+}
+
+/**
+ * Close debug context dialog
+ * @param {boolean} clearInput - Whether to clear the input field (true for cancel, false for send)
+ */
+function closeDebugContextDialog(clearInput = true) {
+    const dialog = document.getElementById('debug-context-dialog');
+    const overlay = document.getElementById('debug-context-overlay');
+
+    overlay.classList.remove('active');
+    dialog.classList.remove('active');
+
+    // Clear the input field only when canceling
+    if (clearInput) {
+        const input = document.getElementById('chat-input');
+        if (input) {
+            input.value = '';
+            input.style.height = 'auto';
+        }
+        // Clear stored message
+        storedDebugMessage = null;
+    }
+}
+
+/**
+ * Send message from debug context dialog
+ */
+function sendFromDebugDialog() {
+    // Restore the stored message to the input field
+    if (storedDebugMessage) {
+        const input = document.getElementById('chat-input');
+        input.value = storedDebugMessage;
+    }
+
+    // Set bypass flag
+    debugContextBypass = true;
+
+    // Close dialog WITHOUT clearing the input
+    closeDebugContextDialog(false);
+
+    // Trigger send
+    sendMessage();
+}
+
+// Initialize debug context toggle state on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const debugToggle = document.getElementById('debug-context-toggle');
+    if (debugToggle) {
+        const savedState = localStorage.getItem('debugContextEnabled') === 'true';
+        debugToggle.checked = savedState;
+    }
+});

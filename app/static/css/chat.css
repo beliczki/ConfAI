@@ -625,6 +625,67 @@ button:focus-visible,
     margin: 0;
 }
 
+/* Debug Context Toggle */
+.dropdown-toggle-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.dropdown-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Small Toggle Switch */
+.toggle-switch-small {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.toggle-switch-small input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider-small {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: 0.3s;
+    border-radius: 22px;
+}
+
+.toggle-slider-small:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider-small {
+    background-color: var(--primary);
+}
+
+input:checked + .toggle-slider-small:before {
+    transform: translateX(18px);
+}
+
 .insight-counter-btn #votes-count-header,
 .insight-counter-btn #shares-count-header {
     color: var(--primary);
@@ -1284,4 +1345,138 @@ button:focus-visible,
     .user-avatar {
         display: flex !important;
     }
+}
+
+/* =============================================================================
+   Debug Context Dialog
+   ============================================================================= */
+
+.debug-context-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.debug-context-overlay.active {
+    display: flex;
+}
+
+.debug-context-dialog {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.3s ease;
+}
+
+.debug-context-dialog.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.debug-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-dialog-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.debug-dialog-close {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.debug-dialog-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.debug-dialog-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+}
+
+.debug-context-content {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    padding: 16px;
+    border-radius: 8px;
+    font-family: "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-dialog-footer .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.debug-dialog-footer .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: inherit;
+}
+
+.debug-dialog-footer .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.debug-dialog-footer .btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.debug-dialog-footer .btn-primary:hover {
+    background: var(--primary-dark);
 }

@@ -6,6 +6,7 @@ from app.services.llm_service import llm_service
 from app.services.embedding_service import embedding_service
 import json
 import os
+from datetime import datetime
 
 chat_bp = Blueprint('chat', __name__)
 
@@ -322,9 +323,19 @@ def stream_message():
     context = ""
 
     if context_mode == 'vector_embeddings':
-        # Vector embeddings mode: use semantic search
-        context = embedding_service.search_context(message)
-        print(f"Vector embeddings search returned {len(context)} chars")
+        # Vector embeddings mode: combine always-in-context files + semantic search
+        always_in_context = llm_service.get_context_files()
+        semantic_results = embedding_service.search_context(message)
+
+        # Combine both contexts
+        context_parts = []
+        if always_in_context:
+            context_parts.append("=== ALWAYS IN CONTEXT FILES ===\n" + always_in_context)
+        if semantic_results:
+            context_parts.append("=== SEMANTIC SEARCH RESULTS ===\n" + semantic_results)
+
+        context = "\n\n".join(context_parts)
+        print(f"Vector embeddings: always-in-context={len(always_in_context)} chars, semantic={len(semantic_results)} chars, total={len(context)} chars")
     # In context_window mode, context is loaded directly in llm_service
 
     def generate():
@@ -402,3 +413,91 @@ def stream_message():
             ChatMessage.create(thread_id, 'assistant', error_msg)
 
     return Response(generate(), mimetype='text/event-stream')
+
+
+@chat_bp.route('/api/chat/debug-context', methods=['POST'])
+@login_required
+def get_debug_context():
+    """Get debug context showing all LLM input before sending."""
+    data = request.json
+    thread_id = data.get('thread_id')
+    message = data.get('message', '')
+
+    if not thread_id or not message:
+        return jsonify({'error': 'Thread ID and message are required'}), 400
+
+    # Verify ownership
+    thread = ChatThread.get_by_id(thread_id)
+    if not thread or thread['user_id'] != session['user_id']:
+        return jsonify({'error': 'Thread not found'}), 404
+
+    # Sanitize input
+    message = sanitize_input(message)
+
+    try:
+        # Get current datetime
+        current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Get current model
+        current_model = Settings.get('llm_provider', os.getenv('LLM_PROVIDER', 'gemini')).lower()
+        model_names = {
+            'claude': 'Claude',
+            'gemini': 'Gemini',
+            'grok': 'Grok',
+            'perplexity': 'Perplexity'
+        }
+        model_display = model_names.get(current_model, current_model.title())
+
+        # Load system prompt
+        system_prompt = llm_service._load_system_prompt()
+
+        # Get conversation history for context
+        messages_history = ChatMessage.get_by_thread(thread_id)
+        conversation_history = [
+            {'role': m['role'], 'content': m['content']}
+            for m in messages_history[-10:]  # Last 10 messages for context
+        ]
+
+        # Get relevant context based on context mode
+        context_mode = Settings.get('context_mode', 'context_window').lower()
+
+        if context_mode == 'vector_embeddings':
+            # Vector embeddings mode: use semantic search + always-in-context files
+            semantic_results = embedding_service.search_context(message)
+            always_in_context = llm_service.get_context_files()
+
+            # Build the debug context object
+            debug_context = {
+                'metadata': {
+                    'datetime': current_datetime,
+                    'model': model_display,
+                    'context_mode': 'Vector Embeddings (Semantic Search)'
+                },
+                'system_prompt': system_prompt,
+                'always_in_context_files': always_in_context if always_in_context else "(No always-in-context files)",
+                'semantic_search_results': semantic_results if semantic_results else "(No semantic search results)",
+                'conversation_history': conversation_history,
+                'user_message': message
+            }
+        else:
+            # Context window mode: load full context files
+            context_files = llm_service.get_context_files()
+
+            # Build the debug context object
+            debug_context = {
+                'metadata': {
+                    'datetime': current_datetime,
+                    'model': model_display,
+                    'context_mode': 'Context Window (Full Files)'
+                },
+                'system_prompt': system_prompt,
+                'context_files': context_files if context_files else "(No context files)",
+                'conversation_history': conversation_history,
+                'user_message': message
+            }
+
+        return jsonify(debug_context)
+
+    except Exception as e:
+        print(f"Error generating debug context: {e}")
+        return jsonify({'error': str(e)}), 500

@@ -292,7 +292,7 @@ def get_context_files():
             if os.path.isfile(filepath) and allowed_context_file(filename):
                 file_size = os.path.getsize(filepath)
 
-                # Read file content
+                # Read file content for char count only
                 with open(filepath, 'r', encoding='utf-8') as f:
                     content = f.read()
 
@@ -309,13 +309,14 @@ def get_context_files():
                     'name': filename,
                     'size': file_size,
                     'chars': char_count,
-                    'content': content,
+                    # Don't send full content in list - load on-demand for preview
                     'enabled': is_enabled,
                     'mode': file_mode
                 })
 
-                # Add to preview (with separator)
-                preview_parts.append(f"--- {filename} ---\n{content}\n")
+                # Add to preview (with separator) - limit preview size
+                preview_sample = content[:1000] + ('...' if len(content) > 1000 else '')
+                preview_parts.append(f"--- {filename} ---\n{preview_sample}\n")
 
         # Create preview (limit to first 2000 chars for display)
         full_preview = '\n'.join(preview_parts)
@@ -455,6 +456,31 @@ def toggle_context_file(filename):
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/context-files/<filename>/content', methods=['GET'])
+@admin_required
+def get_context_file_content(filename):
+    """Get the content of a specific context file for preview."""
+    try:
+        filename = secure_filename(filename)
+        filepath = os.path.join(CONTEXT_FOLDER, filename)
+
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'File not found'}), 404
+
+        # Read file content (limit to 100KB for preview)
+        max_size = 100 * 1024  # 100KB
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read(max_size)
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'content': content
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/api/admin/context-files/<filename>/mode', methods=['PUT'])
 @admin_required
 def update_context_file_mode(filename):
@@ -498,13 +524,13 @@ def update_context_file_mode(filename):
 @admin_bp.route('/api/admin/embedding-settings', methods=['GET'])
 @admin_required
 def get_embedding_settings():
-    """Get embedding settings (chunk size, retrieval count)."""
+    """Get embedding settings (chunk size, chunk overlap, retrieval count)."""
     try:
-        config = load_context_config()
-        embedding_settings = config.get('embedding_settings', {
-            'chunk_size': 1000,
-            'chunks_to_retrieve': 5
-        })
+        embedding_settings = {
+            'chunk_size': int(Settings.get('chunk_size', 1000)),
+            'chunk_overlap': int(Settings.get('chunk_overlap', 200)),
+            'chunks_to_retrieve': int(Settings.get('chunks_to_retrieve', 5))
+        }
 
         return jsonify(embedding_settings)
     except Exception as e:
@@ -514,37 +540,34 @@ def get_embedding_settings():
 @admin_bp.route('/api/admin/embedding-settings', methods=['POST'])
 @admin_required
 def save_embedding_settings():
-    """Save embedding settings (chunk size, retrieval count)."""
+    """Save embedding settings (chunk size, chunk overlap, retrieval count)."""
     try:
         data = request.get_json()
         chunk_size = data.get('chunk_size', 1000)
+        chunk_overlap = data.get('chunk_overlap', 200)
         chunks_to_retrieve = data.get('chunks_to_retrieve', 5)
 
         # Validate settings
         if not isinstance(chunk_size, int) or chunk_size < 200 or chunk_size > 4000:
             return jsonify({'error': 'Invalid chunk_size. Must be between 200 and 4000'}), 400
 
+        if not isinstance(chunk_overlap, int) or chunk_overlap < 0 or chunk_overlap > 500:
+            return jsonify({'error': 'Invalid chunk_overlap. Must be between 0 and 500'}), 400
+
         if not isinstance(chunks_to_retrieve, int) or chunks_to_retrieve < 1 or chunks_to_retrieve > 20:
             return jsonify({'error': 'Invalid chunks_to_retrieve. Must be between 1 and 20'}), 400
 
-        # Load config
-        config = load_context_config()
+        # Save to database
+        Settings.set('chunk_size', chunk_size)
+        Settings.set('chunk_overlap', chunk_overlap)
+        Settings.set('chunks_to_retrieve', chunks_to_retrieve)
 
-        # Update settings
-        config['embedding_settings'] = {
-            'chunk_size': chunk_size,
-            'chunks_to_retrieve': chunks_to_retrieve
-        }
-
-        # Save config
-        if not save_context_config(config):
-            return jsonify({'error': 'Failed to save configuration'}), 500
-
-        print(f"Updated embedding settings: chunk_size={chunk_size}, chunks_to_retrieve={chunks_to_retrieve}")
+        print(f"Updated embedding settings: chunk_size={chunk_size}, chunk_overlap={chunk_overlap}, chunks_to_retrieve={chunks_to_retrieve}")
 
         return jsonify({
             'success': True,
             'chunk_size': chunk_size,
+            'chunk_overlap': chunk_overlap,
             'chunks_to_retrieve': chunks_to_retrieve,
             'message': 'Embedding settings saved successfully'
         })
@@ -708,7 +731,16 @@ def delete_insight(insight_id):
 def process_embeddings():
     """Process context files and generate embeddings."""
     try:
-        from app.services.embedding_service import embedding_service
+        # Import inside try block to catch import errors
+        try:
+            from app.services.embedding_service import embedding_service
+        except ImportError as import_error:
+            print(f"Error importing embedding_service: {import_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'error': f'Failed to import embedding service. Make sure all dependencies are installed: {str(import_error)}'
+            }), 500
 
         # Process all context files
         success = embedding_service.process_context_files()
@@ -721,13 +753,23 @@ def process_embeddings():
                 'stats': stats
             })
         else:
-            return jsonify({'error': 'Failed to process embeddings'}), 500
+            return jsonify({
+                'error': 'Failed to process embeddings. Check server logs for details.'
+            }), 500
 
     except Exception as e:
-        print(f"Error processing embeddings: {e}")
+        error_msg = str(e)
+        print(f"Error processing embeddings: {error_msg}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+
+        # Return more user-friendly error messages
+        if 'chromadb' in error_msg.lower():
+            error_msg = f'ChromaDB error: {error_msg}. Make sure chromadb is properly installed.'
+        elif 'sentence' in error_msg.lower() or 'transformer' in error_msg.lower():
+            error_msg = f'Model loading error: {error_msg}. The embedding model may need to download on first use.'
+
+        return jsonify({'error': error_msg}), 500
 
 
 @admin_bp.route('/api/admin/embeddings/stats', methods=['GET'])

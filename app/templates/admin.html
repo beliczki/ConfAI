@@ -68,45 +68,6 @@
             </div>
         </div>
 
-        <!-- Vector Embeddings Section (only shown when in embeddings mode) -->
-        <div class="section-card" id="embeddings-section" style="display: none;">
-            <h3><i data-lucide="database"></i> Vector Embeddings Settings</h3>
-            <p class="help-text">Configure chunking and retrieval settings for vector embeddings.</p>
-
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0;">
-                <div style="padding: 15px; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #059669;" id="embeddings-doc-count">0</div>
-                    <div style="font-size: 14px; color: #666;">Documents</div>
-                </div>
-                <div style="padding: 15px; background: #f9fafb; border-radius: 8px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #0ea5e9;" id="embeddings-chunk-count">0</div>
-                    <div style="font-size: 14px; color: #666;">Chunks</div>
-                </div>
-                <div style="padding: 15px; background: #f9fafb; border-radius: 8px;">
-                    <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">Chunk Size (chars)</label>
-                    <input type="number" id="chunk-size" value="1000" min="200" max="4000" step="100"
-                           style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; font-weight: bold;">
-                </div>
-                <div style="padding: 15px; background: #f9fafb; border-radius: 8px;">
-                    <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">Chunks to Retrieve</label>
-                    <input type="number" id="chunks-to-retrieve" value="5" min="1" max="20"
-                           style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; font-weight: bold;">
-                </div>
-            </div>
-
-            <div class="button-group">
-                <button class="btn btn-primary" onclick="saveEmbeddingSettings()">
-                    <i data-lucide="save"></i>
-                    <span>Save Settings</span>
-                </button>
-                <button class="btn btn-secondary" onclick="processEmbeddings()">
-                    <i data-lucide="play"></i>
-                    <span>Process Embeddings</span>
-                </button>
-            </div>
-            <div id="embeddings-status" class="status-message"></div>
-        </div>
-
         <!-- Manage Files Section -->
         <div class="section-card">
             <div class="section-header-with-stats">
@@ -115,17 +76,12 @@
                     <p class="help-text">Upload and organize files for different context modes.</p>
                 </div>
                 <div class="context-stats-compact">
-                    Context chars: <span id="context-total-chars">0</span> | tokens: <span id="context-total-tokens">0</span>
+                    Always included Context: <span id="context-total-chars">0</span> chars | <span id="context-total-tokens">0</span> tokens
                 </div>
             </div>
 
-            <!-- Upload Area -->
-            <div class="upload-zone" id="drop-zone" style="margin-bottom: 20px;">
-                <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
-                <i data-lucide="upload"></i>
-                <span>Drop files here or click to upload</span>
-                <small>.txt, .md (Max 500KB)</small>
-            </div>
+            <!-- Hidden file input -->
+            <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
 
             <!-- Two-Column File Layout -->
             <div class="files-two-column">
@@ -133,12 +89,13 @@
                 <div class="file-column">
                     <div class="file-column-header">
                         <h3><i data-lucide="file-text"></i> Window Mode Files</h3>
-                        <p class="help-text-small">Full files added to prompt (costly but informed)</p>
+                        <p class="help-text-small">Full files added to prompt (in window mode only)</p>
                     </div>
                     <div class="file-column-list" id="window-files-list">
                         <div class="empty-state-small">
-                            <i data-lucide="inbox"></i>
-                            <p>No files in window mode</p>
+                            <i data-lucide="upload"></i>
+                            <p>Click or drag files here</p>
+                            <small>No files in window mode</small>
                         </div>
                     </div>
                 </div>
@@ -146,33 +103,53 @@
                 <!-- Right: Vector Mode Files -->
                 <div class="file-column">
                     <div class="file-column-header">
-                        <h3><i data-lucide="database"></i> Vector Mode Files</h3>
-                        <p class="help-text-small">Chunked for semantic search (scalable but narrow)</p>
+                        <div>
+                            <h3><i data-lucide="database"></i> Vector Mode Files</h3>
+                            <p class="help-text-small">Chunked for semantic search (retrieves relevant parts dynamically)</p>
+                        </div>
+                        <div class="embeddings-stats-inline">
+                            <div class="stat-badge stat-badge-success">
+                                <i data-lucide="file"></i>
+                                <span id="vector-doc-count">0</span> docs
+                            </div>
+                            <div class="stat-badge stat-badge-info">
+                                <i data-lucide="layers"></i>
+                                <span id="vector-chunk-count">0</span> chunks
+                            </div>
+                        </div>
                     </div>
                     <div class="file-column-list" id="vector-files-list">
                         <div class="empty-state-small">
-                            <i data-lucide="inbox"></i>
-                            <p>No files in vector mode</p>
+                            <i data-lucide="upload"></i>
+                            <p>Click or drag files here</p>
+                            <small>No files in vector mode</small>
                         </div>
+                    </div>
+                    <div class="file-column-footer">
+                        <button id="process-embeddings-btn" class="btn btn-secondary btn-block" onclick="processEmbeddings()">
+                            <i data-lucide="play" id="process-embeddings-icon"></i>
+                            <span id="process-embeddings-text">Process Embeddings</span>
+                        </button>
+                        <div id="embeddings-status" class="status-message" style="display: none; margin-top: 10px;"></div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- File Preview Dialog -->
-        <div id="file-preview-dialog" class="dialog-overlay" style="display: none;">
-            <div class="dialog-container" style="max-width: 800px; max-height: 80vh;">
+        <div id="file-preview-dialog" class="preview-dialog-overlay">
+            <div class="dialog-container">
                 <div class="dialog-header">
                     <h3><i data-lucide="eye"></i> File Preview: <span id="preview-dialog-filename">-</span></h3>
                     <button class="dialog-close" onclick="closeFilePreview()">
                         <i data-lucide="x"></i>
                     </button>
                 </div>
-                <div class="dialog-body" style="max-height: 60vh; overflow-y: auto;">
-                    <pre id="preview-dialog-content" style="white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.5; margin: 0; padding: 20px; background: #f9fafb; border-radius: 8px;"></pre>
+                <div class="dialog-body">
+                    <pre id="preview-dialog-content"></pre>
                 </div>
                 <div class="dialog-footer">
-                    <div style="font-size: 12px; color: #666;">
+                    <div class="dialog-footer-info">
                         <span id="preview-dialog-size">-</span> |
                         <span id="preview-dialog-chars">-</span> characters |
                         <span id="preview-dialog-tokens">-</span> tokens
@@ -358,6 +335,26 @@
                 </div>
             </div>
 
+            <div class="setting-group">
+                <h3>Vector Embeddings</h3>
+                <p class="help-text">Configure how context files are chunked and retrieved in vector embeddings mode.</p>
+                <div class="form-group">
+                    <label for="chunk-size">Chunk Size (characters)</label>
+                    <input type="number" id="chunk-size" value="1000" min="200" max="4000" step="100">
+                    <small class="help-text">Size of each text chunk for semantic search (200-4000 chars)</small>
+                </div>
+                <div class="form-group">
+                    <label for="chunk-overlap">Chunk Overlap (characters)</label>
+                    <input type="number" id="chunk-overlap" value="200" min="0" max="500" step="50">
+                    <small class="help-text">Overlap between consecutive chunks to preserve context (0-500 chars)</small>
+                </div>
+                <div class="form-group">
+                    <label for="chunks-to-retrieve">Chunks to Retrieve</label>
+                    <input type="number" id="chunks-to-retrieve" value="5" min="1" max="20">
+                    <small class="help-text">Number of most relevant chunks to include in each query (1-20)</small>
+                </div>
+            </div>
+
             <button class="btn btn-primary" onclick="saveSettings()">
                 <i data-lucide="save"></i>
                 <span>Save Settings</span>
@@ -373,8 +370,6 @@
     // Initialize Lucide icons
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
-        // Re-initialize icons after dynamic content loads
-        setInterval(() => lucide.createIcons(), 500);
     }
 </script>
 {% endblock %}

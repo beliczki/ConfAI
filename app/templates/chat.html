@@ -3,7 +3,7 @@
 {% block title %}Chat - ConfAI{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}?v=1.0.1">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/insights.css') }}">
 <script src="https://unpkg.com/lucide@latest"></script>
 {% endblock %}
@@ -85,6 +85,18 @@
                         <div class="dropdown-divider"></div>
 
                         {% if session.get('is_admin') %}
+                        <!-- Debug Context Toggle (Admin Only) -->
+                        <div class="dropdown-item dropdown-toggle-item" onclick="toggleDebugContext(event)">
+                            <div class="dropdown-toggle-label">
+                                <i data-lucide="bug"></i>
+                                <span>Debug Context</span>
+                            </div>
+                            <label class="toggle-switch-small">
+                                <input type="checkbox" id="debug-context-toggle">
+                                <span class="toggle-slider-small"></span>
+                            </label>
+                        </div>
+
                         <!-- Admin Dashboard Link -->
                         <a href="/admin" class="dropdown-item">
                             <i data-lucide="settings"></i>
@@ -149,6 +161,32 @@
         </div>
     </div>
 </div>
+
+<!-- Debug Context Dialog (Admin Only) -->
+<div class="debug-context-overlay" id="debug-context-overlay" onclick="if(event.target === this) closeDebugContextDialog()">
+    <div class="debug-context-dialog" id="debug-context-dialog">
+        <div class="debug-dialog-header">
+            <h3><i data-lucide="bug"></i> Debug Context - LLM Input Preview</h3>
+            <button class="debug-dialog-close" onclick="closeDebugContextDialog()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="debug-dialog-body">
+            <pre id="debug-context-content" class="debug-context-content"></pre>
+        </div>
+        <div class="debug-dialog-footer">
+            <button class="btn btn-secondary" onclick="closeDebugContextDialog()">
+                <i data-lucide="x"></i>
+                <span>Cancel</span>
+            </button>
+            <button class="btn btn-primary" onclick="sendFromDebugDialog()">
+                <i data-lucide="send"></i>
+                <span>Send Message</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -163,7 +201,7 @@
         mangle: false
     });
 </script>
-<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}?v=1.0.3"></script>
 <script src="{{ url_for('static', filename='js/insights.js') }}"></script>
 <script>
     // Sidebar toggle function

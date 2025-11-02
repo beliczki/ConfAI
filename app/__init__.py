@@ -1,6 +1,6 @@
 """Flask application factory and initialization."""
 import os
-from flask import Flask
+from flask import Flask, jsonify
 from flask_session import Session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -54,14 +54,18 @@ def create_app(config_name='development'):
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
-        return {'error': 'Not found'}, 404
+        return jsonify({'error': 'Not found'}), 404
 
     @app.errorhandler(500)
     def internal_error(error):
-        return {'error': 'Internal server error'}, 500
+        # Log the actual error for debugging
+        print(f"500 Error: {error}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        return {'error': 'Rate limit exceeded. Please try again later.'}, 429
+        return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
 
     return app

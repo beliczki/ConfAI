@@ -4,6 +4,12 @@
  * context file management, statistics, and settings.
  */
 
+// Guard against duplicate initialization
+if (window.adminDashboardInitialized) {
+    console.warn('Admin dashboard already initialized, skipping duplicate initialization');
+} else {
+    window.adminDashboardInitialized = true;
+
 // Template definitions for quick system prompt templates
 const PROMPT_TEMPLATES = {
     conference: `You are a helpful AI assistant specialized in conference insights and book knowledge.
@@ -215,38 +221,50 @@ function loadTemplate(templateName) {
 // ============================
 
 /**
- * Setup file upload handlers (drag & drop + click)
+ * Setup file upload handlers (drag & drop + click on file columns)
  */
 function setupFileUpload() {
-    const dropZone = document.getElementById('drop-zone');
+    const windowFilesList = document.getElementById('window-files-list');
+    const vectorFilesList = document.getElementById('vector-files-list');
     const fileInput = document.getElementById('context-file-input');
 
-    if (!dropZone || !fileInput) return;
+    if (!windowFilesList || !vectorFilesList || !fileInput) return;
 
-    // Click to upload
-    dropZone.addEventListener('click', () => {
-        fileInput.click();
-    });
+    const dropZones = [windowFilesList, vectorFilesList];
 
     // File input change
     fileInput.addEventListener('change', (e) => {
         handleFileSelect(e.target.files);
     });
 
-    // Drag and drop
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
+    // Setup drag and drop for both columns
+    dropZones.forEach(dropZone => {
+        // Click to upload
+        dropZone.addEventListener('click', (e) => {
+            // Only trigger file input if clicking on empty area, not on file items or buttons
+            if (e.target === dropZone || e.target.closest('.empty-state-small')) {
+                fileInput.click();
+            }
+        });
 
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('drag-over');
-    });
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
 
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        handleFileSelect(e.dataTransfer.files);
+        dropZone.addEventListener('dragleave', (e) => {
+            // Only remove drag-over if actually leaving the drop zone
+            if (!dropZone.contains(e.relatedTarget)) {
+                dropZone.classList.remove('drag-over');
+            }
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFileSelect(e.dataTransfer.files);
+        });
     });
 }
 
@@ -329,6 +347,29 @@ async function loadContextFiles() {
 }
 
 /**
+ * Truncate filename to max length, preserving extension
+ */
+function truncateFilename(filename, maxLength = 32) {
+    if (filename.length <= maxLength) {
+        return filename;
+    }
+
+    // Get file extension
+    const lastDot = filename.lastIndexOf('.');
+    const ext = lastDot > 0 ? filename.substring(lastDot) : '';
+    const nameWithoutExt = lastDot > 0 ? filename.substring(0, lastDot) : filename;
+
+    // Calculate how many chars we can keep from the name
+    const availableChars = maxLength - ext.length - 3; // 3 for "..."
+
+    if (availableChars <= 0) {
+        return filename.substring(0, maxLength - 3) + '...';
+    }
+
+    return nameWithoutExt.substring(0, availableChars) + '...' + ext;
+}
+
+/**
  * Display the list of context files in two-column layout
  */
 function displayFilesList(files) {
@@ -382,19 +423,19 @@ function displayFileColumn(container, files, mode) {
         return `
         <div class="file-column-item" data-file-index="${fileIndex}">
             <div class="file-column-item-header">
-                <div class="file-column-item-name">
+                <div class="file-column-item-name" title="${escapeHtml(file.name)}">
                     <i data-lucide="file-text"></i>
-                    ${escapeHtml(file.name)}
+                    ${escapeHtml(truncateFilename(file.name))}
                 </div>
                 <div class="file-column-item-actions">
+                    <button class="btn-delete" onclick="deleteFileByIndex(${fileIndex})" title="Delete file">
+                        <i data-lucide="trash-2"></i>
+                    </button>
                     <button onclick="openFilePreview(${fileIndex})" title="Preview file">
                         <i data-lucide="eye"></i>
                     </button>
                     <button onclick="moveFileToMode(${fileIndex}, '${otherMode}')" title="Move to ${otherMode} mode">
                         <i data-lucide="arrow-${mode === 'window' ? 'right' : 'left'}"></i>
-                    </button>
-                    <button class="btn-delete" onclick="deleteFileByIndex(${fileIndex})" title="Delete file">
-                        <i data-lucide="trash-2"></i>
                     </button>
                 </div>
             </div>
@@ -405,8 +446,9 @@ function displayFileColumn(container, files, mode) {
             </div>
             <div class="file-column-item-checkbox">
                 <input type="checkbox" id="enable-${fileIndex}" ${isEnabled ? 'checked' : ''}
-                       onchange="toggleFileEnabled(${fileIndex})">
-                <label for="enable-${fileIndex}">Include in context</label>
+                       onchange="toggleFileEnabled(${fileIndex})"
+                       title="Always include in context (even in vector mode)">
+                <label for="enable-${fileIndex}" title="Always include in context (even in vector mode)">Always include in context</label>
             </div>
         </div>
         `;
@@ -533,15 +575,9 @@ async function deleteSelectedFile() {
 
 /**
  * Delete a context file
+ * Note: Confirmation should be handled by the caller (e.g., deleteFileByIndex)
  */
 async function deleteContextFile(filename) {
-    if (!await showConfirm(`Are you sure you want to delete "${filename}"?`, {
-        confirmText: 'Delete',
-        confirmStyle: 'danger'
-    })) {
-        return;
-    }
-
     try {
         const response = await fetch(`/api/admin/context-files/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
@@ -835,6 +871,11 @@ async function loadContextModeSetting() {
             updateModeOptionsUI(data.mode);
 
             console.log('Loaded context mode setting:', data.mode);
+
+            // Auto-load embedding stats if in vector mode
+            if (data.mode === 'vector_embeddings') {
+                loadEmbeddingStats();
+            }
         }
     } catch (error) {
         console.error('Error loading context mode setting:', error);
@@ -864,6 +905,11 @@ function setupContextModeChange() {
             const newMode = this.checked ? 'vector_embeddings' : 'context_window';
             await saveContextMode(newMode);
             updateModeOptionsUI(newMode);
+
+            // Auto-load stats when switching to vector mode
+            if (newMode === 'vector_embeddings') {
+                loadEmbeddingStats();
+            }
         });
 
         // Handle clicking on mode options
@@ -880,6 +926,9 @@ function setupContextModeChange() {
                 toggle.checked = true;
                 saveContextMode('vector_embeddings');
                 updateModeOptionsUI('vector_embeddings');
+
+                // Auto-load stats when switching to vector mode
+                loadEmbeddingStats();
             });
         }
 
@@ -948,7 +997,9 @@ function updateModeOptionsUI(mode) {
 async function saveSettings() {
     const provider = document.getElementById('llm-provider')?.value;
     const welcomeMessage = document.getElementById('welcome-message')?.value?.trim();
-    const contextMode = document.getElementById('context-mode')?.value;
+    const chunkSize = document.getElementById('chunk-size')?.value;
+    const chunkOverlap = document.getElementById('chunk-overlap')?.value;
+    const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
 
     if (!provider) {
         showSettingsError('Please select a provider');
@@ -960,14 +1011,9 @@ async function saveSettings() {
         return;
     }
 
-    if (!contextMode) {
-        showSettingsError('Please select a context mode');
-        return;
-    }
-
     try {
-        // Save LLM provider, welcome message, and context mode
-        const [providerResponse, welcomeResponse, contextModeResponse] = await Promise.all([
+        // Save LLM provider, welcome message, and embeddings settings
+        const [providerResponse, welcomeResponse, embeddingsResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -982,26 +1028,29 @@ async function saveSettings() {
                 },
                 body: JSON.stringify({ message: welcomeMessage })
             }),
-            fetch('/api/admin/context-mode', {
+            fetch('/api/admin/embedding-settings', {
                 method: 'POST',
                 headers: {
+                    ...getAuthHeaders(),
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ mode: contextMode })
+                body: JSON.stringify({
+                    chunk_size: parseInt(chunkSize),
+                    chunk_overlap: parseInt(chunkOverlap),
+                    chunks_to_retrieve: parseInt(chunksToRetrieve)
+                })
             })
         ]);
 
-        if (!providerResponse.ok || !welcomeResponse.ok || !contextModeResponse.ok) {
+        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok) {
             throw new Error('Failed to save settings');
         }
 
         const providerData = await providerResponse.json();
-        const contextModeData = await contextModeResponse.json();
-        console.log('Settings saved:', providerData, contextModeData);
+        console.log('Settings saved:', providerData);
 
         // Show success message ABOVE the save button
-        const modeName = contextMode === 'context_window' ? 'Context Window' : 'Vector Embeddings';
-        showSettingsSuccess(`Settings saved! LLM: ${providerData.provider_name}, Context: ${modeName}`);
+        showSettingsSuccess(`Settings saved! LLM: ${providerData.provider_name}`);
 
     } catch (error) {
         console.error('Error saving settings:', error);
@@ -1424,17 +1473,9 @@ async function updateContextModeBanner() {
         const data = await response.json();
         const mode = data.mode || 'context_window';
 
-        const embeddingsSection = document.getElementById('embeddings-section');
-
+        // Load stats if in vector embeddings mode
         if (mode === 'vector_embeddings') {
-            // Show embeddings section in vector mode
-            if (embeddingsSection) {
-                embeddingsSection.style.display = 'block';
-                loadEmbeddingStats();
-            }
-        } else {
-            // Hide embeddings section in context window mode
-            if (embeddingsSection) embeddingsSection.style.display = 'none';
+            loadEmbeddingStats();
         }
 
     } catch (error) {
@@ -1450,11 +1491,12 @@ async function loadEmbeddingStats() {
         const response = await fetch('/api/admin/embeddings/stats');
         const stats = await response.json();
 
-        const docCount = document.getElementById('embeddings-doc-count');
-        const chunkCount = document.getElementById('embeddings-chunk-count');
+        // Update vector column header stats
+        const vectorDocCount = document.getElementById('vector-doc-count');
+        const vectorChunkCount = document.getElementById('vector-chunk-count');
 
-        if (docCount) docCount.textContent = stats.document_count || 0;
-        if (chunkCount) chunkCount.textContent = stats.chunk_count || 0;
+        if (vectorDocCount) vectorDocCount.textContent = stats.document_count || 0;
+        if (vectorChunkCount) vectorChunkCount.textContent = stats.chunk_count || 0;
 
     } catch (error) {
         console.error('Error loading embedding stats:', error);
@@ -1466,45 +1508,97 @@ async function loadEmbeddingStats() {
  */
 async function processEmbeddings() {
     const statusEl = document.getElementById('embeddings-status');
-    const button = event.target.closest('button');
+    const button = document.getElementById('process-embeddings-btn');
+    const icon = document.getElementById('process-embeddings-icon');
+    const buttonText = document.getElementById('process-embeddings-text');
 
+    // Disable button and show loading state
     if (button) button.disabled = true;
+
+    // Change icon to spinner
+    if (icon) {
+        icon.setAttribute('data-lucide', 'loader-2');
+        icon.classList.add('spinning');
+        lucide.createIcons();
+    }
+
+    // Update button text
+    if (buttonText) buttonText.textContent = 'Processing...';
+
+    // Show initial status
     if (statusEl) {
-        statusEl.textContent = 'Processing embeddings... This may take a minute.';
+        statusEl.textContent = 'Processing documents and generating embeddings...';
         statusEl.className = 'status-message info';
         statusEl.style.display = 'block';
     }
 
     try {
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
         const response = await fetch('/api/admin/embeddings/process', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
+
+        // Check response status first
+        if (!response.ok) {
+            // Try to parse JSON error, fallback to text if not JSON
+            let errorMessage = 'Failed to process embeddings';
+            try {
+                const data = await response.json();
+                errorMessage = data.error || errorMessage;
+            } catch (parseError) {
+                // If JSON parsing fails, get text response
+                const text = await response.text();
+                errorMessage = `Server error (${response.status}): ${text.substring(0, 200)}`;
+            }
+            throw new Error(errorMessage);
+        }
 
         const data = await response.json();
 
-        if (response.ok) {
-            if (statusEl) {
-                statusEl.textContent = '✓ ' + data.message;
-                statusEl.className = 'status-message success';
-            }
-
-            // Update stats
-            loadEmbeddingStats();
-        } else {
-            throw new Error(data.error || 'Failed to process embeddings');
+        if (statusEl) {
+            statusEl.innerHTML = '<i data-lucide="check-circle"></i> ' + data.message;
+            statusEl.className = 'status-message success';
+            lucide.createIcons();
         }
+
+        // Update stats
+        loadEmbeddingStats();
 
     } catch (error) {
         console.error('Error processing embeddings:', error);
         if (statusEl) {
-            statusEl.textContent = '✗ Error: ' + error.message;
+            let errorMessage = error.message;
+            if (error.name === 'AbortError') {
+                errorMessage = 'Processing timed out after 2 minutes. Check server logs for details.';
+            }
+            statusEl.innerHTML = '<i data-lucide="x-circle"></i> Error: ' + errorMessage;
             statusEl.className = 'status-message error';
+            lucide.createIcons();
         }
     } finally {
+        // Re-enable button and restore icon
         if (button) button.disabled = false;
+
+        // Re-query the icon element to get fresh reference after lucide transformation
+        const iconElement = document.getElementById('process-embeddings-icon');
+        if (iconElement) {
+            iconElement.setAttribute('data-lucide', 'play');
+            iconElement.classList.remove('spinning');
+            lucide.createIcons();
+        }
+
+        if (buttonText) buttonText.textContent = 'Process Embeddings';
+
+        // Auto-hide success/error message after 5 seconds
         if (statusEl) {
             setTimeout(() => {
                 statusEl.style.display = 'none';
@@ -1520,7 +1614,7 @@ async function processEmbeddings() {
 /**
  * Open file preview dialog
  */
-function openFilePreview(fileIndex) {
+async function openFilePreview(fileIndex) {
     const file = currentFiles[fileIndex];
     if (!file) return;
 
@@ -1539,17 +1633,50 @@ function openFilePreview(fileIndex) {
     if (chars) chars.textContent = file.chars.toLocaleString();
     if (tokens) tokens.textContent = Math.ceil(file.chars / 4).toLocaleString();
 
-    // Display file content (already loaded from initial GET request)
+    // Show dialog with loading state
+    dialog.classList.add('active');
     if (content) {
-        content.textContent = file.content || 'No content available';
+        content.textContent = 'Loading...';
     }
-
-    // Show dialog
-    dialog.style.display = 'flex';
 
     // Reinitialize icons
     if (typeof lucide !== 'undefined') {
         setTimeout(() => lucide.createIcons(), 10);
+    }
+
+    // Fetch file content if not already cached
+    if (!file.content) {
+        try {
+            const response = await fetch(`/api/admin/context-files/${encodeURIComponent(file.name)}/content`, {
+                headers: getAuthHeaders()
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load file content');
+            }
+
+            const data = await response.json();
+            file.content = data.content;
+        } catch (error) {
+            console.error('Error loading file content:', error);
+            if (content) {
+                content.textContent = 'Error loading file content. Please try again.';
+            }
+            return;
+        }
+    }
+
+    // Display file content
+    if (content) {
+        const maxPreviewChars = 50000;
+        const fileContent = file.content || 'No content available';
+
+        if (fileContent.length > maxPreviewChars) {
+            content.textContent = fileContent.substring(0, maxPreviewChars) +
+                '\n\n... (content truncated - showing first ' + maxPreviewChars.toLocaleString() + ' characters)';
+        } else {
+            content.textContent = fileContent;
+        }
     }
 }
 
@@ -1559,7 +1686,7 @@ function openFilePreview(fileIndex) {
 function closeFilePreview() {
     const dialog = document.getElementById('file-preview-dialog');
     if (dialog) {
-        dialog.style.display = 'none';
+        dialog.classList.remove('active');
     }
 }
 
@@ -1603,9 +1730,10 @@ async function moveFileToMode(fileIndex, newMode) {
  */
 async function saveEmbeddingSettings() {
     const chunkSize = document.getElementById('chunk-size')?.value;
+    const chunkOverlap = document.getElementById('chunk-overlap')?.value;
     const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
 
-    if (!chunkSize || !chunksToRetrieve) {
+    if (!chunkSize || !chunkOverlap || !chunksToRetrieve) {
         alert('Please fill in all embedding settings');
         return;
     }
@@ -1619,6 +1747,7 @@ async function saveEmbeddingSettings() {
             },
             body: JSON.stringify({
                 chunk_size: parseInt(chunkSize),
+                chunk_overlap: parseInt(chunkOverlap),
                 chunks_to_retrieve: parseInt(chunksToRetrieve)
             })
         });
@@ -1664,10 +1793,15 @@ async function loadEmbeddingSettings() {
         const data = await response.json();
 
         const chunkSize = document.getElementById('chunk-size');
+        const chunkOverlap = document.getElementById('chunk-overlap');
         const chunksToRetrieve = document.getElementById('chunks-to-retrieve');
 
         if (chunkSize && data.chunk_size) {
             chunkSize.value = data.chunk_size;
+        }
+
+        if (chunkOverlap && data.chunk_overlap !== undefined) {
+            chunkOverlap.value = data.chunk_overlap;
         }
 
         if (chunksToRetrieve && data.chunks_to_retrieve) {
@@ -1681,17 +1815,57 @@ async function loadEmbeddingSettings() {
     }
 }
 
-// Close preview dialog when clicking outside
-document.addEventListener('click', function(e) {
-    const dialog = document.getElementById('file-preview-dialog');
-    if (dialog && e.target === dialog) {
-        closeFilePreview();
-    }
-});
+// Close preview dialog when clicking outside or pressing Escape
+// Wrap in IIFE to prevent duplicate event listeners on hot reload
+(function() {
+    let eventListenersAdded = false;
 
-// Close preview dialog with Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeFilePreview();
+    function setupDialogEventListeners() {
+        if (eventListenersAdded) return;
+
+        // Close preview dialog when clicking on overlay
+        document.addEventListener('click', function(e) {
+            const dialog = document.getElementById('file-preview-dialog');
+            if (dialog && dialog.classList.contains('active') && e.target === dialog) {
+                closeFilePreview();
+            }
+        });
+
+        // Close preview dialog with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const dialog = document.getElementById('file-preview-dialog');
+                if (dialog && dialog.classList.contains('active')) {
+                    closeFilePreview();
+                }
+            }
+        });
+
+        eventListenersAdded = true;
     }
-});
+
+    // Setup on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupDialogEventListeners);
+    } else {
+        setupDialogEventListeners();
+    }
+})();
+
+// Expose functions to global scope for HTML onclick handlers
+window.deleteFileByIndex = deleteFileByIndex;
+window.openFilePreview = openFilePreview;
+window.moveFileToMode = moveFileToMode;
+window.deleteInsight = deleteInsight;
+window.toggleFileEnabled = toggleFileEnabled;
+window.switchTab = switchTab;
+window.saveEmbeddingSettings = saveEmbeddingSettings;
+window.processEmbeddings = processEmbeddings;
+window.closeFilePreview = closeFilePreview;
+window.saveSystemPrompt = saveSystemPrompt;
+window.resetSystemPrompt = resetSystemPrompt;
+window.testSystemPrompt = testSystemPrompt;
+window.loadTemplate = loadTemplate;
+window.saveSettings = saveSettings;
+
+} // End of adminDashboardInitialized guard
