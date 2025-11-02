@@ -415,7 +415,7 @@ button:focus-visible,
 .insights-main {
     flex: 1;
     overflow-y: scroll;
-    padding: 20px 40px;
+    padding: 20px 40px 20px 10px;
     background: #2a2a2a;
     min-height: 0;
     height: 100%;

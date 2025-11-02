@@ -120,12 +120,20 @@ function createInsightCard(insight) {
         minute: '2-digit'
     });
 
+    // Add title if available
+    if (insight.title) {
+        const titleElement = document.createElement('h3');
+        titleElement.className = 'insight-title';
+        titleElement.textContent = insight.title;
+        card.appendChild(titleElement);
+    }
+
     const content = document.createElement('div');
     content.className = 'insight-content';
 
-    // Check if content is longer than 800 characters
-    const shouldTruncate = insight.content.length > 800;
-    const displayContent = shouldTruncate ? insight.content.substring(0, 800) : insight.content;
+    // Check if content is longer than 400 characters
+    const shouldTruncate = insight.content.length > 400;
+    const displayContent = shouldTruncate ? insight.content.substring(0, 400) : insight.content;
 
     // Parse markdown the same way as in chat messages
     if (typeof marked !== 'undefined' && marked.parse) {
@@ -224,9 +232,22 @@ function createInsightCard(insight) {
     }
 
     footer.appendChild(remixBtn);
-    footer.appendChild(voteControls);
 
-    card.appendChild(dateBadge);
+    // Only append vote controls if they have content
+    if (voteControls.children.length > 0) {
+        footer.appendChild(voteControls);
+    }
+
+    // Move date badge to footer when votes are visible, otherwise keep it in top right
+    if (insight.net_votes !== null && insight.net_votes !== undefined) {
+        // Remove absolute positioning class and add to footer
+        dateBadge.className = 'insight-date-badge-inline';
+        footer.appendChild(dateBadge);
+    } else {
+        // Keep absolute positioning in top right
+        card.appendChild(dateBadge);
+    }
+
     card.appendChild(content);
     card.appendChild(footer);
 
@@ -242,7 +263,7 @@ function toggleInsightContent(card, fullContent) {
 
     if (isExpanded) {
         // Collapse: show truncated content
-        const truncatedContent = fullContent.substring(0, 800);
+        const truncatedContent = fullContent.substring(0, 400);
         if (typeof marked !== 'undefined' && marked.parse) {
             contentDiv.innerHTML = marked.parse(truncatedContent);
         } else {

@@ -194,6 +194,27 @@ def _run_migrations(cursor):
         cursor.execute('ALTER TABLE chat_threads ADD COLUMN model_used TEXT')
         print("Migration completed: model_used column added")
 
+    # Check if hash_id column exists in chat_threads
+    if 'hash_id' not in columns:
+        print("Running migration: Adding hash_id column to chat_threads")
+        cursor.execute('ALTER TABLE chat_threads ADD COLUMN hash_id TEXT UNIQUE')
+        # Generate hash_ids for existing threads
+        import secrets
+        cursor.execute('SELECT id FROM chat_threads')
+        for row in cursor.fetchall():
+            hash_id = secrets.token_urlsafe(16)
+            cursor.execute('UPDATE chat_threads SET hash_id = ? WHERE id = ?', (hash_id, row[0]))
+        print("Migration completed: hash_id column added and populated")
+
+    # Check if title column exists in insights
+    cursor.execute("PRAGMA table_info(insights)")
+    insight_columns = [row[1] for row in cursor.fetchall()]
+
+    if 'title' not in insight_columns:
+        print("Running migration: Adding title column to insights")
+        cursor.execute('ALTER TABLE insights ADD COLUMN title TEXT')
+        print("Migration completed: title column added")
+
 
 # Helper functions for models
 class User:
@@ -323,13 +344,13 @@ class Insight:
     """Insight model helper."""
 
     @staticmethod
-    def create(user_id, content, message_id=None):
+    def create(user_id, content, message_id=None, title=None):
         """Create a new insight."""
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                'INSERT INTO insights (user_id, content, message_id) VALUES (?, ?, ?)',
-                (user_id, content, message_id)
+                'INSERT INTO insights (user_id, content, message_id, title) VALUES (?, ?, ?, ?)',
+                (user_id, content, message_id, title)
             )
             return cursor.lastrowid
 

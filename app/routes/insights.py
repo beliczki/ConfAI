@@ -3,10 +3,46 @@ from flask import Blueprint, render_template, request, jsonify, session
 from app.utils.helpers import login_required, sanitize_input
 from app.models import Insight, get_db
 import os
+import google.generativeai as genai
 
 insights_bp = Blueprint('insights', __name__)
 
 VOTES_PER_USER = int(os.getenv('VOTES_PER_USER', 3))
+
+# Configure Gemini
+gemini_key = os.getenv('GEMINI_API_KEY')
+if gemini_key:
+    genai.configure(api_key=gemini_key)
+
+
+def generate_insight_title(content):
+    """Generate a 5-7 word title for an insight using Gemini."""
+    if not gemini_key:
+        return None
+
+    try:
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        prompt = f"""Generate a concise, catchy title for this insight. The title must be exactly 5-7 words.
+Do not use quotation marks. Just provide the title.
+
+Insight content:
+{content[:500]}"""
+
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                max_output_tokens=30,
+                temperature=0.7,
+            )
+        )
+        title = response.text.strip().strip('"\'')
+        # Ensure title is not too long
+        if len(title) > 60:
+            title = title[:57] + '...'
+        return title
+    except Exception as e:
+        print(f"Error generating insight title: {e}")
+        return None
 
 
 @insights_bp.route('/insights')
@@ -40,6 +76,7 @@ def get_insights():
         'insights': [
             {
                 'id': i['id'],
+                'title': i.get('title'),
                 'content': i['content'],
                 'user_name': i['user_name'],
                 'avatar_gradient': i['avatar_gradient'],
@@ -83,11 +120,15 @@ def create_insight():
 
     content = sanitize_input(content, max_length=10000)
 
-    insight_id = Insight.create(user_id, content, message_id)
+    # Generate title using Gemini
+    title = generate_insight_title(content)
+
+    insight_id = Insight.create(user_id, content, message_id, title)
 
     return jsonify({
         'success': True,
         'insight_id': insight_id,
+        'title': title,
         'shares_remaining': 2 - share_count
     })
 
