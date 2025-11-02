@@ -296,115 +296,136 @@
     <!-- Tab: Settings -->
     <div id="settings" class="tab-content">
         <div class="section-card">
-            <h2>Application Settings</h2>
-
-            <div class="setting-group">
-                <h3>Welcome Message</h3>
-                <p class="help-text">This message is shown to users when they first open the chat (before creating their first conversation). Supports markdown.</p>
-                <div class="form-group">
-                    <label for="welcome-message">Welcome Message</label>
-                    <textarea id="welcome-message" rows="8" placeholder="Loading..."></textarea>
-                    <div class="char-count">
-                        <span id="welcome-chars">0</span> characters
-                    </div>
+            <h3>Welcome Message</h3>
+            <p class="help-text">This message is shown to users when they first open the chat (before creating their first conversation). Supports markdown.</p>
+            <div class="form-group">
+                <label for="welcome-message">Welcome Message</label>
+                <textarea id="welcome-message" rows="8" placeholder="Loading..."></textarea>
+                <div class="char-count">
+                    <span id="welcome-chars">0</span> characters
                 </div>
             </div>
-
-            <div class="setting-group">
-                <h3>New Chat Instructions</h3>
-                <p class="help-text">This message is shown when a new chat is created. It appears above the conversation starters in an empty chat. Supports markdown.</p>
-                <div class="form-group">
-                    <label for="new-chat-text">New Chat Instructions</label>
-                    <textarea id="new-chat-text" rows="6" placeholder="Loading..."></textarea>
-                    <div class="char-count">
-                        <span id="new-chat-chars">0</span> characters
-                    </div>
-                </div>
-            </div>
-
-            <div class="setting-group">
-                <h3>LLM Configuration</h3>
-                <div class="form-group">
-                    <label for="llm-provider">Default LLM Provider</label>
-                    <select id="llm-provider">
-                        <option value="claude">Claude (Anthropic)</option>
-                        <option value="gemini">Gemini (Google)</option>
-                        <option value="grok">Grok (xAI)</option>
-                        <option value="perplexity">Perplexity</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="max-tokens">Max Tokens per Response</label>
-                    <input type="number" id="max-tokens" value="2048" min="256" max="8192">
-                </div>
-            </div>
-
-            <div class="setting-group">
-                <h3>Rate Limiting</h3>
-                <div class="form-group">
-                    <label for="rate-limit">Requests per Minute</label>
-                    <input type="number" id="rate-limit" value="200" min="10" max="1000">
-                </div>
-            </div>
-
-            <div class="setting-group">
-                <h3>Insights Limits</h3>
-                <div class="form-group">
-                    <label for="votes-per-user">Votes per User</label>
-                    <input type="number" id="votes-per-user" value="3" min="1" max="10">
-                </div>
-                <div class="form-group">
-                    <label for="shares-per-user">Shares per User</label>
-                    <input type="number" id="shares-per-user" value="3" min="1" max="10">
-                </div>
-            </div>
-
-            <div class="setting-group">
-                <h3>Vector Embeddings</h3>
-                <p class="help-text">Configure how context files are chunked and retrieved in vector embeddings mode.</p>
-                <div class="form-group">
-                    <label for="chunk-size">Chunk Size (characters)</label>
-                    <input type="number" id="chunk-size" value="1000" min="200" max="4000" step="100">
-                    <small class="help-text">Size of each text chunk for semantic search (200-4000 chars)</small>
-                </div>
-                <div class="form-group">
-                    <label for="chunk-overlap">Chunk Overlap (characters)</label>
-                    <input type="number" id="chunk-overlap" value="200" min="0" max="500" step="50">
-                    <small class="help-text">Overlap between consecutive chunks to preserve context (0-500 chars)</small>
-                </div>
-                <div class="form-group">
-                    <label for="chunks-to-retrieve">Chunks to Retrieve</label>
-                    <input type="number" id="chunks-to-retrieve" value="5" min="1" max="20">
-                    <small class="help-text">Number of most relevant chunks to include in each query (1-20)</small>
-                </div>
-            </div>
-
-            <div class="setting-group">
-                <h3>Conversation Starters</h3>
-                <p class="help-text">These prompts are shown above the input when starting a new conversation. Users can click them to quickly begin a chat.</p>
-                <div class="form-group">
-                    <label for="starter-1">Starter 1</label>
-                    <input type="text" id="starter-1" placeholder="Enter first conversation starter...">
-                </div>
-                <div class="form-group">
-                    <label for="starter-2">Starter 2</label>
-                    <input type="text" id="starter-2" placeholder="Enter second conversation starter...">
-                </div>
-                <div class="form-group">
-                    <label for="starter-3">Starter 3</label>
-                    <input type="text" id="starter-3" placeholder="Enter third conversation starter...">
-                </div>
-                <div class="form-group">
-                    <label for="starter-4">Starter 4</label>
-                    <input type="text" id="starter-4" placeholder="Enter fourth conversation starter...">
-                </div>
-            </div>
-
-            <button class="btn btn-primary" onclick="saveSettings()">
-                <i data-lucide="save"></i>
-                <span>Save Settings</span>
-            </button>
         </div>
+
+        <div class="section-card">
+            <h3>New Chat Instructions</h3>
+            <p class="help-text">This message is shown when a new chat is created. It appears above the conversation starters in an empty chat. Supports markdown.</p>
+            <div class="form-group">
+                <label for="new-chat-text">New Chat Instructions</label>
+                <textarea id="new-chat-text" rows="6" placeholder="Loading..."></textarea>
+                <div class="char-count">
+                    <span id="new-chat-chars">0</span> characters
+                </div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Conversation Starters</h3>
+            <p class="help-text">These prompts are shown above the input when starting a new conversation. Users can click them to quickly begin a chat.</p>
+            <div class="form-group">
+                <label for="starter-1">Starter 1</label>
+                <input type="text" id="starter-1" placeholder="Enter first conversation starter...">
+            </div>
+            <div class="form-group">
+                <label for="starter-2">Starter 2</label>
+                <input type="text" id="starter-2" placeholder="Enter second conversation starter...">
+            </div>
+            <div class="form-group">
+                <label for="starter-3">Starter 3</label>
+                <input type="text" id="starter-3" placeholder="Enter third conversation starter...">
+            </div>
+            <div class="form-group">
+                <label for="starter-4">Starter 4</label>
+                <input type="text" id="starter-4" placeholder="Enter fourth conversation starter...">
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>LLM Configuration</h3>
+            <div class="form-group">
+                <label for="llm-provider">Default LLM Provider</label>
+                <select id="llm-provider">
+                    <option value="claude">Claude (Anthropic)</option>
+                    <option value="gemini">Gemini (Google)</option>
+                    <option value="grok">Grok (xAI)</option>
+                    <option value="perplexity">Perplexity</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="max-tokens">Max Tokens per Response</label>
+                <input type="number" id="max-tokens" value="2048" min="256" max="8192">
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Model Names</h3>
+            <p class="help-text">Configure the specific model names/IDs for each provider. Update these when new models are released.</p>
+            <div class="form-group">
+                <label for="claude-model">Claude Model</label>
+                <input type="text" id="claude-model" placeholder="claude-sonnet-4-5-20250929">
+                <small class="help-text">Anthropic Claude model identifier</small>
+            </div>
+            <div class="form-group">
+                <label for="gemini-model">Gemini Model</label>
+                <input type="text" id="gemini-model" placeholder="gemini-2.5-flash-lite">
+                <small class="help-text">Google Gemini model identifier</small>
+            </div>
+            <div class="form-group">
+                <label for="grok-model">Grok Model</label>
+                <input type="text" id="grok-model" placeholder="grok-4-fast-reasoning">
+                <small class="help-text">xAI Grok model identifier</small>
+            </div>
+            <div class="form-group">
+                <label for="perplexity-model">Perplexity Model</label>
+                <input type="text" id="perplexity-model" placeholder="sonar">
+                <small class="help-text">Perplexity model identifier</small>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Rate Limiting</h3>
+            <div class="form-group">
+                <label for="rate-limit">Requests per Minute</label>
+                <input type="number" id="rate-limit" value="200" min="10" max="1000">
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Insights Limits</h3>
+            <div class="form-group">
+                <label for="votes-per-user">Votes per User</label>
+                <input type="number" id="votes-per-user" value="3" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label for="shares-per-user">Shares per User</label>
+                <input type="number" id="shares-per-user" value="3" min="1" max="10">
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Vector Embeddings</h3>
+            <p class="help-text">Configure how context files are chunked and retrieved in vector embeddings mode.</p>
+            <div class="form-group">
+                <label for="chunk-size">Chunk Size (characters)</label>
+                <input type="number" id="chunk-size" value="1000" min="200" max="4000" step="100">
+                <small class="help-text">Size of each text chunk for semantic search (200-4000 chars)</small>
+            </div>
+            <div class="form-group">
+                <label for="chunk-overlap">Chunk Overlap (characters)</label>
+                <input type="number" id="chunk-overlap" value="200" min="0" max="500" step="50">
+                <small class="help-text">Overlap between consecutive chunks to preserve context (0-500 chars)</small>
+            </div>
+            <div class="form-group">
+                <label for="chunks-to-retrieve">Chunks to Retrieve</label>
+                <input type="number" id="chunks-to-retrieve" value="5" min="1" max="20">
+                <small class="help-text">Number of most relevant chunks to include in each query (1-20)</small>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()">
+            <i data-lucide="save"></i>
+            <span>Save Settings</span>
+        </button>
     </div>
 </div>
 {% endblock %}

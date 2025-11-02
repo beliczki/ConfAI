@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadContextModeSetting();
     loadEmbeddingSettings();
     loadConversationStarters();
+    loadModelNames();
 
     // Setup event listeners
     setupFileUpload();
@@ -909,6 +910,38 @@ async function loadConversationStarters() {
 }
 
 /**
+ * Load model names
+ */
+async function loadModelNames() {
+    try {
+        const response = await fetch('/api/admin/model-names', {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load model names');
+        }
+
+        const data = await response.json();
+
+        // Set default values if not configured
+        const claudeInput = document.getElementById('claude-model');
+        const geminiInput = document.getElementById('gemini-model');
+        const grokInput = document.getElementById('grok-model');
+        const perplexityInput = document.getElementById('perplexity-model');
+
+        if (claudeInput) claudeInput.value = data.claude_model || 'claude-sonnet-4-5-20250929';
+        if (geminiInput) geminiInput.value = data.gemini_model || 'gemini-2.5-flash-lite';
+        if (grokInput) grokInput.value = data.grok_model || 'grok-4-fast-reasoning';
+        if (perplexityInput) perplexityInput.value = data.perplexity_model || 'sonar';
+
+        console.log('Model names loaded successfully');
+    } catch (error) {
+        console.error('Error loading model names:', error);
+    }
+}
+
+/**
  * Save the welcome message to the server
  */
 async function saveWelcomeMessage() {
@@ -1148,6 +1181,12 @@ async function saveSettings() {
     const chunkOverlap = document.getElementById('chunk-overlap')?.value;
     const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
 
+    // Get model names
+    const claudeModel = document.getElementById('claude-model')?.value?.trim();
+    const geminiModel = document.getElementById('gemini-model')?.value?.trim();
+    const grokModel = document.getElementById('grok-model')?.value?.trim();
+    const perplexityModel = document.getElementById('perplexity-model')?.value?.trim();
+
     // Get conversation starters
     const starters = [];
     for (let i = 1; i <= 4; i++) {
@@ -1169,9 +1208,15 @@ async function saveSettings() {
         return;
     }
 
+    // Validate model names
+    if (!claudeModel || !geminiModel || !grokModel || !perplexityModel) {
+        showSettingsError('All model names must be specified');
+        return;
+    }
+
     try {
-        // Save LLM provider, welcome message, new chat text, embeddings settings, and conversation starters
-        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, startersResponse] = await Promise.all([
+        // Save LLM provider, welcome message, new chat text, embeddings settings, model names, and conversation starters
+        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, modelNamesResponse, startersResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -1205,6 +1250,19 @@ async function saveSettings() {
                     chunks_to_retrieve: parseInt(chunksToRetrieve)
                 })
             }),
+            fetch('/api/admin/model-names', {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    claude_model: claudeModel,
+                    gemini_model: geminiModel,
+                    grok_model: grokModel,
+                    perplexity_model: perplexityModel
+                })
+            }),
             fetch('/api/admin/conversation-starters', {
                 method: 'POST',
                 headers: {
@@ -1215,7 +1273,7 @@ async function saveSettings() {
             })
         ]);
 
-        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !startersResponse.ok) {
+        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !modelNamesResponse.ok || !startersResponse.ok) {
             throw new Error('Failed to save settings');
         }
 

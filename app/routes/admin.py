@@ -308,6 +308,55 @@ def update_conversation_starters():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/model-names', methods=['GET'])
+@admin_required
+def get_model_names():
+    """Get configured model names for each LLM provider."""
+    try:
+        model_names = {
+            'claude_model': Settings.get('claude_model', 'claude-sonnet-4-5-20250929'),
+            'gemini_model': Settings.get('gemini_model', 'gemini-2.5-flash-lite'),
+            'grok_model': Settings.get('grok_model', 'grok-4-fast-reasoning'),
+            'perplexity_model': Settings.get('perplexity_model', 'sonar')
+        }
+        return jsonify({
+            'success': True,
+            **model_names
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/model-names', methods=['POST'])
+@admin_required
+def update_model_names():
+    """Update configured model names for each LLM provider."""
+    try:
+        data = request.get_json()
+
+        claude_model = data.get('claude_model', '').strip()
+        gemini_model = data.get('gemini_model', '').strip()
+        grok_model = data.get('grok_model', '').strip()
+        perplexity_model = data.get('perplexity_model', '').strip()
+
+        if not claude_model or not gemini_model or not grok_model or not perplexity_model:
+            return jsonify({'error': 'All model names must be specified'}), 400
+
+        Settings.set('claude_model', claude_model)
+        Settings.set('gemini_model', gemini_model)
+        Settings.set('grok_model', grok_model)
+        Settings.set('perplexity_model', perplexity_model)
+
+        print(f"Model names updated at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Model names updated successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/api/admin/context-mode', methods=['GET'])
 @admin_required
 def get_context_mode():

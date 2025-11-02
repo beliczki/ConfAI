@@ -409,6 +409,12 @@ async function selectThread(threadId, title, hashId = null) {
     currentThreadId = threadId;
     currentThreadTitle = title;
     document.getElementById('main-title').textContent = title;
+
+    // Show input area when selecting a thread
+    const inputArea = document.querySelector('.chat-input-area');
+    if (inputArea) {
+        inputArea.style.display = 'block';
+    }
     document.getElementById('chat-input').disabled = false;
     document.getElementById('send-btn').disabled = false;
 
@@ -897,6 +903,10 @@ function showWelcomeScreen() {
     setTimeout(() => lucide.createIcons(), 0);
 
     // Hide input area when showing welcome screen
+    const inputArea = document.querySelector('.chat-input-area');
+    if (inputArea) {
+        inputArea.style.display = 'none';
+    }
     document.getElementById('chat-input').disabled = true;
     document.getElementById('send-btn').disabled = true;
     document.getElementById('thread-title').textContent = 'Welcome';

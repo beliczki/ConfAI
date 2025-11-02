@@ -94,6 +94,27 @@ Be professional, engaging, and help users derive meaningful insights."""
             print(f"Error reading context mode from database: {e}")
             return 'context_window'
 
+    def _get_model_name(self, provider: str) -> str:
+        """Get model name for a provider from database settings."""
+        try:
+            from app.models import Settings
+            defaults = {
+                'claude': 'claude-sonnet-4-5-20250929',
+                'gemini': 'gemini-2.5-flash-lite',
+                'grok': 'grok-4-fast-reasoning',
+                'perplexity': 'sonar'
+            }
+            return Settings.get(f'{provider}_model', defaults.get(provider, ''))
+        except Exception as e:
+            print(f"Error reading model name for {provider}: {e}")
+            # Fallback to hardcoded defaults
+            return {
+                'claude': 'claude-sonnet-4-5-20250929',
+                'gemini': 'gemini-2.5-flash-lite',
+                'grok': 'grok-4-fast-reasoning',
+                'perplexity': 'sonar'
+            }.get(provider, '')
+
     def generate_response(
         self,
         messages: list,
@@ -161,6 +182,9 @@ Be professional, engaging, and help users derive meaningful insights."""
         try:
             client = anthropic.Anthropic(api_key=self.anthropic_key)
 
+            # Get configured model name
+            model_name = self._get_model_name('claude')
+
             # Use prompt caching by converting system prompt to list format
             # Mark the system prompt as cacheable to reduce costs
             system_blocks = [
@@ -177,7 +201,7 @@ Be professional, engaging, and help users derive meaningful insights."""
 
                 def generate_stream():
                     with client.messages.stream(
-                        model="claude-sonnet-4-5-20250929",
+                        model=model_name,
                         max_tokens=2048,
                         system=system_blocks,
                         messages=messages
@@ -204,7 +228,7 @@ Be professional, engaging, and help users derive meaningful insights."""
             else:
                 # Non-streaming response with caching
                 response = client.messages.create(
-                    model="claude-sonnet-4-5-20250929",
+                    model=model_name,
                     max_tokens=2048,
                     system=system_blocks,
                     messages=messages
@@ -234,9 +258,12 @@ Be professional, engaging, and help users derive meaningful insights."""
             return "Gemini API key not configured."
 
         try:
-            # Use Gemini 2.0 Flash model
+            # Get configured model name
+            model_name = self._get_model_name('gemini')
+
+            # Use Gemini model
             model = genai.GenerativeModel(
-                model_name='gemini-2.0-flash-exp',
+                model_name=model_name,
                 system_instruction=system_prompt
             )
 
@@ -287,12 +314,20 @@ Be professional, engaging, and help users derive meaningful insights."""
         system_prompt: str,
         stream: bool
     ) -> str | Iterator[str]:
-        """Generate response using Grok API."""
+        """Generate response using Grok API (xAI)."""
+        print("=== GROK CALLED ===")
+
         if not self.grok_key:
-            return "Grok API key not configured."
+            error_msg = "Grok API key not configured."
+            print(f"ERROR: {error_msg}")
+            if stream:
+                def error_gen():
+                    yield error_msg
+                return error_gen()
+            return error_msg
 
         try:
-            # Grok API endpoint (xAI)
+            # Grok API endpoint (xAI) - uses OpenAI-compatible format
             url = "https://api.x.ai/v1/chat/completions"
 
             headers = {
@@ -300,44 +335,129 @@ Be professional, engaging, and help users derive meaningful insights."""
                 "Content-Type": "application/json"
             }
 
-            # Prepare messages with system prompt
-            api_messages = [{"role": "system", "content": system_prompt}] + messages
+            # Prepare messages with UTF-8 encoding
+            formatted_messages = []
+
+            # Add system prompt
+            if system_prompt:
+                try:
+                    system_content = system_prompt.encode('utf-8', errors='ignore').decode('utf-8')
+                    formatted_messages.append({
+                        "role": "system",
+                        "content": system_content
+                    })
+                except Exception as e:
+                    print(f"Warning: Error encoding system prompt: {e}")
+                    formatted_messages.append({
+                        "role": "system",
+                        "content": system_prompt
+                    })
+
+            # Add conversation messages with UTF-8 encoding
+            for msg in messages:
+                try:
+                    content = msg["content"]
+                    if isinstance(content, str):
+                        content = content.encode('utf-8', errors='ignore').decode('utf-8')
+                    formatted_messages.append({
+                        "role": msg["role"],
+                        "content": content
+                    })
+                except Exception as e:
+                    print(f"Warning: Error encoding message: {e}")
+                    formatted_messages.append({
+                        "role": msg["role"],
+                        "content": str(msg["content"])
+                    })
+
+            # Get configured model name
+            model_name = self._get_model_name('grok')
 
             data = {
-                "model": "grok-beta",
-                "messages": api_messages,
+                "model": model_name,  # xAI's configured model
+                "messages": formatted_messages,
                 "stream": stream,
                 "temperature": 0.7
             }
 
+            print(f"Grok API request - messages count: {len(formatted_messages)}, stream: {stream}")
+
             if stream:
                 # Streaming response
                 def generate_stream():
-                    with httpx.stream("POST", url, headers=headers, json=data, timeout=60.0) as response:
-                        for line in response.iter_lines():
-                            if line.startswith("data: "):
-                                chunk = line[6:]  # Remove "data: " prefix
-                                if chunk.strip() and chunk != "[DONE]":
-                                    import json
-                                    try:
-                                        data = json.loads(chunk)
-                                        if "choices" in data and len(data["choices"]) > 0:
-                                            delta = data["choices"][0].get("delta", {})
-                                            if "content" in delta:
-                                                yield delta["content"]
-                                    except json.JSONDecodeError:
-                                        pass
+                    print("Starting Grok stream...")
+                    try:
+                        with httpx.stream("POST", url, headers=headers, json=data, timeout=120.0) as response:
+                            # Check status code first
+                            status = response.status_code
+                            print(f"Grok response status: {status}")
+
+                            if status != 200:
+                                # Read error response body
+                                error_body = ""
+                                for line in response.iter_lines():
+                                    error_body += line + "\n"
+                                print(f"Grok error body: {error_body}")
+                                yield f"\n\n[Error: HTTP {status} - {error_body}]"
+                                return
+
+                            # Read streaming response
+                            for line in response.iter_lines():
+                                if line.startswith("data: "):
+                                    chunk = line[6:]  # Remove "data: " prefix
+                                    if chunk.strip() and chunk != "[DONE]":
+                                        try:
+                                            chunk_data = json.loads(chunk)
+                                            if "choices" in chunk_data and len(chunk_data["choices"]) > 0:
+                                                delta = chunk_data["choices"][0].get("delta", {})
+                                                if "content" in delta:
+                                                    yield delta["content"]
+                                        except json.JSONDecodeError as e:
+                                            print(f"JSON decode error in streaming: {e}")
+                                            pass
+
+                            print("Grok stream completed")
+
+                    except httpx.ConnectError as e:
+                        error_msg = f"Connection error: {str(e)}"
+                        print(error_msg)
+                        yield f"\n\n[Error: {error_msg}]"
+                    except httpx.TimeoutException as e:
+                        error_msg = f"Request timeout: {str(e)}"
+                        print(error_msg)
+                        yield f"\n\n[Error: {error_msg}]"
+                    except Exception as e:
+                        print(f"Error in Grok streaming: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+                        yield f"\n\n[Error: {str(e)}]"
 
                 return generate_stream()
             else:
                 # Non-streaming response
-                response = httpx.post(url, headers=headers, json=data, timeout=60.0)
+                print("Making non-streaming Grok request...")
+                response = httpx.post(url, headers=headers, json=data, timeout=120.0)
                 response.raise_for_status()
                 result = response.json()
+                print(f"Grok non-streaming response received")
                 return result["choices"][0]["message"]["content"]
 
+        except httpx.HTTPStatusError as e:
+            error_msg = f"Grok API error {e.response.status_code}: {e.response.text}"
+            print(error_msg)
+            if stream:
+                def error_gen():
+                    yield f"Sorry, I encountered an error: {error_msg}"
+                return error_gen()
+            return f"Sorry, I encountered an error: {error_msg}"
         except Exception as e:
             print(f"Error calling Grok API: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            if stream:
+                def error_gen():
+                    yield f"Sorry, I encountered an error: {str(e)}"
+                return error_gen()
             return f"Sorry, I encountered an error: {str(e)}"
 
     def _generate_perplexity(
@@ -347,8 +467,16 @@ Be professional, engaging, and help users derive meaningful insights."""
         stream: bool
     ) -> str | Iterator[str]:
         """Generate response using Perplexity API."""
+        print("=== PERPLEXITY CALLED ===")  # Debug
+
         if not self.perplexity_key:
-            return "Perplexity API key not configured."
+            error_msg = "Perplexity API key not configured."
+            print(f"ERROR: {error_msg}")
+            if stream:
+                def error_gen():
+                    yield error_msg
+                return error_gen()
+            return error_msg
 
         try:
             url = "https://api.perplexity.ai/chat/completions"
@@ -358,43 +486,160 @@ Be professional, engaging, and help users derive meaningful insights."""
                 "Content-Type": "application/json"
             }
 
-            # Prepare messages with system prompt
-            api_messages = [{"role": "system", "content": system_prompt}] + messages
+            # Prepare messages - Perplexity API format
+            # Perplexity requires messages without system role and strict alternation
+            print(f"=== PERPLEXITY INPUT ===")
+            print(f"Number of input messages: {len(messages)}")
+            for i, msg in enumerate(messages):
+                print(f"  Input message {i}: role={msg['role']}")
+            print(f"=== END INPUT ===")
+
+            formatted_messages = []
+
+            # Add actual conversation messages with UTF-8 encoding
+            for msg in messages:
+                try:
+                    # Ensure proper UTF-8 encoding for all content
+                    content = msg["content"]
+                    if isinstance(content, str):
+                        content = content.encode('utf-8', errors='ignore').decode('utf-8')
+                    formatted_messages.append({
+                        "role": msg["role"],
+                        "content": content
+                    })
+                except Exception as e:
+                    print(f"Warning: Error encoding message: {e}")
+                    formatted_messages.append({
+                        "role": msg["role"],
+                        "content": str(msg["content"])
+                    })
+
+            # Prepend system prompt (with context) to the first user message
+            if system_prompt and len(system_prompt) > 0 and len(formatted_messages) > 0:
+                # Find the first user message
+                for i, msg in enumerate(formatted_messages):
+                    if msg["role"] == "user":
+                        # Include the full system prompt with context
+                        # Perplexity can combine this with its web search capabilities
+                        formatted_messages[i]["content"] = system_prompt + "\n\n" + formatted_messages[i]["content"]
+                        print(f"Added system prompt to first user message ({len(system_prompt)} chars)")
+                        break
+
+            # Perplexity requires conversation to start with a user message
+            # Remove any leading assistant messages
+            while formatted_messages and formatted_messages[0]["role"] == "assistant":
+                print(f"Removing leading assistant message")
+                formatted_messages.pop(0)
+
+            # Ensure messages alternate between user and assistant
+            # Merge consecutive messages of the same role
+            cleaned_messages = []
+            for msg in formatted_messages:
+                if cleaned_messages and cleaned_messages[-1]["role"] == msg["role"]:
+                    # Merge with previous message
+                    cleaned_messages[-1]["content"] += "\n\n" + msg["content"]
+                else:
+                    cleaned_messages.append(msg)
+
+            formatted_messages = cleaned_messages
+
+            # Debug: Print message roles to verify alternation
+            print(f"=== PERPLEXITY MESSAGE STRUCTURE ===")
+            for i, msg in enumerate(formatted_messages):
+                print(f"  Message {i}: role={msg['role']}, content_length={len(msg['content'])}")
+            print(f"=== END MESSAGE STRUCTURE ===")
+
+            # Get configured model name
+            model_name = self._get_model_name('perplexity')
 
             data = {
-                "model": "llama-3.1-sonar-large-128k-online",
-                "messages": api_messages,
-                "stream": stream
+                "model": model_name,  # Perplexity's configured model
+                "messages": formatted_messages,
+                "stream": stream,
+                "max_tokens": 2048
             }
+
+            print(f"Perplexity API request - messages count: {len(formatted_messages)}, stream: {stream}")
+            print(f"Perplexity URL: {url}")
 
             if stream:
                 # Streaming response
                 def generate_stream():
-                    with httpx.stream("POST", url, headers=headers, json=data, timeout=60.0) as response:
-                        for line in response.iter_lines():
-                            if line.startswith("data: "):
-                                chunk = line[6:]
-                                if chunk.strip() and chunk != "[DONE]":
-                                    import json
-                                    try:
-                                        chunk_data = json.loads(chunk)
-                                        if "choices" in chunk_data and len(chunk_data["choices"]) > 0:
-                                            delta = chunk_data["choices"][0].get("delta", {})
-                                            if "content" in delta:
-                                                yield delta["content"]
-                                    except json.JSONDecodeError:
-                                        pass
+                    print("Starting Perplexity stream...")
+                    try:
+                        with httpx.stream("POST", url, headers=headers, json=data, timeout=120.0) as response:
+                            # Check status code first, before accessing content
+                            status = response.status_code
+                            print(f"Perplexity response status: {status}")
+
+                            if status != 200:
+                                # Read error response body
+                                error_body = ""
+                                for line in response.iter_lines():
+                                    error_body += line + "\n"
+                                print(f"Perplexity error body: {error_body}")
+                                yield f"\n\n[Error: HTTP {status} - {error_body}]"
+                                return
+
+                            # Read streaming response line by line
+                            for line in response.iter_lines():
+                                if line.startswith("data: "):
+                                    chunk = line[6:]
+                                    if chunk.strip() and chunk != "[DONE]":
+                                        try:
+                                            chunk_data = json.loads(chunk)
+                                            if "choices" in chunk_data and len(chunk_data["choices"]) > 0:
+                                                delta = chunk_data["choices"][0].get("delta", {})
+                                                if "content" in delta:
+                                                    content = delta["content"]
+                                                    # Don't print content to avoid encoding issues
+                                                    yield content
+                                        except json.JSONDecodeError as e:
+                                            print(f"JSON decode error in streaming: {e}")
+                                            pass
+
+                            print("Perplexity stream completed")
+
+                    except httpx.ConnectError as e:
+                        error_msg = f"Connection error: {str(e)}"
+                        print(error_msg)
+                        yield f"\n\n[Error: {error_msg}]"
+                    except httpx.TimeoutException as e:
+                        error_msg = f"Request timeout: {str(e)}"
+                        print(error_msg)
+                        yield f"\n\n[Error: {error_msg}]"
+                    except Exception as e:
+                        print(f"Error in Perplexity streaming: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+                        yield f"\n\n[Error: {str(e)}]"
 
                 return generate_stream()
             else:
                 # Non-streaming response
-                response = httpx.post(url, headers=headers, json=data, timeout=60.0)
+                print("Making non-streaming Perplexity request...")
+                response = httpx.post(url, headers=headers, json=data, timeout=120.0)
                 response.raise_for_status()
                 result = response.json()
+                print(f"Perplexity non-streaming response received")
                 return result["choices"][0]["message"]["content"]
 
+        except httpx.HTTPStatusError as e:
+            error_msg = f"Perplexity API error {e.response.status_code}: {e.response.text}"
+            print(error_msg)
+            if stream:
+                def error_gen():
+                    yield f"Sorry, I encountered an error: {error_msg}"
+                return error_gen()
+            return f"Sorry, I encountered an error: {error_msg}"
         except Exception as e:
             print(f"Error calling Perplexity API: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            if stream:
+                def error_gen():
+                    yield f"Sorry, I encountered an error: {str(e)}"
+                return error_gen()
             return f"Sorry, I encountered an error: {str(e)}"
 
 

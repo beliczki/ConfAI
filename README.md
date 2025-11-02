@@ -4,8 +4,8 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.1-green.svg)
-![Claude](https://img.shields.io/badge/Claude-Sonnet_4.5-purple.svg)
-![Gemini](https://img.shields.io/badge/Gemini-2.0_Flash-blue.svg)
+![Claude](https://img.shields.io/badge/Claude-Sonnet_4.5_20250929-purple.svg)
+![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash_Lite-blue.svg)
 ![Status](https://img.shields.io/badge/Status-Production_Ready-green.svg)
 
 ---
@@ -116,10 +116,10 @@ The application will start on **port 5000**
 - **sentence-transformers** - ML models for semantic search
 
 ### AI Integration
-- **Claude Sonnet 4.5** - Anthropic's latest model with prompt caching
-- **Gemini 2.0 Flash** - Google's fast, cost-effective model
-- **Grok** - xAI's conversational model
-- **Perplexity** - Web-connected reasoning
+- **Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)** - Anthropic's latest model with prompt caching
+- **Gemini 2.5 Flash Lite (gemini-2.5-flash-lite)** - Google's fast, cost-effective model
+- **Grok 4 Fast Reasoning (grok-4-fast-reasoning)** - xAI's conversational model
+- **Perplexity Sonar (sonar)** - Web-connected reasoning
 
 ### Frontend
 - **Vanilla JavaScript** - No frameworks, fast loading
@@ -133,10 +133,10 @@ The application will start on **port 5000**
 ### 🤖 Multi-Model AI Support
 
 Switch between AI models instantly:
-- **Claude Sonnet 4.5** - Best quality, prompt caching for cost optimization
-- **Gemini 2.0 Flash** - Fastest, most cost-effective
-- **Grok** - Alternative conversational model
-- **Perplexity** - Web-connected for current information
+- **Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)** - Best quality, prompt caching for cost optimization
+- **Gemini 2.5 Flash Lite (gemini-2.5-flash-lite)** - Fastest, most cost-effective
+- **Grok 4 Fast Reasoning (grok-4-fast-reasoning)** - Alternative conversational model
+- **Perplexity Sonar (sonar)** - Web-connected for current information
 
 Model switching persists across all users and processes.
 
@@ -478,8 +478,10 @@ Proprietary - For internal conference use only
 ## ✨ Credits
 
 **Built with:**
-- Claude Sonnet 4.5 (Anthropic)
-- Gemini 2.0 Flash (Google)
+- Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) by Anthropic
+- Gemini 2.5 Flash Lite (gemini-2.5-flash-lite) by Google
+- Grok 4 Fast Reasoning (grok-4-fast-reasoning) by xAI
+- Perplexity Sonar (sonar)
 - Flask Web Framework
 - ChromaDB Vector Database
 - Sentence Transformers
