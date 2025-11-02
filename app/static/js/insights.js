@@ -176,17 +176,23 @@ function createInsightCard(insight) {
         voteControls.appendChild(unshareBtn);
     } else {
         // Normal view - show vote buttons
-        // Upvote button
+        // Upvote button with count
         const upvoteBtn = document.createElement('button');
         upvoteBtn.className = 'vote-btn upvote';
         if (insight.user_vote === 'up') {
             upvoteBtn.classList.add('voted');
         }
-        upvoteBtn.innerHTML = '👍';
         upvoteBtn.disabled = votesRemaining === 0 && !insight.user_vote;
         upvoteBtn.onclick = () => handleVote(insight.id, 'up');
 
-        // Vote count
+        // Show upvote count if available
+        if (insight.upvotes !== null && insight.upvotes !== undefined) {
+            upvoteBtn.innerHTML = `👍 ${insight.upvotes}`;
+        } else {
+            upvoteBtn.innerHTML = '👍';
+        }
+
+        // Vote count separator (net votes)
         const voteCount = document.createElement('span');
         voteCount.className = 'vote-count';
         if (insight.net_votes !== null && insight.net_votes !== undefined) {
@@ -196,15 +202,21 @@ function createInsightCard(insight) {
             voteCount.classList.add('hidden');
         }
 
-        // Downvote button
+        // Downvote button with count
         const downvoteBtn = document.createElement('button');
         downvoteBtn.className = 'vote-btn downvote';
         if (insight.user_vote === 'down') {
             downvoteBtn.classList.add('voted');
         }
-        downvoteBtn.innerHTML = '👎';
         downvoteBtn.disabled = votesRemaining === 0 && !insight.user_vote;
         downvoteBtn.onclick = () => handleVote(insight.id, 'down');
+
+        // Show downvote count if available
+        if (insight.downvotes !== null && insight.downvotes !== undefined) {
+            downvoteBtn.innerHTML = `👎 ${insight.downvotes}`;
+        } else {
+            downvoteBtn.innerHTML = '👎';
+        }
 
         voteControls.appendChild(upvoteBtn);
         voteControls.appendChild(voteCount);
