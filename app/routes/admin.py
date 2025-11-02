@@ -276,9 +276,10 @@ def get_context_files():
         # Ensure context folder exists
         os.makedirs(CONTEXT_FOLDER, exist_ok=True)
 
-        # Load enabled/disabled state
+        # Load enabled/disabled state and file modes
         config = load_context_config()
         enabled_files = config.get('enabled_files', {})
+        file_modes = config.get('file_modes', {})
 
         files_info = []
         total_chars = 0
@@ -301,12 +302,16 @@ def get_context_files():
                 # Check if file is enabled (default to True if not specified)
                 is_enabled = enabled_files.get(filename, True)
 
+                # Get file mode (default to 'window' if not specified)
+                file_mode = file_modes.get(filename, 'window')
+
                 files_info.append({
                     'name': filename,
                     'size': file_size,
                     'chars': char_count,
                     'content': content,
-                    'enabled': is_enabled
+                    'enabled': is_enabled,
+                    'mode': file_mode
                 })
 
                 # Add to preview (with separator)
@@ -445,6 +450,103 @@ def toggle_context_file(filename):
             'success': True,
             'enabled': enabled,
             'message': f'File {"enabled" if enabled else "disabled"}: {filename}'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/context-files/<filename>/mode', methods=['PUT'])
+@admin_required
+def update_context_file_mode(filename):
+    """Update the mode (window/vector) of a context file."""
+    try:
+        filename = secure_filename(filename)
+        filepath = os.path.join(CONTEXT_FOLDER, filename)
+
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'File not found'}), 404
+
+        data = request.get_json()
+        mode = data.get('mode', 'window')
+
+        if mode not in ['window', 'vector']:
+            return jsonify({'error': 'Invalid mode. Must be "window" or "vector"'}), 400
+
+        # Load config
+        config = load_context_config()
+        file_modes = config.get('file_modes', {})
+
+        # Update mode
+        file_modes[filename] = mode
+        config['file_modes'] = file_modes
+
+        # Save config
+        if not save_context_config(config):
+            return jsonify({'error': 'Failed to save configuration'}), 500
+
+        print(f"Updated context file {filename} mode to: {mode}")
+
+        return jsonify({
+            'success': True,
+            'mode': mode,
+            'message': f'File mode updated to {mode}: {filename}'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/embedding-settings', methods=['GET'])
+@admin_required
+def get_embedding_settings():
+    """Get embedding settings (chunk size, retrieval count)."""
+    try:
+        config = load_context_config()
+        embedding_settings = config.get('embedding_settings', {
+            'chunk_size': 1000,
+            'chunks_to_retrieve': 5
+        })
+
+        return jsonify(embedding_settings)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/embedding-settings', methods=['POST'])
+@admin_required
+def save_embedding_settings():
+    """Save embedding settings (chunk size, retrieval count)."""
+    try:
+        data = request.get_json()
+        chunk_size = data.get('chunk_size', 1000)
+        chunks_to_retrieve = data.get('chunks_to_retrieve', 5)
+
+        # Validate settings
+        if not isinstance(chunk_size, int) or chunk_size < 200 or chunk_size > 4000:
+            return jsonify({'error': 'Invalid chunk_size. Must be between 200 and 4000'}), 400
+
+        if not isinstance(chunks_to_retrieve, int) or chunks_to_retrieve < 1 or chunks_to_retrieve > 20:
+            return jsonify({'error': 'Invalid chunks_to_retrieve. Must be between 1 and 20'}), 400
+
+        # Load config
+        config = load_context_config()
+
+        # Update settings
+        config['embedding_settings'] = {
+            'chunk_size': chunk_size,
+            'chunks_to_retrieve': chunks_to_retrieve
+        }
+
+        # Save config
+        if not save_context_config(config):
+            return jsonify({'error': 'Failed to save configuration'}), 500
+
+        print(f"Updated embedding settings: chunk_size={chunk_size}, chunks_to_retrieve={chunks_to_retrieve}")
+
+        return jsonify({
+            'success': True,
+            'chunk_size': chunk_size,
+            'chunks_to_retrieve': chunks_to_retrieve,
+            'message': 'Embedding settings saved successfully'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
