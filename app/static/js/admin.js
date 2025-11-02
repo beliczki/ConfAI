@@ -1181,6 +1181,10 @@ async function saveSettings() {
     const chunkOverlap = document.getElementById('chunk-overlap')?.value;
     const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
 
+    // Get embedding provider settings
+    const embeddingProvider = document.getElementById('embedding-provider')?.value;
+    const stModelName = document.getElementById('st-model-name')?.value;
+
     // Get model names
     const claudeModel = document.getElementById('claude-model')?.value?.trim();
     const geminiModel = document.getElementById('gemini-model')?.value?.trim();
@@ -1215,8 +1219,8 @@ async function saveSettings() {
     }
 
     try {
-        // Save LLM provider, welcome message, new chat text, embeddings settings, model names, and conversation starters
-        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, modelNamesResponse, startersResponse] = await Promise.all([
+        // Save LLM provider, welcome message, new chat text, embeddings settings, embedding provider, model names, and conversation starters
+        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, embeddingProviderResponse, modelNamesResponse, startersResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -1250,6 +1254,17 @@ async function saveSettings() {
                     chunks_to_retrieve: parseInt(chunksToRetrieve)
                 })
             }),
+            fetch('/api/admin/embeddings/provider', {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    provider: embeddingProvider,
+                    st_model_name: stModelName
+                })
+            }),
             fetch('/api/admin/model-names', {
                 method: 'POST',
                 headers: {
@@ -1273,7 +1288,7 @@ async function saveSettings() {
             })
         ]);
 
-        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !modelNamesResponse.ok || !startersResponse.ok) {
+        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !embeddingProviderResponse.ok || !modelNamesResponse.ok || !startersResponse.ok) {
             throw new Error('Failed to save settings');
         }
 
@@ -1773,7 +1788,7 @@ async function processEmbeddings() {
     try {
         // Create abort controller for timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for large embedding processing
 
         const response = await fetch('/api/admin/embeddings/process', {
             method: 'POST',
@@ -1802,14 +1817,20 @@ async function processEmbeddings() {
 
         const data = await response.json();
 
+        // Update stats first to get the counts
+        await loadEmbeddingStats();
+
+        // Display success message
         if (statusEl) {
-            statusEl.innerHTML = '<i data-lucide="check-circle"></i> ' + data.message;
+            const message = data.message || 'Embeddings processed successfully!';
+            const docCount = data.document_count || 'N/A';
+            const chunkCount = data.chunk_count || 'N/A';
+
+            statusEl.innerHTML = `<i data-lucide="check-circle"></i> ${message}<br><small>Documents: ${docCount} | Chunks: ${chunkCount}</small>`;
             statusEl.className = 'status-message success';
+            statusEl.style.display = 'block';
             lucide.createIcons();
         }
-
-        // Update stats
-        loadEmbeddingStats();
 
     } catch (error) {
         console.error('Error processing embeddings:', error);
@@ -2015,38 +2036,80 @@ async function saveEmbeddingSettings() {
 }
 
 /**
+ * Toggle embedding provider options visibility
+ */
+function toggleEmbeddingProvider() {
+    const provider = document.getElementById('embedding-provider')?.value;
+    const stOptions = document.getElementById('st-options');
+    const geminiOptions = document.getElementById('gemini-options');
+
+    if (provider === 'gemini') {
+        if (stOptions) stOptions.style.display = 'none';
+        if (geminiOptions) geminiOptions.style.display = 'block';
+    } else {
+        if (stOptions) stOptions.style.display = 'block';
+        if (geminiOptions) geminiOptions.style.display = 'none';
+    }
+}
+
+/**
  * Load embedding settings
  */
 async function loadEmbeddingSettings() {
     try {
+        // Load chunk settings
         const response = await fetch('/api/admin/embedding-settings', {
             headers: getAuthHeaders()
         });
 
         if (!response.ok) {
             console.log('No embedding settings found, using defaults');
-            return;
+        } else {
+            const data = await response.json();
+
+            const chunkSize = document.getElementById('chunk-size');
+            const chunkOverlap = document.getElementById('chunk-overlap');
+            const chunksToRetrieve = document.getElementById('chunks-to-retrieve');
+
+            if (chunkSize && data.chunk_size) {
+                chunkSize.value = data.chunk_size;
+            }
+
+            if (chunkOverlap && data.chunk_overlap !== undefined) {
+                chunkOverlap.value = data.chunk_overlap;
+            }
+
+            if (chunksToRetrieve && data.chunks_to_retrieve) {
+                chunksToRetrieve.value = data.chunks_to_retrieve;
+            }
+
+            console.log('Loaded embedding chunk settings:', data);
         }
 
-        const data = await response.json();
+        // Load embedding provider settings
+        const providerResponse = await fetch('/api/admin/embeddings/provider', {
+            headers: getAuthHeaders()
+        });
 
-        const chunkSize = document.getElementById('chunk-size');
-        const chunkOverlap = document.getElementById('chunk-overlap');
-        const chunksToRetrieve = document.getElementById('chunks-to-retrieve');
+        if (providerResponse.ok) {
+            const providerData = await providerResponse.json();
 
-        if (chunkSize && data.chunk_size) {
-            chunkSize.value = data.chunk_size;
+            const providerSelect = document.getElementById('embedding-provider');
+            const stModelSelect = document.getElementById('st-model-name');
+
+            if (providerSelect && providerData.provider) {
+                providerSelect.value = providerData.provider;
+            }
+
+            if (stModelSelect && providerData.st_model_name) {
+                stModelSelect.value = providerData.st_model_name;
+            }
+
+            // Update visibility of provider options
+            toggleEmbeddingProvider();
+
+            console.log('Loaded embedding provider settings:', providerData);
         }
-
-        if (chunkOverlap && data.chunk_overlap !== undefined) {
-            chunkOverlap.value = data.chunk_overlap;
-        }
-
-        if (chunksToRetrieve && data.chunks_to_retrieve) {
-            chunksToRetrieve.value = data.chunks_to_retrieve;
-        }
-
-        console.log('Loaded embedding settings:', data);
 
     } catch (error) {
         console.error('Error loading embedding settings:', error);

@@ -5,6 +5,7 @@ from typing import List, Dict
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 from sentence_transformers import SentenceTransformer
+import google.generativeai as genai
 from app.models import Settings
 
 
@@ -19,7 +20,9 @@ class EmbeddingService:
 
     def __init__(self):
         self.embeddings_initialized = False
-        self.model = None
+        self.provider = None  # 'sentence-transformers' or 'gemini'
+        self.st_model = None  # Sentence transformers model
+        self.gemini_key = None  # Gemini API key
         self.client = None
         self.collection = None
         # Chunk settings (loaded from database, with fallback to class constants)
@@ -45,15 +48,15 @@ class EmbeddingService:
                 self.chunk_size = self.CHUNK_SIZE
                 self.chunk_overlap = self.CHUNK_OVERLAP
 
-            # Initialize sentence transformer model
-            # Using all-MiniLM-L6-v2: lightweight, fast, and good quality
-            print("Loading sentence transformer model (this may take a minute on first run)...")
-            try:
-                self.model = SentenceTransformer('all-MiniLM-L6-v2')
-                print("[OK] Sentence transformer model loaded")
-            except Exception as model_error:
-                print(f"[ERROR] Failed to load sentence transformer model: {model_error}")
-                raise Exception(f"Failed to load embedding model. Make sure sentence-transformers is installed and you have internet connection for first-time model download: {model_error}")
+            # Load embedding provider from database
+            self.provider = Settings.get('embedding_provider', 'sentence-transformers')
+            print(f"[INFO] Using embedding provider: {self.provider}")
+
+            # Initialize the selected embedding provider
+            if self.provider == 'gemini':
+                self._init_gemini()
+            else:
+                self._init_sentence_transformers()
 
             # Initialize ChromaDB client (persistent storage)
             print("Initializing ChromaDB...")
@@ -90,6 +93,108 @@ class EmbeddingService:
             self.embeddings_initialized = False
             # Re-raise the exception so it can be caught by the caller
             raise
+
+    def _init_sentence_transformers(self):
+        """Initialize sentence transformers model."""
+        print("Loading sentence transformer model (this may take a minute on first run)...")
+        try:
+            model_name = Settings.get('st_model_name', 'all-MiniLM-L6-v2')
+            self.st_model = SentenceTransformer(model_name)
+            print(f"[OK] Sentence transformer model loaded: {model_name}")
+        except Exception as model_error:
+            print(f"[ERROR] Failed to load sentence transformer model: {model_error}")
+            raise Exception(f"Failed to load embedding model. Make sure sentence-transformers is installed and you have internet connection for first-time model download: {model_error}")
+
+    def _init_gemini(self):
+        """Initialize Gemini embedding API."""
+        print("Initializing Gemini embedding API...")
+        try:
+            self.gemini_key = os.getenv('GEMINI_API_KEY')
+            if not self.gemini_key:
+                raise Exception("GEMINI_API_KEY not found in environment variables")
+            genai.configure(api_key=self.gemini_key)
+            print("[OK] Gemini embedding API initialized")
+        except Exception as gemini_error:
+            print(f"[ERROR] Failed to initialize Gemini: {gemini_error}")
+            raise Exception(f"Failed to initialize Gemini embedding API: {gemini_error}")
+
+    def encode(self, texts):
+        """Encode texts to embeddings using the configured provider.
+
+        Args:
+            texts: String or list of strings to encode
+
+        Returns:
+            numpy array or list of embeddings
+        """
+        if not self.embeddings_initialized:
+            self.initialize()
+
+        # Handle single string input
+        if isinstance(texts, str):
+            texts = [texts]
+            single_input = True
+        else:
+            single_input = False
+
+        try:
+            if self.provider == 'sentence-transformers':
+                embeddings = self.st_model.encode(texts, show_progress_bar=False)
+            elif self.provider == 'gemini':
+                embeddings = self._gemini_encode(texts)
+            else:
+                raise Exception(f"Unknown embedding provider: {self.provider}")
+
+            # Return single embedding if single input
+            if single_input:
+                return embeddings[0] if isinstance(embeddings, list) else embeddings
+            return embeddings
+
+        except Exception as e:
+            print(f"[ERROR] Failed to encode texts: {e}")
+            raise
+
+    def _gemini_encode(self, texts):
+        """Encode texts using Gemini API one at a time for consistent format."""
+        import numpy as np
+        import time
+
+        all_embeddings = []
+
+        for idx, text in enumerate(texts):
+            try:
+                # Process one text at a time to ensure consistent response format
+                result = genai.embed_content(
+                    model="models/text-embedding-004",
+                    content=text,
+                    task_type="retrieval_document"
+                )
+
+                # Gemini API returns a dict, check for 'embedding' key
+                if isinstance(result, dict) and 'embedding' in result:
+                    embedding_vector = result['embedding']
+                elif hasattr(result, 'embedding'):
+                    # Alternative: result might be an object with embedding attribute
+                    embedding_vector = result.embedding
+                else:
+                    raise Exception(f"Unexpected Gemini response format: {type(result)}, keys: {result.keys() if isinstance(result, dict) else 'N/A'}")
+
+                # Ensure it's a simple list of floats
+                if isinstance(embedding_vector, list):
+                    all_embeddings.append(embedding_vector)
+                else:
+                    # Convert to list if numpy array or other type
+                    all_embeddings.append(list(embedding_vector))
+
+                # Rate limiting - process 10 per second
+                if (idx + 1) % 10 == 0 and (idx + 1) < len(texts):
+                    time.sleep(0.1)
+
+            except Exception as e:
+                print(f"[ERROR] Gemini encoding failed for text {idx + 1}/{len(texts)}: {e}")
+                raise
+
+        return np.array(all_embeddings)
 
     def chunk_text(self, text: str, filename: str) -> List[Dict]:
         """Split text into overlapping chunks."""
@@ -140,28 +245,24 @@ class EmbeddingService:
             return False
 
         try:
-            # Clear existing documents by getting all IDs and deleting them
+            # Clear existing documents and recreate collection to handle dimension changes
             print("\n[1/4] Clearing existing embeddings...")
-            if self.collection.count() > 0:
-                try:
-                    # Get all document IDs
-                    existing = self.collection.get()
-                    if existing and 'ids' in existing and existing['ids']:
-                        self.collection.delete(ids=existing['ids'])
-                        print(f"  [OK] Deleted {len(existing['ids'])} existing chunks")
-                except Exception as delete_error:
-                    print(f"Warning: Error clearing embeddings: {delete_error}")
-                    # If deletion fails, try to create a new collection
-                    try:
-                        self.client.delete_collection(self.COLLECTION_NAME)
-                        self.collection = self.client.create_collection(
-                            name=self.COLLECTION_NAME,
-                            metadata={"description": "Context documents for AI chat"}
-                        )
-                        print("Recreated collection")
-                    except Exception as recreate_error:
-                        print(f"Error recreating collection: {recreate_error}")
-                        return False
+            try:
+                # Delete the entire collection to handle embedding dimension changes
+                # (e.g., switching from 384-dim sentence-transformers to 768-dim Gemini)
+                self.client.delete_collection(self.COLLECTION_NAME)
+                print("  [OK] Deleted existing collection")
+
+                # Recreate collection
+                self.collection = self.client.create_collection(
+                    name=self.COLLECTION_NAME,
+                    metadata={"description": "Context documents for AI chat"}
+                )
+                print("  [OK] Created new collection")
+            except Exception as delete_error:
+                # Collection might not exist yet, that's fine
+                print(f"  [INFO] No existing collection to delete (this is normal for first run)")
+                # Collection should already be created in initialize()
 
             # Load context config to check file modes
             print("\n[2/4] Loading configuration...")
@@ -213,7 +314,7 @@ class EmbeddingService:
                         # Generate embeddings for all chunks
                         print(f"    -> Generating embeddings...")
                         chunk_texts = [chunk['text'] for chunk in chunks]
-                        embeddings = self.model.encode(chunk_texts, show_progress_bar=False)
+                        embeddings = self.encode(chunk_texts)
 
                         # Prepare data for ChromaDB
                         ids = [chunk['id'] for chunk in chunks]
@@ -258,11 +359,24 @@ class EmbeddingService:
 
         try:
             # Generate query embedding
-            query_embedding = self.model.encode(query, show_progress_bar=False)
+            query_embedding = self.encode(query)
+
+            # Convert to proper format for ChromaDB
+            # Ensure it's a flat list, not nested
+            if hasattr(query_embedding, 'tolist'):
+                # NumPy array
+                embedding_list = query_embedding.tolist()
+            else:
+                # Already a list
+                embedding_list = query_embedding
+
+            # Ensure we have a flat list (not nested)
+            if isinstance(embedding_list, list) and isinstance(embedding_list[0], list):
+                embedding_list = embedding_list[0]
 
             # Search ChromaDB
             results = self.collection.query(
-                query_embeddings=[query_embedding.tolist()],
+                query_embeddings=[embedding_list],
                 n_results=min(top_k, self.collection.count())
             )
 

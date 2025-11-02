@@ -405,6 +405,43 @@
         <div class="section-card">
             <h3>Vector Embeddings</h3>
             <p class="help-text">Configure how context files are chunked and retrieved in vector embeddings mode.</p>
+
+            <div class="form-group">
+                <label for="embedding-provider">Embedding Provider</label>
+                <select id="embedding-provider" onchange="toggleEmbeddingProvider()">
+                    <option value="sentence-transformers">Sentence Transformers (Local)</option>
+                    <option value="gemini">Google Gemini (API)</option>
+                </select>
+                <small class="help-text">Choose between local models or API-based embeddings</small>
+            </div>
+
+            <div id="st-options" class="form-group">
+                <label for="st-model-name">Sentence Transformer Model</label>
+                <select id="st-model-name">
+                    <option value="all-MiniLM-L6-v2">all-MiniLM-L6-v2 (384 dims, fast)</option>
+                    <option value="paraphrase-multilingual-mpnet-base-v2">paraphrase-multilingual-mpnet-base-v2 (768 dims, multilingual)</option>
+                    <option value="all-mpnet-base-v2">all-mpnet-base-v2 (768 dims, quality)</option>
+                </select>
+                <small class="help-text">Local embedding model - first use will download the model</small>
+            </div>
+
+            <div id="gemini-options" class="form-group" style="display: none;">
+                <label>Gemini Embedding Details</label>
+                <div class="embedding-info-box">
+                    <div><strong>Model:</strong> text-embedding-004</div>
+                    <div><strong>Dimensions:</strong> 768</div>
+                    <div><strong>Multilingual:</strong> Yes (100+ languages including Hungarian)</div>
+                    <div><strong>Cost:</strong> Free (1500 requests/day)</div>
+                </div>
+                <small class="help-text">Requires GEMINI_API_KEY in .env file</small>
+            </div>
+
+            <div class="form-group" style="padding: 10px; background: #fff3cd; border-left: 3px solid #ffc107; margin: 15px 0;">
+                <small style="color: #856404;">
+                    <strong>⚠ Important:</strong> Changing the embedding provider requires re-processing all context files in the Context Files tab.
+                </small>
+            </div>
+
             <div class="form-group">
                 <label for="chunk-size">Chunk Size (characters)</label>
                 <input type="number" id="chunk-size" value="1000" min="200" max="4000" step="100">

@@ -113,7 +113,8 @@ The application will start on **port 5000**
 - **Flask 3.1** - Modern Python web framework
 - **SQLite** - Lightweight database with raw SQL
 - **ChromaDB** - Vector database for embeddings
-- **sentence-transformers** - ML models for semantic search
+- **Gemini Embeddings (text-embedding-004)** - 768-dim multilingual embeddings (Hungarian + English)
+- **sentence-transformers** - Alternative local ML models for semantic search
 
 ### AI Integration
 - **Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)** - Anthropic's latest model with prompt caching
@@ -286,6 +287,9 @@ The application automatically creates 8 tables:
 - Files appear in Context Files tab
 
 **Vector Embeddings Mode:**
+- Configure embedding provider in Settings > Embedding Provider
+  - **Sentence Transformers** - Local models (384 or 768 dims), no API required
+  - **Gemini** - Cloud-based (768 dims), multilingual (100+ languages including Hungarian)
 - Files must be processed first
 - Go to Context Files tab
 - Click "Process Embeddings"
@@ -438,14 +442,15 @@ Claude automatically caches system prompts:
 
 When in Vector Embeddings mode:
 1. Documents chunked into 512-char segments (128-char overlap)
-2. Each chunk converted to vector embedding
-3. User query converted to embedding
-4. Top 5 most similar chunks retrieved
+2. Each chunk converted to vector embedding using selected provider
+3. User query converted to embedding (same provider)
+4. Top 5-9 most similar chunks retrieved (configurable)
 5. Only relevant chunks sent to AI
 
 **Benefits:**
 - Handles large document collections
 - Finds semantic matches (not just keywords)
+- Multilingual support with Gemini (Hungarian + English + 100+ languages)
 - Cost-effective (only send relevant content)
 - Scalable to millions of documents
 

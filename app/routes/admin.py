@@ -918,3 +918,53 @@ def get_embedding_stats():
             'chunk_count': 0,
             'error': str(e)
         }), 500
+
+
+@admin_bp.route('/api/admin/embeddings/provider', methods=['GET'])
+@admin_required
+def get_embedding_provider():
+    """Get current embedding provider settings."""
+    try:
+        provider = Settings.get('embedding_provider', 'sentence-transformers')
+        st_model = Settings.get('st_model_name', 'all-MiniLM-L6-v2')
+
+        return jsonify({
+            'success': True,
+            'provider': provider,
+            'st_model_name': st_model
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/embeddings/provider', methods=['POST'])
+@admin_required
+def update_embedding_provider():
+    """Update embedding provider settings."""
+    try:
+        data = request.get_json()
+
+        provider = data.get('provider', '').strip()
+        st_model = data.get('st_model_name', 'all-MiniLM-L6-v2').strip()
+
+        # Validate provider
+        if provider not in ['sentence-transformers', 'gemini']:
+            return jsonify({'error': 'Invalid provider. Must be sentence-transformers or gemini'}), 400
+
+        # Save settings
+        Settings.set('embedding_provider', provider)
+        if provider == 'sentence-transformers':
+            Settings.set('st_model_name', st_model)
+
+        print(f"Embedding provider updated to: {provider}")
+        if provider == 'sentence-transformers':
+            print(f"Sentence transformer model: {st_model}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Embedding provider updated to {provider}',
+            'provider': provider,
+            'st_model_name': st_model if provider == 'sentence-transformers' else None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

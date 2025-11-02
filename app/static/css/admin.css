@@ -1740,6 +1740,18 @@ input:checked + .toggle-slider:before {
     margin: 0;
 }
 
+/* Embedding provider info box */
+.embedding-info-box {
+    padding: 10px;
+    background: var(--secondary);
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+.embedding-info-box div {
+    margin: 4px 0;
+}
+
 /* Embeddings Stats Inline */
 .embeddings-stats-inline {
     display: flex;
