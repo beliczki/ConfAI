@@ -284,9 +284,23 @@
             </div>
         </div>
 
+        <!-- Token Usage by Model -->
+        <div class="section-card">
+            <h3>Token Usage by Model</h3>
+            <div id="token-by-model" class="token-model-grid">
+                <!-- Model token stats will be loaded here -->
+            </div>
+        </div>
+
         <!-- Recent Activity -->
         <div class="section-card">
             <h3>Recent Activity</h3>
+            <div class="activity-filters">
+                <button class="filter-btn active" data-filter="all" onclick="filterActivity('all')">All</button>
+                <button class="filter-btn" data-filter="thread_created" onclick="filterActivity('thread_created')">Conversations</button>
+                <button class="filter-btn" data-filter="insight_shared" onclick="filterActivity('insight_shared')">Shares</button>
+                <button class="filter-btn" data-filter="vote_cast" onclick="filterActivity('vote_cast')">Votes</button>
+            </div>
             <div id="recent-activity" class="activity-list">
                 <!-- Activity items will be loaded here -->
             </div>

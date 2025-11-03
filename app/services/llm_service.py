@@ -278,7 +278,15 @@ Be professional, engaging, and help users derive meaningful insights."""
                 })
 
             if stream:
-                # Streaming response
+                # Streaming response with usage tracking
+                usage_data = {
+                    'input_tokens': 0,
+                    'output_tokens': 0,
+                    'cache_creation_tokens': 0,
+                    'cache_read_tokens': 0,
+                    'captured': False
+                }
+
                 def generate_stream():
                     response = model.generate_content(
                         gemini_messages,
@@ -288,11 +296,27 @@ Be professional, engaging, and help users derive meaningful insights."""
                             temperature=0.7,
                         )
                     )
+
+                    # Stream the text
                     for chunk in response:
                         if chunk.text:
                             yield chunk.text
 
-                return generate_stream()
+                        # Try to capture usage from last chunk
+                        if hasattr(chunk, 'usage_metadata') and chunk.usage_metadata:
+                            usage = chunk.usage_metadata
+                            usage_data['input_tokens'] = getattr(usage, 'prompt_token_count', 0)
+                            usage_data['output_tokens'] = getattr(usage, 'candidates_token_count', 0)
+                            usage_data['captured'] = True
+
+                    # Log usage if captured
+                    if usage_data['captured']:
+                        print(f"Gemini usage - Input: {usage_data['input_tokens']}, Output: {usage_data['output_tokens']}")
+
+                def get_usage():
+                    return usage_data if usage_data['captured'] else None
+
+                return (generate_stream(), get_usage)
             else:
                 # Non-streaming response
                 response = model.generate_content(
@@ -302,6 +326,14 @@ Be professional, engaging, and help users derive meaningful insights."""
                         temperature=0.7,
                     )
                 )
+
+                # Log usage data
+                if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                    usage = response.usage_metadata
+                    input_tokens = getattr(usage, 'prompt_token_count', 0)
+                    output_tokens = getattr(usage, 'candidates_token_count', 0)
+                    print(f"Gemini usage - Input: {input_tokens}, Output: {output_tokens}")
+
                 return response.text
 
         except Exception as e:
@@ -383,8 +415,20 @@ Be professional, engaging, and help users derive meaningful insights."""
             print(f"Grok API request - messages count: {len(formatted_messages)}, stream: {stream}")
 
             if stream:
-                # Streaming response
+                # Streaming response with usage tracking
+                usage_data = {
+                    'input_tokens': 0,
+                    'output_tokens': 0,
+                    'cache_creation_tokens': 0,
+                    'cache_read_tokens': 0,
+                    'captured': False
+                }
+
+                # Track output characters for fallback estimation
+                output_chars = 0
+
                 def generate_stream():
+                    nonlocal output_chars
                     print("Starting Grok stream...")
                     try:
                         with httpx.stream("POST", url, headers=headers, json=data, timeout=120.0) as response:
@@ -402,19 +446,55 @@ Be professional, engaging, and help users derive meaningful insights."""
                                 return
 
                             # Read streaming response
+                            chunk_count = 0
                             for line in response.iter_lines():
                                 if line.startswith("data: "):
                                     chunk = line[6:]  # Remove "data: " prefix
                                     if chunk.strip() and chunk != "[DONE]":
                                         try:
                                             chunk_data = json.loads(chunk)
+                                            chunk_count += 1
+
+                                            # Debug: Log chunk structure for first and last few chunks
+                                            if chunk_count <= 2 or chunk_count % 50 == 0:
+                                                print(f"Grok chunk #{chunk_count} keys: {list(chunk_data.keys())}")
+
                                             if "choices" in chunk_data and len(chunk_data["choices"]) > 0:
                                                 delta = chunk_data["choices"][0].get("delta", {})
                                                 if "content" in delta:
-                                                    yield delta["content"]
+                                                    content = delta["content"]
+                                                    output_chars += len(content)
+                                                    yield content
+
+                                            # Capture usage from chunk (OpenAI format)
+                                            if "usage" in chunk_data:
+                                                usage = chunk_data["usage"]
+                                                usage_data['input_tokens'] = usage.get('prompt_tokens', 0)
+                                                usage_data['output_tokens'] = usage.get('completion_tokens', 0)
+                                                usage_data['captured'] = True
+                                                print(f"Grok usage captured from chunk #{chunk_count}")
                                         except json.JSONDecodeError as e:
                                             print(f"JSON decode error in streaming: {e}")
                                             pass
+                                    elif chunk == "[DONE]":
+                                        print(f"Grok stream: Received [DONE] after {chunk_count} chunks")
+
+                            # If no usage captured from API, estimate from character count
+                            if not usage_data['captured'] and output_chars > 0:
+                                # Estimate tokens: ~1 token per 4 characters (rough approximation)
+                                estimated_output = max(1, output_chars // 4)
+
+                                # Estimate input tokens from message content
+                                input_chars = sum(len(msg['content']) for msg in formatted_messages)
+                                input_chars += len(system_prompt) if system_prompt else 0
+                                estimated_input = max(1, input_chars // 4)
+
+                                usage_data['input_tokens'] = estimated_input
+                                usage_data['output_tokens'] = estimated_output
+                                usage_data['captured'] = True
+                                print(f"Grok usage (estimated) - Input: {estimated_input} (~{input_chars} chars), Output: {estimated_output} (~{output_chars} chars)")
+                            elif usage_data['captured']:
+                                print(f"Grok usage - Input: {usage_data['input_tokens']}, Output: {usage_data['output_tokens']}")
 
                             print("Grok stream completed")
 
@@ -432,7 +512,10 @@ Be professional, engaging, and help users derive meaningful insights."""
                         traceback.print_exc()
                         yield f"\n\n[Error: {str(e)}]"
 
-                return generate_stream()
+                def get_usage():
+                    return usage_data if usage_data['captured'] else None
+
+                return (generate_stream(), get_usage)
             else:
                 # Non-streaming response
                 print("Making non-streaming Grok request...")
@@ -440,6 +523,14 @@ Be professional, engaging, and help users derive meaningful insights."""
                 response.raise_for_status()
                 result = response.json()
                 print(f"Grok non-streaming response received")
+
+                # Log usage if available
+                if "usage" in result:
+                    usage = result["usage"]
+                    input_tokens = usage.get('prompt_tokens', 0)
+                    output_tokens = usage.get('completion_tokens', 0)
+                    print(f"Grok usage - Input: {input_tokens}, Output: {output_tokens}")
+
                 return result["choices"][0]["message"]["content"]
 
         except httpx.HTTPStatusError as e:
@@ -563,8 +654,20 @@ Be professional, engaging, and help users derive meaningful insights."""
             print(f"Perplexity URL: {url}")
 
             if stream:
-                # Streaming response
+                # Streaming response with usage tracking
+                usage_data = {
+                    'input_tokens': 0,
+                    'output_tokens': 0,
+                    'cache_creation_tokens': 0,
+                    'cache_read_tokens': 0,
+                    'captured': False
+                }
+
+                # Track output characters for fallback estimation
+                output_chars = 0
+
                 def generate_stream():
+                    nonlocal output_chars
                     print("Starting Perplexity stream...")
                     try:
                         with httpx.stream("POST", url, headers=headers, json=data, timeout=120.0) as response:
@@ -582,21 +685,56 @@ Be professional, engaging, and help users derive meaningful insights."""
                                 return
 
                             # Read streaming response line by line
+                            chunk_count = 0
                             for line in response.iter_lines():
                                 if line.startswith("data: "):
                                     chunk = line[6:]
                                     if chunk.strip() and chunk != "[DONE]":
                                         try:
                                             chunk_data = json.loads(chunk)
+                                            chunk_count += 1
+
+                                            # Debug: Log chunk structure for first and last few chunks
+                                            if chunk_count <= 2 or chunk_count % 50 == 0:
+                                                print(f"Perplexity chunk #{chunk_count} keys: {list(chunk_data.keys())}")
+
                                             if "choices" in chunk_data and len(chunk_data["choices"]) > 0:
                                                 delta = chunk_data["choices"][0].get("delta", {})
                                                 if "content" in delta:
                                                     content = delta["content"]
+                                                    output_chars += len(content)
                                                     # Don't print content to avoid encoding issues
                                                     yield content
+
+                                            # Capture usage from chunk (OpenAI format)
+                                            if "usage" in chunk_data:
+                                                usage = chunk_data["usage"]
+                                                usage_data['input_tokens'] = usage.get('prompt_tokens', 0)
+                                                usage_data['output_tokens'] = usage.get('completion_tokens', 0)
+                                                usage_data['captured'] = True
+                                                print(f"Perplexity usage captured from chunk #{chunk_count}")
                                         except json.JSONDecodeError as e:
                                             print(f"JSON decode error in streaming: {e}")
                                             pass
+                                    elif chunk == "[DONE]":
+                                        print(f"Perplexity stream: Received [DONE] after {chunk_count} chunks")
+
+                            # If no usage captured from API, estimate from character count
+                            if not usage_data['captured'] and output_chars > 0:
+                                # Estimate tokens: ~1 token per 4 characters (rough approximation)
+                                estimated_output = max(1, output_chars // 4)
+
+                                # Estimate input tokens from message content
+                                input_chars = sum(len(msg['content']) for msg in formatted_messages)
+                                input_chars += len(system_prompt) if system_prompt else 0
+                                estimated_input = max(1, input_chars // 4)
+
+                                usage_data['input_tokens'] = estimated_input
+                                usage_data['output_tokens'] = estimated_output
+                                usage_data['captured'] = True
+                                print(f"Perplexity usage (estimated) - Input: {estimated_input} (~{input_chars} chars), Output: {estimated_output} (~{output_chars} chars)")
+                            elif usage_data['captured']:
+                                print(f"Perplexity usage - Input: {usage_data['input_tokens']}, Output: {usage_data['output_tokens']}")
 
                             print("Perplexity stream completed")
 
@@ -614,7 +752,10 @@ Be professional, engaging, and help users derive meaningful insights."""
                         traceback.print_exc()
                         yield f"\n\n[Error: {str(e)}]"
 
-                return generate_stream()
+                def get_usage():
+                    return usage_data if usage_data['captured'] else None
+
+                return (generate_stream(), get_usage)
             else:
                 # Non-streaming response
                 print("Making non-streaming Perplexity request...")
@@ -622,6 +763,14 @@ Be professional, engaging, and help users derive meaningful insights."""
                 response.raise_for_status()
                 result = response.json()
                 print(f"Perplexity non-streaming response received")
+
+                # Log usage if available
+                if "usage" in result:
+                    usage = result["usage"]
+                    input_tokens = usage.get('prompt_tokens', 0)
+                    output_tokens = usage.get('completion_tokens', 0)
+                    print(f"Perplexity usage - Input: {input_tokens}, Output: {output_tokens}")
+
                 return result["choices"][0]["message"]["content"]
 
         except httpx.HTTPStatusError as e:

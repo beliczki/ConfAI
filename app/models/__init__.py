@@ -15,6 +15,10 @@ def get_db():
 
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
+
+    # Enable foreign key constraints (disabled by default in SQLite)
+    conn.execute('PRAGMA foreign_keys = ON')
+
     try:
         yield conn
         conn.commit()

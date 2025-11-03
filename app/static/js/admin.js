@@ -733,6 +733,9 @@ async function loadStatistics() {
         // Update context usage
         updateContextUsage(data.context_used || 0, data.context_max || 200000);
 
+        // Display token usage by model
+        displayTokenByModel(data.token_by_model || []);
+
         // Display recent activity
         displayRecentActivity(data.recent_activity || []);
 
@@ -779,12 +782,81 @@ function updateContextUsage(used, max) {
 }
 
 /**
+ * Display token usage by model
+ */
+function displayTokenByModel(tokenByModel) {
+    const container = document.getElementById('token-by-model');
+
+    if (!container) return;
+
+    if (tokenByModel.length === 0) {
+        container.innerHTML = '<p class="empty-state">No token usage data available</p>';
+        return;
+    }
+
+    const modelNames = {
+        'claude': 'Claude',
+        'gemini': 'Gemini',
+        'grok': 'Grok',
+        'perplexity': 'Perplexity'
+    };
+
+    container.innerHTML = tokenByModel.map(model => {
+        const modelName = modelNames[model.model] || model.model;
+        const totalTokens = model.input_tokens + model.output_tokens;
+
+        return `
+            <div class="token-model-card">
+                <div class="token-model-header">
+                    <i data-lucide="cpu"></i>
+                    <span>${modelName}</span>
+                </div>
+                <div class="token-model-stats">
+                    <div class="token-model-stat">
+                        <span class="token-model-stat-label">Messages:</span>
+                        <span class="token-model-stat-value">${model.message_count.toLocaleString()}</span>
+                    </div>
+                    <div class="token-model-stat">
+                        <span class="token-model-stat-label">Input:</span>
+                        <span class="token-model-stat-value">${model.input_tokens.toLocaleString()}</span>
+                    </div>
+                    <div class="token-model-stat">
+                        <span class="token-model-stat-label">Output:</span>
+                        <span class="token-model-stat-value">${model.output_tokens.toLocaleString()}</span>
+                    </div>
+                    ${model.cache_read > 0 ? `
+                    <div class="token-model-stat">
+                        <span class="token-model-stat-label">Cached:</span>
+                        <span class="token-model-stat-value">${model.cache_read.toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    <div class="token-model-stat" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);">
+                        <span class="token-model-stat-label"><strong>Total:</strong></span>
+                        <span class="token-model-stat-value"><strong>${totalTokens.toLocaleString()}</strong></span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Re-initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
  * Display recent activity log
  */
+let allActivities = []; // Store all activities for filtering
+
 function displayRecentActivity(activities) {
     const activityEl = document.getElementById('recent-activity');
 
     if (!activityEl) return;
+
+    // Store activities for filtering
+    allActivities = activities;
 
     if (activities.length === 0) {
         activityEl.innerHTML = '<p class="empty-state">No recent activity</p>';
@@ -792,10 +864,53 @@ function displayRecentActivity(activities) {
     }
 
     activityEl.innerHTML = activities.map(activity => `
-        <div class="activity-item">
+        <div class="activity-item" data-activity-type="${activity.type}">
             <div class="activity-left">
                 <i data-lucide="${getActivityIcon(activity.type)}" class="activity-icon"></i>
-                <span class="activity-text">${escapeHtml(activity.text)}</span>
+                <span class="activity-text"><strong>${escapeHtml(activity.user)}:</strong> ${escapeHtml(activity.text)}</span>
+            </div>
+            <span class="activity-time">${activity.time}</span>
+        </div>
+    `).join('');
+
+    // Re-initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Filter activities by type
+ */
+function filterActivity(filter) {
+    const activityEl = document.getElementById('recent-activity');
+
+    if (!activityEl) return;
+
+    // Update filter button states
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.filter === filter) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Filter activities
+    const filtered = filter === 'all'
+        ? allActivities
+        : allActivities.filter(activity => activity.type === filter);
+
+    if (filtered.length === 0) {
+        activityEl.innerHTML = '<p class="empty-state">No activities of this type</p>';
+        return;
+    }
+
+    activityEl.innerHTML = filtered.map(activity => `
+        <div class="activity-item" data-activity-type="${activity.type}">
+            <div class="activity-left">
+                <i data-lucide="${getActivityIcon(activity.type)}" class="activity-icon"></i>
+                <span class="activity-text"><strong>${escapeHtml(activity.user)}:</strong> ${escapeHtml(activity.text)}</span>
             </div>
             <span class="activity-time">${activity.time}</span>
         </div>
@@ -1478,11 +1593,27 @@ function renderAdminInsights(insights) {
     const listEl = document.getElementById('admin-insights-list');
 
     listEl.innerHTML = insights.map(insight => {
-        const date = new Date(insight.created_at).toLocaleString();
-        const content = insight.content.length > 200 ? insight.content.substring(0, 200) + '...' : insight.content;
+        const date = new Date(insight.created_at).toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Check if content should be truncated (same as insights wall: 400 chars)
+        const shouldTruncate = insight.content.length > 400;
+        const displayContent = shouldTruncate ? insight.content.substring(0, 400) : insight.content;
+
+        // Parse markdown for display
+        let contentHTML = '';
+        if (typeof marked !== 'undefined' && marked.parse) {
+            contentHTML = marked.parse(displayContent);
+        } else {
+            contentHTML = escapeHtml(displayContent).replace(/\n/g, '<br>');
+        }
 
         return `
-            <div class="admin-insight-item" data-insight-id="${insight.id}">
+            <div class="admin-insight-item" data-insight-id="${insight.id}" data-full-content="${escapeHtml(insight.content)}">
                 <div class="insight-header">
                     <div class="insight-user">
                         <div class="user-avatar-small" style="background: ${insight.avatar_gradient}">
@@ -1496,7 +1627,11 @@ function renderAdminInsights(insights) {
                         <span class="vote-stat net">Net: ${insight.net_votes}</span>
                     </div>
                 </div>
-                <div class="insight-content-preview">${escapeHtml(content)}</div>
+                ${insight.title ? `<h3 class="insight-title">${escapeHtml(insight.title)}</h3>` : ''}
+                <div class="insight-content-preview">
+                    ${contentHTML}
+                    ${shouldTruncate ? `<a href="#" class="more-link" onclick="toggleAdminInsightContent(${insight.id}); return false;">... more</a>` : ''}
+                </div>
                 <div class="insight-footer">
                     <span class="insight-date">${date}</span>
                     <button class="btn btn-danger btn-sm" onclick="deleteInsight(${insight.id})">
@@ -1506,6 +1641,52 @@ function renderAdminInsights(insights) {
             </div>
         `;
     }).join('');
+
+    // Reinitialize Lucide icons if available
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
+
+/**
+ * Toggle admin insight content between truncated and full view
+ */
+function toggleAdminInsightContent(insightId) {
+    const card = document.querySelector(`.admin-insight-item[data-insight-id="${insightId}"]`);
+    if (!card) return;
+
+    const contentDiv = card.querySelector('.insight-content-preview');
+    const moreLink = contentDiv.querySelector('.more-link');
+    const fullContent = card.dataset.fullContent;
+    const isExpanded = card.classList.contains('expanded');
+
+    if (isExpanded) {
+        // Collapse: show truncated content
+        const truncatedContent = fullContent.substring(0, 400);
+        let contentHTML = '';
+        if (typeof marked !== 'undefined' && marked.parse) {
+            contentHTML = marked.parse(truncatedContent);
+        } else {
+            contentHTML = escapeHtml(truncatedContent).replace(/\n/g, '<br>');
+        }
+        contentDiv.innerHTML = contentHTML + `<a href="#" class="more-link" onclick="toggleAdminInsightContent(${insightId}); return false;">... more</a>`;
+        card.classList.remove('expanded');
+    } else {
+        // Expand: show full content
+        let contentHTML = '';
+        if (typeof marked !== 'undefined' && marked.parse) {
+            contentHTML = marked.parse(fullContent);
+        } else {
+            contentHTML = escapeHtml(fullContent).replace(/\n/g, '<br>');
+        }
+        contentDiv.innerHTML = contentHTML + `<a href="#" class="more-link" onclick="toggleAdminInsightContent(${insightId}); return false;">... less</a>`;
+        card.classList.add('expanded');
+    }
+
+    // Reinitialize Lucide icons if available
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
 }
 
 /**
@@ -2168,5 +2349,6 @@ window.resetSystemPrompt = resetSystemPrompt;
 window.testSystemPrompt = testSystemPrompt;
 window.loadTemplate = loadTemplate;
 window.saveSettings = saveSettings;
+window.filterActivity = filterActivity;
 
 } // End of adminDashboardInitialized guard

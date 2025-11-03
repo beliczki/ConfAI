@@ -1,8 +1,9 @@
 """Insights wall routes."""
 from flask import Blueprint, render_template, request, jsonify, session
 from app.utils.helpers import login_required, sanitize_input
-from app.models import Insight, get_db
+from app.models import Insight, ActivityLog, get_db
 import os
+import json
 import google.generativeai as genai
 
 insights_bp = Blueprint('insights', __name__)
@@ -125,6 +126,14 @@ def create_insight():
 
     insight_id = Insight.create(user_id, content, message_id, title)
 
+    # Log activity
+    ActivityLog.log(
+        user_id,
+        'insight_shared',
+        'shared an insight',
+        json.dumps({'insight_id': insight_id, 'title': title})
+    )
+
     return jsonify({
         'success': True,
         'insight_id': insight_id,
@@ -153,6 +162,15 @@ def vote_insight(insight_id):
 
     if not success:
         return jsonify({'error': message}), 400
+
+    # Log activity
+    vote_display = 'upvoted' if vote_type == 'up' else 'downvoted'
+    ActivityLog.log(
+        user_id,
+        'vote_cast',
+        f'{vote_display} an insight',
+        json.dumps({'insight_id': insight_id, 'vote_type': vote_type})
+    )
 
     return jsonify({
         'success': True,
