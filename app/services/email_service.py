@@ -83,6 +83,81 @@ The ConfAI Team
             print(f"Error sending email: {str(e)}")
             return False
 
+    def send_invite_email(self, to_email, name, invite_link):
+        """Send invite email to new user."""
+        try:
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = 'You\'re invited to ConfAI!'
+            msg['From'] = self.from_email
+            msg['To'] = to_email
+
+            # Create HTML and plain text versions
+            text_content = f"""
+Hello {name},
+
+You've been invited to join ConfAI - your conference intelligence assistant!
+
+Click the link below to accept your invite and get started:
+{invite_link}
+
+This invite link will expire in 7 days.
+
+Best regards,
+The ConfAI Team
+            """
+
+            html_content = f"""
+<html>
+  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: linear-gradient(135deg, #E20074, #001E50); padding: 30px; border-radius: 10px 10px 0 0;">
+      <h1 style="color: white; margin: 0; font-size: 32px;">ConfAI</h1>
+      <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
+    </div>
+    <div style="background: #f8f8f8; padding: 40px; border-radius: 0 0 10px 10px;">
+      <h2 style="color: #333; font-size: 24px; margin-top: 0;">Welcome, {name}!</h2>
+      <p style="color: #666; font-size: 16px; line-height: 1.6;">
+        You've been invited to join <strong>ConfAI</strong>, an AI-powered assistant that helps you derive meaningful insights from conference materials and knowledge resources.
+      </p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="{invite_link}" style="background: linear-gradient(135deg, #E20074, #001E50); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+          Accept Invite &rarr;
+        </a>
+      </div>
+      <p style="color: #999; font-size: 14px; margin-top: 30px;">
+        This invite link will expire in <strong>7 days</strong>.
+      </p>
+      <p style="color: #999; font-size: 12px; margin-top: 20px;">
+        If you didn't expect this invitation, you can safely ignore this email.
+      </p>
+    </div>
+    <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+      <p>© 2024 ConfAI. All rights reserved.</p>
+    </div>
+  </body>
+</html>
+            """
+
+            # Attach both versions
+            part1 = MIMEText(text_content, 'plain')
+            part2 = MIMEText(html_content, 'html')
+            msg.attach(part1)
+            msg.attach(part2)
+
+            # Send email
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
+                if self.username and self.password:
+                    server.login(self.username, self.password)
+                server.send_message(msg)
+
+            print(f"Invite email sent to {to_email}")
+            return True
+
+        except Exception as e:
+            print(f"Error sending invite email: {str(e)}")
+            return False
+
 
 # Singleton instance
 email_service = EmailService()

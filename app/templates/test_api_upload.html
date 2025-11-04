@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Upload - ConfAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #E20074, #001E50);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #001E50;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        input[type="file"]:hover {
+            border-color: #E20074;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #666;
+            display: none;
+        }
+
+        .file-info.active {
+            display: block;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #E20074, #001E50);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(226, 0, 116, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .response.active {
+            display: block;
+        }
+
+        .response.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .response.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .response pre {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        .note {
+            margin-top: 20px;
+            padding: 12px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test API Upload</h1>
+        <p class="subtitle">Test the public context file upload endpoint</p>
+
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="fileInput">Select File (.txt or .md)</label>
+                <input type="file" id="fileInput" accept=".txt,.md" required>
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+
+            <button type="submit" id="submitBtn">Upload File</button>
+        </form>
+
+        <div class="response" id="response"></div>
+
+        <div class="note">
+            <strong>Note:</strong> Open your browser's Developer Console (F12) to see detailed logs of the upload process.
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const responseDiv = document.getElementById('response');
+
+        // Log file input change
+        fileInput.addEventListener('change', (e) => {
+            console.log('=== FILE INPUT CHANGED ===');
+            const file = e.target.files[0];
+
+            if (file) {
+                console.log('Selected file:', {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    lastModified: new Date(file.lastModified).toISOString()
+                });
+
+                // Show file info on page
+                fileInfo.innerHTML = `
+                    <strong>Selected:</strong> ${file.name}<br>
+                    <strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB<br>
+                    <strong>Type:</strong> ${file.type || 'text/plain'}
+                `;
+                fileInfo.classList.add('active');
+            } else {
+                console.log('No file selected');
+                fileInfo.classList.remove('active');
+            }
+            console.log('========================\n');
+        });
+
+        // Handle form submission
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            console.log('=== FORM SUBMIT ===');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                console.error('No file selected');
+                return;
+            }
+
+            // Create FormData payload
+            const formData = new FormData();
+            formData.append('file', file);
+
+            console.log('Payload:', {
+                file: file.name,
+                size: file.size,
+                formDataKeys: Array.from(formData.keys())
+            });
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+            responseDiv.classList.remove('active', 'success', 'error');
+
+            try {
+                console.log('Making API request to: /api/upload-context');
+                console.log('Request method: POST');
+                console.log('Request body: FormData with file');
+
+                const response = await fetch('/api/upload-context', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+                const data = await response.json();
+
+                console.log('=== API RESPONSE ===');
+                console.log('Response data:', data);
+                console.log('===================\n');
+
+                if (response.ok && data.success) {
+                    responseDiv.className = 'response active success';
+                    responseDiv.innerHTML = `
+                        <strong>✓ Upload successful!</strong>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    responseDiv.className = 'response active error';
+                    responseDiv.innerHTML = `
+                        <strong>✗ Upload failed</strong>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('=== ERROR ===');
+                console.error('Error:', error);
+                console.error('============\n');
+
+                responseDiv.className = 'response active error';
+                responseDiv.innerHTML = `
+                    <strong>✗ Error</strong>
+                    <pre>${error.message}</pre>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Upload File';
+            }
+        });
+
+        console.log('Test API Upload page loaded');
+        console.log('Endpoint: /api/upload-context');
+        console.log('Accepted file types: .txt, .md');
+    </script>
+</body>
+</html>

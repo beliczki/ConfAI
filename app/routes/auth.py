@@ -1,7 +1,7 @@
 """Authentication routes."""
 from datetime import datetime, timedelta
 from flask import Blueprint, request, session, redirect, url_for, render_template, jsonify
-from app.models import User, get_db
+from app.models import User, Settings, get_db
 from app.services.email_service import email_service
 from app.utils.helpers import (
     generate_pin, generate_gradient, extract_name_from_email,
@@ -34,18 +34,23 @@ def login():
     if not email or not is_valid_email(email):
         return jsonify({'error': 'Invalid email address'}), 400
 
-    # Check if email is allowed (invite-only)
+    # Check registration mode
+    registration_mode = Settings.get('registration_mode', 'invite_only')
+
     user = User.get_by_email(email)
     if not user:
-        # For MVP, auto-create user if email looks valid
-        # In production, check against whitelist
-        name = extract_name_from_email(email)
-        gradient = generate_gradient()
-        user_id = User.create(email, name, gradient)
-        print(f"New user created: {email}")
+        # Check if registration is open or invite-only
+        if registration_mode == 'invite_only':
+            return jsonify({'error': 'Access denied. This email is not on the invite list. Please contact an administrator.'}), 403
+        else:
+            # Open registration - auto-create user
+            name = extract_name_from_email(email)
+            gradient = generate_gradient()
+            user_id = User.create(email, name, gradient)
+            print(f"New user created (open registration): {email}")
     else:
         if not user['is_allowed']:
-            return jsonify({'error': 'Access denied. This email is not on the invite list.'}), 403
+            return jsonify({'error': 'Access denied. Your account has been disabled.'}), 403
 
     # Generate PIN
     pin = generate_pin()
@@ -167,3 +172,9 @@ def me():
         'name': user['name'],
         'avatar_gradient': user['avatar_gradient']
     })
+
+
+@auth_bp.route('/testAPIupload')
+def test_api_upload():
+    """Test page for public API upload endpoint."""
+    return render_template('test_api_upload.html')

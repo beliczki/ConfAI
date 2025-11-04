@@ -58,6 +58,22 @@ def init_db():
             )
         ''')
 
+        # Invites table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS invites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL,
+                invite_code TEXT UNIQUE NOT NULL,
+                user_id INTEGER,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                sent_at TIMESTAMP,
+                accepted_at TIMESTAMP,
+                expires_at TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        ''')
+
         # Chat threads table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS chat_threads (
@@ -170,6 +186,12 @@ I''m your conference intelligence assistant. I can help you with insights from c
 **Get started by creating a new chat!**')
         ''')
 
+        # Insert default registration mode (invite_only or open)
+        cursor.execute('''
+            INSERT OR IGNORE INTO settings (key, value)
+            VALUES ('registration_mode', 'invite_only')
+        ''')
+
         # Create indexes for performance
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_threads_user ON chat_threads(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_messages_thread ON chat_messages(thread_id)')
@@ -179,6 +201,9 @@ I''m your conference intelligence assistant. I can help you with insights from c
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(activity_type)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_token_usage_thread ON token_usage(thread_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_invites_email ON invites(email)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_invites_code ON invites(invite_code)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_invites_status ON invites(status)')
 
         # Run migrations
         _run_migrations(cursor)
@@ -643,3 +668,75 @@ class TokenUsage:
                 GROUP BY model_used
             ''')
             return cursor.fetchall()
+
+
+class Invite:
+    """Invite model helper."""
+
+    @staticmethod
+    def create(email, user_id, invite_code, expires_at):
+        """Create a new invite."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'INSERT INTO invites (email, user_id, invite_code, expires_at) VALUES (?, ?, ?, ?)',
+                (email, user_id, invite_code, expires_at)
+            )
+            return cursor.lastrowid
+
+    @staticmethod
+    def get_by_code(invite_code):
+        """Get invite by code."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM invites WHERE invite_code = ?', (invite_code,))
+            return cursor.fetchone()
+
+    @staticmethod
+    def get_by_email(email):
+        """Get invite by email."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM invites WHERE email = ? ORDER BY created_at DESC LIMIT 1', (email,))
+            return cursor.fetchone()
+
+    @staticmethod
+    def get_all():
+        """Get all invites with user information."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT i.*, u.name as user_name, u.is_allowed
+                FROM invites i
+                LEFT JOIN users u ON i.user_id = u.id
+                ORDER BY i.created_at DESC
+            ''')
+            return cursor.fetchall()
+
+    @staticmethod
+    def mark_sent(invite_id):
+        """Mark invite as sent."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'UPDATE invites SET status = ?, sent_at = CURRENT_TIMESTAMP WHERE id = ?',
+                ('sent', invite_id)
+            )
+
+    @staticmethod
+    def mark_accepted(invite_code):
+        """Mark invite as accepted."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'UPDATE invites SET status = ?, accepted_at = CURRENT_TIMESTAMP WHERE invite_code = ?',
+                ('accepted', invite_code)
+            )
+
+    @staticmethod
+    def delete(invite_id):
+        """Delete an invite."""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM invites WHERE id = ?', (invite_id,))
+            return cursor.rowcount > 0
