@@ -1,4 +1,5 @@
 """Email service for sending PIN codes."""
+
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -9,20 +10,21 @@ class EmailService:
     """Service for sending emails."""
 
     def __init__(self):
-        self.smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-        self.smtp_port = int(os.getenv('SMTP_PORT', 587))
-        self.username = os.getenv('SMTP_USERNAME')
-        self.password = os.getenv('SMTP_PASSWORD')
-        self.from_email = os.getenv('EMAIL_FROM', 'noreply@confai.com')
+        self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        self.smtp_port = int(os.getenv("SMTP_PORT", 587))
+        self.smtp_encryiption = os.getenv("SMTP_ENCRYIPTION", "false")
+        self.username = os.getenv("SMTP_USERNAME")
+        self.password = os.getenv("SMTP_PASSWORD")
+        self.from_email = os.getenv("EMAIL_FROM", "noreply@confai.com")
 
     def send_pin_email(self, to_email, pin):
         """Send PIN code to user's email."""
         try:
             # Create message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = 'Your ConfAI Login PIN'
-            msg['From'] = self.from_email
-            msg['To'] = to_email
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = "Your ConfAI Login PIN"
+            msg["From"] = self.from_email
+            msg["To"] = to_email
 
             # Create HTML and plain text versions
             text_content = f"""
@@ -64,14 +66,15 @@ The ConfAI Team
             """
 
             # Attach both versions
-            part1 = MIMEText(text_content, 'plain')
-            part2 = MIMEText(html_content, 'html')
+            part1 = MIMEText(text_content, "plain")
+            part2 = MIMEText(html_content, "html")
             msg.attach(part1)
             msg.attach(part2)
 
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()
+                if self.smtp_encryiption == "true":
+                    server.starttls()
                 if self.username and self.password:
                     server.login(self.username, self.password)
                 server.send_message(msg)
@@ -87,10 +90,10 @@ The ConfAI Team
         """Send invite email to new user."""
         try:
             # Create message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = 'You\'re invited to ConfAI!'
-            msg['From'] = self.from_email
-            msg['To'] = to_email
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = "You're invited to ConfAI!"
+            msg["From"] = self.from_email
+            msg["To"] = to_email
 
             # Create HTML and plain text versions
             text_content = f"""
@@ -139,8 +142,8 @@ The ConfAI Team
             """
 
             # Attach both versions
-            part1 = MIMEText(text_content, 'plain')
-            part2 = MIMEText(html_content, 'html')
+            part1 = MIMEText(text_content, "plain")
+            part2 = MIMEText(html_content, "html")
             msg.attach(part1)
             msg.attach(part2)
 
