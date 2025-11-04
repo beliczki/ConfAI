@@ -127,10 +127,11 @@ def verify():
     session['name'] = user['name']
     session.permanent = True
 
-    # Check if user is admin
+    # Check if user is admin (supports comma-separated list)
     import os
-    admin_email = os.getenv('ADMIN_EMAIL', '').strip().lower()
-    if admin_email and email == admin_email:
+    admin_emails_str = os.getenv('ADMIN_EMAIL', '').strip()
+    admin_emails = [e.strip().lower() for e in admin_emails_str.split(',') if e.strip()]
+    if email in admin_emails:
         session['is_admin'] = True
         print(f"Admin user logged in: {email}")
     else:

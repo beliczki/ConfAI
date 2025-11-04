@@ -909,7 +909,10 @@ function showWelcomeScreen() {
     }
     document.getElementById('chat-input').disabled = true;
     document.getElementById('send-btn').disabled = true;
-    document.getElementById('thread-title').textContent = 'Welcome';
+    const threadTitle = document.getElementById('thread-title');
+    if (threadTitle) {
+        threadTitle.textContent = 'Welcome';
+    }
 }
 
 function escapeHtml(text) {
