@@ -4,7 +4,6 @@ import json
 from typing import List, Dict
 import chromadb
 from chromadb.config import Settings as ChromaSettings
-from sentence_transformers import SentenceTransformer
 import google.generativeai as genai
 from app.models import Settings
 
@@ -20,8 +19,7 @@ class EmbeddingService:
 
     def __init__(self):
         self.embeddings_initialized = False
-        self.provider = None  # 'sentence-transformers' or 'gemini'
-        self.st_model = None  # Sentence transformers model
+        self.provider = 'gemini'  # Only Gemini supported
         self.gemini_key = None  # Gemini API key
         self.client = None
         self.collection = None
@@ -48,15 +46,12 @@ class EmbeddingService:
                 self.chunk_size = self.CHUNK_SIZE
                 self.chunk_overlap = self.CHUNK_OVERLAP
 
-            # Load embedding provider from database
-            self.provider = Settings.get('embedding_provider', 'sentence-transformers')
+            # Load embedding provider from database (default to Gemini)
+            self.provider = Settings.get('embedding_provider', 'gemini')
             print(f"[INFO] Using embedding provider: {self.provider}")
 
-            # Initialize the selected embedding provider
-            if self.provider == 'gemini':
-                self._init_gemini()
-            else:
-                self._init_sentence_transformers()
+            # Initialize Gemini embedding provider
+            self._init_gemini()
 
             # Initialize ChromaDB client (persistent storage)
             print("Initializing ChromaDB...")
@@ -94,17 +89,6 @@ class EmbeddingService:
             # Re-raise the exception so it can be caught by the caller
             raise
 
-    def _init_sentence_transformers(self):
-        """Initialize sentence transformers model."""
-        print("Loading sentence transformer model (this may take a minute on first run)...")
-        try:
-            model_name = Settings.get('st_model_name', 'all-MiniLM-L6-v2')
-            self.st_model = SentenceTransformer(model_name)
-            print(f"[OK] Sentence transformer model loaded: {model_name}")
-        except Exception as model_error:
-            print(f"[ERROR] Failed to load sentence transformer model: {model_error}")
-            raise Exception(f"Failed to load embedding model. Make sure sentence-transformers is installed and you have internet connection for first-time model download: {model_error}")
-
     def _init_gemini(self):
         """Initialize Gemini embedding API."""
         print("Initializing Gemini embedding API...")
@@ -138,12 +122,7 @@ class EmbeddingService:
             single_input = False
 
         try:
-            if self.provider == 'sentence-transformers':
-                embeddings = self.st_model.encode(texts, show_progress_bar=False)
-            elif self.provider == 'gemini':
-                embeddings = self._gemini_encode(texts)
-            else:
-                raise Exception(f"Unknown embedding provider: {self.provider}")
+            embeddings = self._gemini_encode(texts)
 
             # Return single embedding if single input
             if single_input:

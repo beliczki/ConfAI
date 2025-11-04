@@ -1840,7 +1840,6 @@ input:checked + .toggle-slider:before {
 /* Embedding provider info box */
 .embedding-info-box {
     padding: 10px;
-    background: var(--secondary);
     border-radius: 4px;
     margin-top: 5px;
 }

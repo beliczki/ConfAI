@@ -44,8 +44,8 @@ pinForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const pin = Array.from(pinDigits).map(d => d.value).join('');
 
-    if (pin.length !== 6) {
-        showMessage('Please enter all 6 digits', 'error');
+    if (pin.length !== 4) {
+        showMessage('Please enter all 4 digits', 'error');
         return;
     }
 
@@ -74,7 +74,7 @@ pinForm.addEventListener('submit', async (e) => {
 // PIN input auto-focus
 pinDigits.forEach((digit, index) => {
     digit.addEventListener('input', (e) => {
-        if (e.target.value.length === 1 && index < 5) {
+        if (e.target.value.length === 1 && index < 3) {
             pinDigits[index + 1].focus();
         }
     });

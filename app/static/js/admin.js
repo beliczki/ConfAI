@@ -1386,9 +1386,7 @@ async function saveSettings() {
     const summarizePrompt = document.getElementById('summarize-prompt')?.value?.trim();
     const synthesisPrompt = document.getElementById('synthesis-prompt')?.value?.trim();
 
-    // Get embedding provider settings
-    const embeddingProvider = document.getElementById('embedding-provider')?.value;
-    const stModelName = document.getElementById('st-model-name')?.value;
+    // Embedding provider is now hardcoded to Gemini (no longer configurable)
 
     // Get model names
     const claudeModel = document.getElementById('claude-model')?.value?.trim();
@@ -1435,7 +1433,7 @@ async function saveSettings() {
 
     try {
         // Save all settings in parallel
-        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, embeddingProviderResponse, modelNamesResponse, startersResponse, summarizePromptResponse, synthesisPromptResponse] = await Promise.all([
+        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, modelNamesResponse, startersResponse, summarizePromptResponse, synthesisPromptResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -1467,17 +1465,6 @@ async function saveSettings() {
                     chunk_size: parseInt(chunkSize),
                     chunk_overlap: parseInt(chunkOverlap),
                     chunks_to_retrieve: parseInt(chunksToRetrieve)
-                })
-            }),
-            fetch('/api/admin/embeddings/provider', {
-                method: 'POST',
-                headers: {
-                    ...getAuthHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    provider: embeddingProvider,
-                    st_model_name: stModelName
                 })
             }),
             fetch('/api/admin/model-names', {
@@ -1519,7 +1506,7 @@ async function saveSettings() {
             })
         ]);
 
-        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !embeddingProviderResponse.ok || !modelNamesResponse.ok || !startersResponse.ok || !summarizePromptResponse.ok || !synthesisPromptResponse.ok) {
+        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !modelNamesResponse.ok || !startersResponse.ok || !summarizePromptResponse.ok || !synthesisPromptResponse.ok) {
             throw new Error('Failed to save settings');
         }
 
@@ -2251,33 +2238,50 @@ function closeFilePreview() {
 }
 
 /**
- * Download the currently previewed file
+ * Download the currently previewed file (full content, not truncated)
  */
-function downloadPreviewFile() {
+async function downloadPreviewFile() {
     if (!currentPreviewedFile) {
         alert('No file is currently being previewed');
         return;
     }
 
-    const content = currentPreviewedFile.content || '';
     const filename = currentPreviewedFile.name;
 
-    // Create a blob from the content
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
+    try {
+        // Use the download endpoint to get the complete file with auth headers
+        const downloadUrl = `/api/admin/context-files/${encodeURIComponent(filename)}/download`;
 
-    // Create a temporary link and trigger download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
+        const response = await fetch(downloadUrl, {
+            headers: getAuthHeaders()
+        });
 
-    // Cleanup
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+        if (!response.ok) {
+            throw new Error(`Download failed: ${response.statusText}`);
+        }
 
-    console.log(`Downloaded: ${filename}`);
+        // Get the file content as a blob
+        const blob = await response.blob();
+
+        // Create a temporary URL for the blob
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Create a temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+
+        // Cleanup
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+
+        console.log(`Downloaded: ${filename}`);
+    } catch (error) {
+        console.error('Download error:', error);
+        alert(`Failed to download file: ${error.message}`);
+    }
 }
 
 /**
@@ -2554,19 +2558,10 @@ async function saveEmbeddingSettings() {
 
 /**
  * Toggle embedding provider options visibility
+ * (Deprecated - Gemini is now the only provider)
  */
 function toggleEmbeddingProvider() {
-    const provider = document.getElementById('embedding-provider')?.value;
-    const stOptions = document.getElementById('st-options');
-    const geminiOptions = document.getElementById('gemini-options');
-
-    if (provider === 'gemini') {
-        if (stOptions) stOptions.style.display = 'none';
-        if (geminiOptions) geminiOptions.style.display = 'block';
-    } else {
-        if (stOptions) stOptions.style.display = 'block';
-        if (geminiOptions) geminiOptions.style.display = 'none';
-    }
+    // No longer needed - Gemini is the only embedding provider
 }
 
 /**
@@ -2603,30 +2598,7 @@ async function loadEmbeddingSettings() {
             console.log('Loaded embedding chunk settings:', data);
         }
 
-        // Load embedding provider settings
-        const providerResponse = await fetch('/api/admin/embeddings/provider', {
-            headers: getAuthHeaders()
-        });
-
-        if (providerResponse.ok) {
-            const providerData = await providerResponse.json();
-
-            const providerSelect = document.getElementById('embedding-provider');
-            const stModelSelect = document.getElementById('st-model-name');
-
-            if (providerSelect && providerData.provider) {
-                providerSelect.value = providerData.provider;
-            }
-
-            if (stModelSelect && providerData.st_model_name) {
-                stModelSelect.value = providerData.st_model_name;
-            }
-
-            // Update visibility of provider options
-            toggleEmbeddingProvider();
-
-            console.log('Loaded embedding provider settings:', providerData);
-        }
+        // Embedding provider is now hardcoded to Gemini (no longer configurable)
 
     } catch (error) {
         console.error('Error loading embedding settings:', error);

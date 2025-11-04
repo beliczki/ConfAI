@@ -58,8 +58,8 @@ def get_new_chat_text():
 @login_required
 def get_config():
     """Get application configuration including LLM provider."""
-    # Get provider from database settings (persistent across all processes)
-    provider = Settings.get('llm_provider', os.getenv('LLM_PROVIDER', 'gemini')).lower()
+    # Get provider from session first (per-user), then fall back to env default
+    provider = session.get('preferred_model', os.getenv('LLM_PROVIDER', 'gemini')).lower()
 
     # Map provider names to display names
     provider_names = {
@@ -97,10 +97,10 @@ def update_config():
         return jsonify({'error': 'Invalid provider'}), 400
 
     try:
-        # Store provider in database (persistent across all Flask processes)
-        Settings.set('llm_provider', provider)
+        # Store provider in user's session (per-user preference)
+        session['preferred_model'] = provider
 
-        print(f"Model switched to: {provider} (stored in database)")
+        print(f"Model switched to: {provider} for user {session.get('email')} (stored in session)")
 
         # Map provider names to display names
         provider_names = {
@@ -147,8 +147,8 @@ def create_thread():
     user_id = session['user_id']
     title = request.json.get('title', 'New Chat')
 
-    # Get current model from settings
-    current_model = Settings.get('llm_provider', os.getenv('LLM_PROVIDER', 'gemini')).lower()
+    # Get current model from user's session
+    current_model = session.get('preferred_model', os.getenv('LLM_PROVIDER', 'gemini')).lower()
 
     # Map model names
     model_names = {
@@ -366,22 +366,23 @@ def stream_message():
         print(f"Vector embeddings: always-in-context={len(always_in_context)} chars, semantic={len(semantic_results)} chars, total={len(context)} chars")
     # In context_window mode, context is loaded directly in llm_service
 
+    # Get current model from user's session BEFORE the generator (avoid request context issues)
+    current_model = session.get('preferred_model', os.getenv('LLM_PROVIDER', 'gemini')).lower()
+
     def generate():
         """Generator for streaming response."""
         try:
-            # Get current model
-            current_model = Settings.get('llm_provider', os.getenv('LLM_PROVIDER', 'gemini')).lower()
 
             # Update thread's model to current model
             ChatThread.update_model(thread_id, current_model)
 
             # Get streaming response from LLM
-            # The provider will be read from database each time
             full_response = ""
             result = llm_service.generate_response(
                 messages=conversation,
                 context=context,
-                stream=True
+                stream=True,
+                provider=current_model
             )
 
             # Check if we got a string (error) or iterator
@@ -466,8 +467,8 @@ def get_debug_context():
         # Get current datetime
         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        # Get current model
-        current_model = Settings.get('llm_provider', os.getenv('LLM_PROVIDER', 'gemini')).lower()
+        # Get current model from user's session
+        current_model = session.get('preferred_model', os.getenv('LLM_PROVIDER', 'gemini')).lower()
         model_names = {
             'claude': 'Claude',
             'gemini': 'Gemini',

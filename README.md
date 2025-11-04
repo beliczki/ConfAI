@@ -101,7 +101,7 @@ The application will start on **port 5000**
 
 1. Visit the application URL
 2. Enter any email address
-3. Check the console output for the 6-digit PIN (in development mode)
+3. Check the console output for the 4-digit PIN (in development mode)
 4. Enter the PIN to log in
 5. Start chatting with AI!
 
@@ -114,7 +114,6 @@ The application will start on **port 5000**
 - **SQLite** - Lightweight database with raw SQL
 - **ChromaDB** - Vector database for embeddings
 - **Gemini Embeddings (text-embedding-004)** - 768-dim multilingual embeddings (Hungarian + English)
-- **sentence-transformers** - Alternative local ML models for semantic search
 
 ### AI Integration
 - **Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)** - Anthropic's latest model with prompt caching
@@ -151,7 +150,7 @@ Model switching persists across all users and processes.
 
 #### **Vector Embeddings Mode** (Smart & Scalable)
 - Uses semantic search to find relevant chunks
-- Powered by ChromaDB + sentence-transformers
+- Powered by ChromaDB + Gemini embeddings
 - Best for: Large datasets, specific questions
 - Pros: Scalable, cost-effective, semantic understanding
 - Cons: Requires preprocessing, may miss context
@@ -287,9 +286,10 @@ The application automatically creates 8 tables:
 - Files appear in Context Files tab
 
 **Vector Embeddings Mode:**
-- Configure embedding provider in Settings > Embedding Provider
-  - **Sentence Transformers** - Local models (384 or 768 dims), no API required
-  - **Gemini** - Cloud-based (768 dims), multilingual (100+ languages including Hungarian)
+- Uses Gemini embeddings (text-embedding-004)
+  - Cloud-based (768 dims)
+  - Multilingual (100+ languages including Hungarian and English)
+  - Requires GEMINI_API_KEY in .env
 - Files must be processed first
 - Go to Context Files tab
 - Click "Process Embeddings"
@@ -489,7 +489,7 @@ Proprietary - For internal conference use only
 - Perplexity Sonar (sonar)
 - Flask Web Framework
 - ChromaDB Vector Database
-- Sentence Transformers
+- Gemini Embeddings (text-embedding-004)
 
 **Created for:** Conference attendees and knowledge sharing
 

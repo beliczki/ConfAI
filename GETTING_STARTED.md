@@ -83,10 +83,7 @@ This installs:
 - Anthropic SDK (Claude)
 - Google Generative AI (Gemini)
 - ChromaDB (vector database)
-- sentence-transformers (ML models)
 - Other required packages
-
-**Note**: First-time installation of sentence-transformers will download the ML model (~80MB).
 
 ### Step 4: Create Required Directories
 
@@ -190,7 +187,7 @@ Open your browser and navigate to the application URL (default: port 5000)
 
 1. Enter any email address (e.g., `test@example.com`)
 2. Click "Send Code"
-3. **Check the console output** for the 6-digit PIN
+3. **Check the console output** for the 4-digit PIN
 4. Enter the PIN and click "Verify"
 5. You're now logged in!
 
@@ -309,9 +306,9 @@ For large document collections, use vector embeddings instead of loading all con
 
 **Processing Details**:
 - Documents are split into 512-character chunks (128-char overlap)
-- Each chunk is converted to a vector embedding
+- Each chunk is converted to a vector embedding using Gemini API (text-embedding-004)
 - Embeddings are stored in ChromaDB (`data/chromadb/`)
-- First-time processing downloads the ML model (~80MB)
+- Requires GEMINI_API_KEY configured in .env
 
 **Stats**: After processing, you'll see:
 - **Documents**: Number of unique files processed

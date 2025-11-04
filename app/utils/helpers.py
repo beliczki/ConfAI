@@ -6,7 +6,7 @@ from functools import wraps
 from flask import session, redirect, url_for, request
 
 
-def generate_pin(length=6):
+def generate_pin(length=4):
     """Generate a random PIN code."""
     return ''.join(random.choices(string.digits, k=length))
 

@@ -1,5 +1,5 @@
 """Admin routes for document management."""
-from flask import Blueprint, request, jsonify, render_template, session
+from flask import Blueprint, request, jsonify, render_template, session, send_file, current_app
 from app.utils.helpers import admin_required, login_required, generate_gradient, extract_name_from_email, is_valid_email
 from app.models import Settings, Insight, User, Invite, get_db
 from app.services.email_service import email_service
@@ -13,9 +13,9 @@ admin_bp = Blueprint('admin', __name__)
 
 ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
 UPLOAD_FOLDER = 'documents'
-CONTEXT_FOLDER = 'documents/context'
-SYSTEM_PROMPT_FILE = 'data/system_prompt.txt'
-CONTEXT_CONFIG_FILE = 'data/context_config.json'
+CONTEXT_FOLDER = os.path.join('documents', 'context')
+SYSTEM_PROMPT_FILE = os.path.join('data', 'system_prompt.txt')
+CONTEXT_CONFIG_FILE = os.path.join('data', 'context_config.json')
 
 # Default system prompt
 DEFAULT_SYSTEM_PROMPT = """You are a helpful AI assistant specialized in conference insights and book knowledge.
@@ -942,6 +942,30 @@ def get_context_file_content(filename):
             'filename': filename,
             'content': content
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/context-files/<filename>/download', methods=['GET'])
+@admin_required
+def download_context_file(filename):
+    """Download the complete context file without truncation."""
+    try:
+        filename = secure_filename(filename)
+        # Construct absolute path relative to app root
+        filepath = os.path.join(current_app.root_path, '..', CONTEXT_FOLDER, filename)
+        filepath = os.path.abspath(filepath)
+
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'File not found'}), 404
+
+        # Send the complete file
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='text/plain'
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

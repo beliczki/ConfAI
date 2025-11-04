@@ -55,12 +55,11 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**Note**: This may take 5-10 minutes as it includes:
+**Note**: This may take a few minutes as it includes:
 - Flask and extensions
 - Anthropic Claude SDK
-- Transformers (for embeddings)
-- PyTorch
-- FAISS
+- Google Generative AI SDK (for Gemini)
+- ChromaDB (for vector embeddings)
 - And other dependencies
 
 ### 3. Configure Environment
@@ -91,7 +90,7 @@ The application will start on port 5000
 1. Open the application URL in your browser
 2. Enter any valid email address
 3. Check the console output for the PIN code
-4. Enter the 6-digit PIN
+4. Enter the 4-digit PIN
 5. You'll be logged in and redirected to the chat page
 
 ---
@@ -145,7 +144,7 @@ ConfAI/
 
 1. **Authentication System**
    - Email-based login
-   - 6-digit PIN codes
+   - 4-digit PIN codes
    - 15-minute expiration
    - Session management
    - Rate limiting (5 attempts/min)
@@ -193,10 +192,10 @@ ConfAI/
    - Share button in chat
 
 4. **Embedding System**
-   - BAAI/bge-large-en-v1.5 model loading
+   - Gemini embeddings (text-embedding-004) integration
    - PDF/TXT parsing
    - Text chunking and embedding
-   - FAISS index creation
+   - ChromaDB vector storage
    - Context search integration
 
 5. **Frontend Polish**

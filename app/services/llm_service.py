@@ -119,7 +119,8 @@ Be professional, engaging, and help users derive meaningful insights."""
         self,
         messages: list,
         context: str = "",
-        stream: bool = False
+        stream: bool = False,
+        provider: str = None
     ) -> str | Iterator[str]:
         """Generate response from LLM.
 
@@ -127,6 +128,7 @@ Be professional, engaging, and help users derive meaningful insights."""
             messages: List of message dicts with 'role' and 'content'
             context: Additional context from embeddings (used in vector_embeddings mode)
             stream: Whether to stream the response
+            provider: Optional provider to use (otherwise falls back to env default)
 
         Returns:
             Complete response string or iterator of response chunks
@@ -149,8 +151,9 @@ Be professional, engaging, and help users derive meaningful insights."""
             if context:
                 system_prompt += f"\n\nRelevant context:\n{context}"
 
-        # Get current provider from database
-        provider = self._get_provider()
+        # Use provided provider or fall back to env default
+        if not provider:
+            provider = os.getenv('LLM_PROVIDER', 'gemini').lower()
 
         # Estimate token count (rough: chars / 4)
         estimated_tokens = len(system_prompt) // 4

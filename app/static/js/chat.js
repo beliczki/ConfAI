@@ -174,12 +174,28 @@ function useConversationStarter(text) {
 
 async function loadModelInfo() {
     try {
+        // Check localStorage for persisted preference
+        const savedProvider = localStorage.getItem('preferred_model');
+
+        // If localStorage has a preference, sync it to backend session first
+        if (savedProvider) {
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({provider: savedProvider})
+            });
+        }
+
+        // Fetch current config from backend
         const response = await fetch('/api/config');
         if (response.ok) {
             const data = await response.json();
 
             // Set current model for gradient on new chats
             currentModel = data.provider;
+
+            // Ensure localStorage is synced
+            localStorage.setItem('preferred_model', data.provider);
 
             // Update model name in header dropdown
             const modelNameHeaderEl = document.getElementById('current-model-name-header');
@@ -297,6 +313,9 @@ async function selectModel(provider) {
 
             // Update current model for gradient
             currentModel = provider;
+
+            // Save to localStorage for persistence across sessions
+            localStorage.setItem('preferred_model', provider);
 
             // Show success message
             console.log(data.message);
