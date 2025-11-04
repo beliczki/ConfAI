@@ -2111,6 +2111,43 @@ input:checked + .toggle-slider:before {
     gap: 8px;
 }
 
+.dialog-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.model-select {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    min-width: 120px;
+}
+
+.model-select:hover {
+    border-color: var(--primary);
+}
+
+.model-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(226, 0, 116, 0.1);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+.btn-sm i {
+    width: 14px;
+    height: 14px;
+}
+
 .dialog-close {
     background: none;
     border: none;
@@ -2145,6 +2182,11 @@ input:checked + .toggle-slider:before {
 .dialog-footer-info {
     font-size: 12px;
     color: #666;
+}
+
+.dialog-footer-actions {
+    display: flex;
+    gap: 10px;
 }
 
 #preview-dialog-content {
@@ -2243,4 +2285,226 @@ body:has(.admin-container) .dialog-btn-secondary:hover {
 .spinning {
     animation: spin 1s linear infinite;
     display: inline-block;
+}
+
+/* ============================
+   STATUS INDICATOR & SPINNER
+   ============================ */
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.status-indicator .spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.status-indicator.finished .spinner {
+    display: none;
+}
+
+.status-indicator.finished::before {
+    content: '✓';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: #4CAF50;
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#summary-status-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* ============================
+   USER MANAGEMENT STYLES
+   ============================ */
+
+.upload-csv-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.csv-format-hint {
+    background: rgba(226, 0, 116, 0.05);
+    border-left: 3px solid var(--primary);
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.csv-format-hint code {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+.csv-format-hint small {
+    display: block;
+    margin-top: 8px;
+    color: var(--text-secondary);
+}
+
+.section-header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header-with-actions h2 {
+    margin: 0;
+}
+
+.users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.user-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s;
+}
+
+.user-item:hover {
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(226, 0, 116, 0.1);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.user-email {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.user-status {
+    flex-shrink: 0;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.status-pending {
+    background: rgba(255, 152, 0, 0.1);
+    color: #FF9800;
+}
+
+.status-badge.status-sent {
+    background: rgba(33, 150, 243, 0.1);
+    color: #2196F3;
+}
+
+.status-badge.status-accepted {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+}
+
+.user-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.loading-state,
+.empty-state,
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.loading-state i,
+.empty-state i,
+.error-state i {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+}
+
+.loading-state i {
+    animation: spin 1s linear infinite;
+}
+
+.empty-state p,
+.error-state p {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+}
+
+.empty-state small {
+    font-size: 14px;
+    color: var(--text-secondary);
 }

@@ -1,11 +1,13 @@
 """Admin routes for document management."""
 from flask import Blueprint, request, jsonify, render_template, session
-from app.utils.helpers import admin_required, login_required
-from app.models import Settings, Insight
+from app.utils.helpers import admin_required, login_required, generate_gradient, extract_name_from_email, is_valid_email
+from app.models import Settings, Insight, User, Invite, get_db
+from app.services.email_service import email_service
 from werkzeug.utils import secure_filename
 import os
 import json
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -354,6 +356,341 @@ def update_model_names():
             'message': 'Model names updated successfully'
         })
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/summarize-prompt', methods=['GET'])
+@admin_required
+def get_summarize_prompt():
+    """Get the summarization prompt setting."""
+    try:
+        prompt = Settings.get('summarize_prompt', 'Please provide a concise summary of the following document, highlighting the key points and main takeaways:\n\n')
+        return jsonify({
+            'success': True,
+            'prompt': prompt
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/summarize-prompt', methods=['POST'])
+@admin_required
+def update_summarize_prompt():
+    """Update the summarization prompt setting."""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '').strip()
+
+        if not prompt:
+            return jsonify({'error': 'Summarization prompt cannot be empty'}), 400
+
+        Settings.set('summarize_prompt', prompt)
+        print(f"Summarize prompt updated at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Summarization prompt updated successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/synthesis-prompt', methods=['GET'])
+@admin_required
+def get_synthesis_prompt():
+    """Get the synthesis prompt setting."""
+    try:
+        default_prompt = """Below are 4 summaries of the same conference transcript from different AI models.
+
+Your task: Create the definitive summary that:
+- Preserves ALL unique insights from any model
+- Highlights points where all models agree (these are critical)
+- Maintains technical accuracy while being accessible
+- Optimizes for being used as context in future conversations
+
+The four summaries from Claude, Gemini, Grok, and Perplexity are below:
+
+"""
+        prompt = Settings.get('synthesis_prompt', default_prompt)
+        return jsonify({
+            'success': True,
+            'prompt': prompt
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/synthesis-prompt', methods=['POST'])
+@admin_required
+def update_synthesis_prompt():
+    """Update the synthesis prompt setting."""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '').strip()
+
+        if not prompt:
+            return jsonify({'error': 'Synthesis prompt cannot be empty'}), 400
+
+        Settings.set('synthesis_prompt', prompt)
+        print(f"Synthesis prompt updated at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Synthesis prompt updated successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/summarize-file-stream', methods=['POST'])
+@admin_required
+def summarize_file_stream():
+    """Create multi-model summary with streaming progress updates."""
+    import json
+    from flask import Response, stream_with_context
+
+    data = request.get_json()
+    filename = data.get('filename')
+
+    if not filename:
+        return jsonify({'error': 'Filename is required'}), 400
+
+    # Read the file content
+    file_path = os.path.join(CONTEXT_FOLDER, filename)
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'File not found'}), 404
+
+    def generate():
+        """Generator function that yields progress updates as SSE."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+
+            # Get the prompts from settings
+            summarize_prompt = Settings.get('summarize_prompt', 'Please provide a concise summary of the following document, highlighting the key points and main takeaways:\n\n')
+            synthesis_prompt = Settings.get('synthesis_prompt', 'Below are 4 summaries of the same document from different AI models.\n\nYour task: Create the definitive summary that:\n- Preserves ALL unique insights from any model\n- Highlights points where all models agree (these are critical)\n- Maintains technical accuracy while being accessible\n- Optimizes for being used as context in future conversations\n\nThe four summaries are below:\n\n')
+
+            # Import the LLM service
+            from app.services.llm_service import llm_service
+
+            # List of models to use
+            models = ['claude', 'gemini', 'grok', 'perplexity']
+            model_summaries = {}
+
+            # Send start event
+            yield f"data: {json.dumps({'type': 'start', 'filename': filename, 'models': models})}\n\n"
+
+            # Generate summary from each model
+            for model in models:
+                try:
+                    # Send progress update
+                    yield f"data: {json.dumps({'type': 'model_start', 'model': model})}\n\n"
+
+                    full_prompt = summarize_prompt + file_content
+
+                    summary_response = llm_service.generate_simple_response(
+                        messages=[{"role": "user", "content": full_prompt}],
+                        model=model
+                    )
+
+                    summary_content = summary_response.get('content', '')
+
+                    if summary_content:
+                        model_summaries[model] = summary_content
+                        # Send model completion event with summary
+                        yield f"data: {json.dumps({'type': 'model_complete', 'model': model, 'summary': summary_content, 'length': len(summary_content)})}\n\n"
+                    else:
+                        # Send warning event
+                        yield f"data: {json.dumps({'type': 'model_warning', 'model': model, 'message': 'Returned empty summary'})}\n\n"
+
+                except Exception as e:
+                    # Send error event
+                    error_msg = str(e)
+                    yield f"data: {json.dumps({'type': 'model_error', 'model': model, 'error': error_msg})}\n\n"
+
+            # Check if we got at least some summaries
+            if not model_summaries:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Failed to generate summaries from any model'})}\n\n"
+                return
+
+            # Prepare synthesis prompt with all model summaries
+            yield f"data: {json.dumps({'type': 'synthesis_start'})}\n\n"
+
+            synthesis_input = synthesis_prompt
+            for model, summary in model_summaries.items():
+                synthesis_input += f"\n\n=== {model.upper()} SUMMARY ===\n{summary}\n"
+
+            # Use Claude to synthesize all summaries (with higher token limit for long synthesis)
+            synthesis_response = llm_service.generate_simple_response(
+                messages=[{"role": "user", "content": synthesis_input}],
+                model='claude',
+                max_tokens=8192  # Higher limit for comprehensive synthesis
+            )
+
+            final_summary = synthesis_response.get('content', '')
+
+            if not final_summary:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Failed to synthesize summaries'})}\n\n"
+                return
+
+            # Send synthesis complete event
+            yield f"data: {json.dumps({'type': 'synthesis_complete', 'summary': final_summary, 'length': len(final_summary)})}\n\n"
+
+            # Find next available version number for summary file
+            base_filename = "conference_summary_multimodel"
+            extension = ".txt"
+            version = 1
+            summary_filename = f"{base_filename}{extension}"
+
+            while os.path.exists(os.path.join(CONTEXT_FOLDER, summary_filename)):
+                version += 1
+                summary_filename = f"{base_filename}_v{version}{extension}"
+
+            # Save the final summary to a new file
+            summary_path = os.path.join(CONTEXT_FOLDER, summary_filename)
+            with open(summary_path, 'w', encoding='utf-8') as f:
+                f.write(final_summary)
+
+            # Load context config and set this file to window mode
+            config = load_context_config()
+            file_modes = config.get('file_modes', {})
+            file_modes[summary_filename] = 'window'
+            config['file_modes'] = file_modes
+
+            enabled_files = config.get('enabled_files', {})
+            enabled_files[summary_filename] = True
+            config['enabled_files'] = enabled_files
+
+            save_context_config(config)
+
+            # Send completion event
+            yield f"data: {json.dumps({'type': 'complete', 'filename': summary_filename, 'size': len(final_summary), 'version': version if version > 1 else None})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+
+@admin_bp.route('/api/admin/summarize-file', methods=['POST'])
+@admin_required
+def summarize_file():
+    """Create multi-model summary of a context file using all available models (legacy non-streaming endpoint)."""
+    try:
+        data = request.get_json()
+        filename = data.get('filename')
+
+        if not filename:
+            return jsonify({'error': 'Filename is required'}), 400
+
+        # Read the file content
+        file_path = os.path.join(CONTEXT_FOLDER, filename)
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+
+        # Get the prompts from settings
+        summarize_prompt = Settings.get('summarize_prompt', 'Please provide a concise summary of the following document, highlighting the key points and main takeaways:\n\n')
+        synthesis_prompt = Settings.get('synthesis_prompt', 'Below are 4 summaries of the same document from different AI models.\n\nYour task: Create the definitive summary that:\n- Preserves ALL unique insights from any model\n- Highlights points where all models agree (these are critical)\n- Maintains technical accuracy while being accessible\n- Optimizes for being used as context in future conversations\n\nThe four summaries are below:\n\n')
+
+        # Import the LLM service
+        from app.services.llm_service import llm_service
+
+        # List of models to use
+        models = ['claude', 'gemini', 'grok', 'perplexity']
+        model_summaries = {}
+
+        print(f"Starting multi-model summarization of {filename}")
+
+        # Generate summary from each model
+        for model in models:
+            try:
+                print(f"Generating summary with {model}...")
+                full_prompt = summarize_prompt + file_content
+
+                summary_response = llm_service.generate_simple_response(
+                    messages=[{"role": "user", "content": full_prompt}],
+                    model=model
+                )
+
+                summary_content = summary_response.get('content', '')
+
+                if summary_content:
+                    model_summaries[model] = summary_content
+                    print(f"{model.capitalize()} summary generated ({len(summary_content)} chars)")
+                else:
+                    print(f"Warning: {model} returned empty summary")
+
+            except Exception as e:
+                print(f"Error generating summary with {model}: {str(e)}")
+                # Continue with other models even if one fails
+
+        # Check if we got at least some summaries
+        if not model_summaries:
+            return jsonify({'error': 'Failed to generate summaries from any model'}), 500
+
+        # Prepare synthesis prompt with all model summaries
+        synthesis_input = synthesis_prompt
+        for model, summary in model_summaries.items():
+            synthesis_input += f"\n\n=== {model.upper()} SUMMARY ===\n{summary}\n"
+
+        # Use Claude to synthesize all summaries (with higher token limit for long synthesis)
+        print("Synthesizing summaries with Claude...")
+        synthesis_response = llm_service.generate_simple_response(
+            messages=[{"role": "user", "content": synthesis_input}],
+            model='claude',
+            max_tokens=8192  # Higher limit for comprehensive synthesis
+        )
+
+        final_summary = synthesis_response.get('content', '')
+
+        if not final_summary:
+            return jsonify({'error': 'Failed to synthesize summaries'}), 500
+
+        # Find next available version number for summary file
+        base_filename = "conference_summary_multimodel"
+        extension = ".txt"
+        version = 1
+        summary_filename = f"{base_filename}{extension}"
+
+        while os.path.exists(os.path.join(CONTEXT_FOLDER, summary_filename)):
+            version += 1
+            summary_filename = f"{base_filename}_v{version}{extension}"
+
+        # Save the final summary to a new file
+        summary_path = os.path.join(CONTEXT_FOLDER, summary_filename)
+        with open(summary_path, 'w', encoding='utf-8') as f:
+            f.write(final_summary)
+
+        # Load context config and set this file to window mode
+        config = load_context_config()
+        file_modes = config.get('file_modes', {})
+        file_modes[summary_filename] = 'window'  # Set to window mode
+        config['file_modes'] = file_modes
+
+        # Enable the file by default
+        enabled_files = config.get('enabled_files', {})
+        enabled_files[summary_filename] = True
+        config['enabled_files'] = enabled_files
+
+        save_context_config(config)
+
+        print(f"Multi-model summary created: {summary_filename} ({len(final_summary)} chars)")
+
+        return jsonify({
+            'success': True,
+            'summary_filename': summary_filename,
+            'size': len(final_summary),
+            'models_used': list(model_summaries.keys()),
+            'version': version if version > 1 else None,
+            'model_summaries': model_summaries,  # Include individual model summaries
+            'final_summary': final_summary  # Include the final synthesized summary
+        })
+
+    except Exception as e:
+        print(f"Error creating multi-model summary: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -967,4 +1304,411 @@ def update_embedding_provider():
             'st_model_name': st_model if provider == 'sentence-transformers' else None
         })
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================
+# USER MANAGEMENT ROUTES
+# ============================
+
+@admin_bp.route('/api/admin/users', methods=['GET'])
+@admin_required
+def get_users():
+    """Get all users with invite status."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT
+                    u.*,
+                    i.invite_code,
+                    i.status as invite_status,
+                    i.sent_at,
+                    i.accepted_at
+                FROM users u
+                LEFT JOIN invites i ON u.id = i.user_id
+                ORDER BY u.created_at DESC
+            ''')
+            users = cursor.fetchall()
+
+        return jsonify({
+            'success': True,
+            'users': [
+                {
+                    'id': user['id'],
+                    'email': user['email'],
+                    'name': user['name'],
+                    'avatar_gradient': user['avatar_gradient'],
+                    'is_allowed': user['is_allowed'],
+                    'created_at': user['created_at'],
+                    'invite_code': user['invite_code'],
+                    'invite_status': user['invite_status'],
+                    'sent_at': user['sent_at'],
+                    'accepted_at': user['accepted_at']
+                } for user in users
+            ]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/users/upload-csv', methods=['POST'])
+@admin_required
+def upload_users_csv():
+    """Upload CSV file with user emails and names."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        if not file.filename.endswith('.csv'):
+            return jsonify({'error': 'Invalid file type. Only CSV files allowed'}), 400
+
+        # Read CSV content
+        content = file.read().decode('utf-8')
+
+        # Parse CSV - expect single column with email addresses (with or without header)
+        lines = [line.strip() for line in content.strip().split('\n') if line.strip()]
+
+        created_users = []
+        errors = []
+        skipped = []
+
+        for row_num, line in enumerate(lines, start=1):
+            try:
+                # Skip header row if it looks like "email" or "Email"
+                if row_num == 1 and line.lower() in ['email', 'emails', 'e-mail']:
+                    continue
+
+                email = line.strip().lower()
+
+                if not email:
+                    continue  # Skip empty lines
+
+                if not is_valid_email(email):
+                    errors.append(f"Row {row_num}: Invalid email format - {email}")
+                    continue
+
+                # Check if user already exists
+                existing_user = User.get_by_email(email)
+                if existing_user:
+                    skipped.append(f"{email} (already exists)")
+                    continue
+
+                # Generate name from email
+                name = extract_name_from_email(email)
+
+                # Create user
+                gradient = generate_gradient()
+                user_id = User.create(email, name, gradient)
+
+                # Generate invite code (16 chars, URL-safe)
+                invite_code = secrets.token_urlsafe(16)
+                expires_at = datetime.now() + timedelta(days=7)
+
+                # Create invite
+                Invite.create(email, user_id, invite_code, expires_at)
+
+                created_users.append({
+                    'email': email,
+                    'name': name,
+                    'user_id': user_id
+                })
+
+                print(f"Created user: {email} ({name})")
+
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+
+        return jsonify({
+            'success': True,
+            'created': len(created_users),
+            'skipped': len(skipped),
+            'errors': len(errors),
+            'users': created_users,
+            'skipped_list': skipped,
+            'error_list': errors
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/users/<int:user_id>/send-invite', methods=['POST'])
+@admin_required
+def send_user_invite(user_id):
+    """Send invite email to a user."""
+    try:
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Get or create invite
+        invite = Invite.get_by_email(user['email'])
+        if not invite:
+            # Create new invite
+            invite_code = secrets.token_urlsafe(16)
+            expires_at = datetime.now() + timedelta(days=7)
+            invite_id = Invite.create(user['email'], user_id, invite_code, expires_at)
+            invite = Invite.get_by_email(user['email'])
+
+        # Check if already accepted
+        if invite['status'] == 'accepted':
+            return jsonify({'error': 'Invite already accepted'}), 400
+
+        # Generate invite link
+        # Get base URL from request
+        base_url = request.host_url.rstrip('/')
+        invite_link = f"{base_url}/login?invite={invite['invite_code']}"
+
+        # Send email
+        success = email_service.send_invite_email(
+            user['email'],
+            user['name'],
+            invite_link
+        )
+
+        if success:
+            # Mark as sent
+            Invite.mark_sent(invite['id'])
+
+            return jsonify({
+                'success': True,
+                'message': f'Invite sent to {user["email"]}'
+            })
+        else:
+            # Return invite link even if email fails (for dev mode)
+            return jsonify({
+                'success': False,
+                'message': 'Failed to send email (check SMTP configuration)',
+                'invite_link': invite_link
+            }), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/users/send-bulk-invites', methods=['POST'])
+@admin_required
+def send_bulk_invites():
+    """Send invites to all users who haven't been sent invites yet."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            # Get all users with pending invites
+            cursor.execute('''
+                SELECT u.*, i.id as invite_id, i.invite_code
+                FROM users u
+                JOIN invites i ON u.id = i.user_id
+                WHERE i.status = 'pending' AND i.sent_at IS NULL
+            ''')
+            pending_users = cursor.fetchall()
+
+        if not pending_users:
+            return jsonify({
+                'success': True,
+                'message': 'No pending invites to send',
+                'sent': 0
+            })
+
+        # Get base URL from request
+        base_url = request.host_url.rstrip('/')
+
+        sent_count = 0
+        failed = []
+
+        for user in pending_users:
+            try:
+                invite_link = f"{base_url}/login?invite={user['invite_code']}"
+
+                success = email_service.send_invite_email(
+                    user['email'],
+                    user['name'],
+                    invite_link
+                )
+
+                if success:
+                    Invite.mark_sent(user['invite_id'])
+                    sent_count += 1
+                else:
+                    failed.append(user['email'])
+
+            except Exception as e:
+                print(f"Error sending invite to {user['email']}: {e}")
+                failed.append(user['email'])
+
+        return jsonify({
+            'success': True,
+            'sent': sent_count,
+            'failed': len(failed),
+            'failed_list': failed
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    """Delete a user and their invite."""
+    try:
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Delete user (will cascade delete invite due to foreign key)
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+
+        return jsonify({
+            'success': True,
+            'message': f'User deleted: {user["email"]}'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/users/<int:user_id>/toggle-access', methods=['POST'])
+@admin_required
+def toggle_user_access(user_id):
+    """Toggle user's is_allowed status."""
+    try:
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        new_status = not user['is_allowed']
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE users SET is_allowed = ? WHERE id = ?', (new_status, user_id))
+
+        return jsonify({
+            'success': True,
+            'is_allowed': new_status,
+            'message': f'User access {"enabled" if new_status else "disabled"}'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/registration-mode', methods=['GET'])
+@admin_required
+def get_registration_mode():
+    """Get current registration mode setting."""
+    try:
+        mode = Settings.get('registration_mode', 'invite_only')
+        return jsonify({
+            'success': True,
+            'mode': mode
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/registration-mode', methods=['POST'])
+@admin_required
+def update_registration_mode():
+    """Update registration mode setting."""
+    try:
+        data = request.get_json()
+        mode = data.get('mode', '').strip()
+
+        # Validate mode
+        valid_modes = ['invite_only', 'open']
+        if mode not in valid_modes:
+            return jsonify({'error': 'Invalid registration mode. Must be "invite_only" or "open"'}), 400
+
+        Settings.set('registration_mode', mode)
+
+        print(f"Registration mode updated to {mode} at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Registration mode updated to {mode}',
+            'mode': mode
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================
+# PUBLIC API ROUTES
+# ============================
+
+@admin_bp.route('/api/upload-context', methods=['POST'])
+def public_upload_context():
+    """Public API endpoint to upload context files (no authentication required)."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        if not allowed_context_file(file.filename):
+            return jsonify({'error': 'Invalid file type. Only .txt and .md files are allowed'}), 400
+
+        # Ensure context folder exists
+        os.makedirs(CONTEXT_FOLDER, exist_ok=True)
+
+        # Get the original filename
+        original_filename = secure_filename(file.filename)
+        base_name, extension = os.path.splitext(original_filename)
+
+        # Check if file exists and find next available version number
+        final_filename = original_filename
+        version = 1
+        while os.path.exists(os.path.join(CONTEXT_FOLDER, final_filename)):
+            version += 1
+            final_filename = f"{base_name}_v{version}{extension}"
+
+        # Save the file
+        filepath = os.path.join(CONTEXT_FOLDER, final_filename)
+        file.save(filepath)
+
+        # Load context config and set this file to vector mode
+        config = load_context_config()
+        file_modes = config.get('file_modes', {})
+        file_modes[final_filename] = 'vector'
+        config['file_modes'] = file_modes
+
+        # Enable the file by default
+        enabled_files = config.get('enabled_files', {})
+        enabled_files[final_filename] = True
+        config['enabled_files'] = enabled_files
+
+        # Save config
+        save_context_config(config)
+
+        # Get file size and char count
+        file_size = os.path.getsize(filepath)
+        with open(filepath, 'r', encoding='utf-8') as f:
+            char_count = len(f.read())
+
+        print(f"Public API: Context file uploaded - {final_filename} ({char_count} chars, vector mode)")
+
+        return jsonify({
+            'success': True,
+            'message': f'File uploaded successfully',
+            'filename': final_filename,
+            'original_filename': original_filename,
+            'version': version if version > 1 else None,
+            'mode': 'vector',
+            'size': file_size,
+            'chars': char_count
+        })
+
+    except Exception as e:
+        print(f"Error in public upload: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500

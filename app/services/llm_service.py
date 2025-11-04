@@ -169,6 +169,52 @@ Be professional, engaging, and help users derive meaningful insights."""
         else:
             raise ValueError(f"Unknown LLM provider: {provider}")
 
+    def generate_simple_response(
+        self,
+        messages: list,
+        model: str,
+        system_prompt: str = "",
+        max_tokens: int = 2048
+    ) -> dict:
+        """Generate a simple response from a specific model without context loading.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content'
+            model: Model to use ('claude', 'gemini', 'grok', 'perplexity')
+            system_prompt: Optional system prompt (defaults to empty string)
+            max_tokens: Maximum tokens for response (defaults to 2048)
+
+        Returns:
+            Dict with 'content' key containing the response text
+        """
+        try:
+            # Store the max_tokens temporarily
+            old_max_tokens = getattr(self, '_temp_max_tokens', None)
+            self._temp_max_tokens = max_tokens
+
+            # Route to appropriate provider
+            if model == 'claude':
+                response_text = self._generate_claude(messages, system_prompt, stream=False)
+            elif model == 'gemini':
+                response_text = self._generate_gemini(messages, system_prompt, stream=False)
+            elif model == 'grok':
+                response_text = self._generate_grok(messages, system_prompt, stream=False)
+            elif model == 'perplexity':
+                response_text = self._generate_perplexity(messages, system_prompt, stream=False)
+            else:
+                raise ValueError(f"Unknown model: {model}")
+
+            # Restore old value
+            if old_max_tokens is None:
+                delattr(self, '_temp_max_tokens')
+            else:
+                self._temp_max_tokens = old_max_tokens
+
+            return {'content': response_text}
+        except Exception as e:
+            print(f"Error in generate_simple_response for {model}: {str(e)}")
+            return {'content': '', 'error': str(e)}
+
     def _generate_claude(
         self,
         messages: list,
@@ -187,25 +233,36 @@ Be professional, engaging, and help users derive meaningful insights."""
 
             # Use prompt caching by converting system prompt to list format
             # Mark the system prompt as cacheable to reduce costs
-            system_blocks = [
-                {
-                    "type": "text",
-                    "text": system_prompt,
-                    "cache_control": {"type": "ephemeral"}
-                }
-            ]
+            # Only use cache_control if system prompt is not empty
+            if system_prompt:
+                system_blocks = [
+                    {
+                        "type": "text",
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"}
+                    }
+                ]
+            else:
+                system_blocks = None
 
             if stream:
                 # Streaming response with caching
                 usage_data = {'captured': False}
 
                 def generate_stream():
-                    with client.messages.stream(
-                        model=model_name,
-                        max_tokens=2048,
-                        system=system_blocks,
-                        messages=messages
-                    ) as stream:
+                    # Use temp max_tokens if set, otherwise default to 2048
+                    max_tokens_value = getattr(self, '_temp_max_tokens', 2048)
+
+                    # Build kwargs, only include system if not None
+                    stream_kwargs = {
+                        'model': model_name,
+                        'max_tokens': max_tokens_value,
+                        'messages': messages
+                    }
+                    if system_blocks is not None:
+                        stream_kwargs['system'] = system_blocks
+
+                    with client.messages.stream(**stream_kwargs) as stream:
                         # Stream the text first
                         for text in stream.text_stream:
                             yield text
@@ -227,12 +284,19 @@ Be professional, engaging, and help users derive meaningful insights."""
                 return (generate_stream(), get_usage)
             else:
                 # Non-streaming response with caching
-                response = client.messages.create(
-                    model=model_name,
-                    max_tokens=2048,
-                    system=system_blocks,
-                    messages=messages
-                )
+                # Use temp max_tokens if set, otherwise default to 2048
+                max_tokens_value = getattr(self, '_temp_max_tokens', 2048)
+
+                # Build kwargs, only include system if not None
+                create_kwargs = {
+                    'model': model_name,
+                    'max_tokens': max_tokens_value,
+                    'messages': messages
+                }
+                if system_blocks is not None:
+                    create_kwargs['system'] = system_blocks
+
+                response = client.messages.create(**create_kwargs)
 
                 # Log cache usage stats
                 if hasattr(response, 'usage'):
@@ -261,11 +325,12 @@ Be professional, engaging, and help users derive meaningful insights."""
             # Get configured model name
             model_name = self._get_model_name('gemini')
 
-            # Use Gemini model
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                system_instruction=system_prompt
-            )
+            # Use Gemini model - only pass system_instruction if not empty
+            model_kwargs = {'model_name': model_name}
+            if system_prompt:
+                model_kwargs['system_instruction'] = system_prompt
+
+            model = genai.GenerativeModel(**model_kwargs)
 
             # Convert messages to Gemini format
             # Gemini expects alternating user/model messages
@@ -794,3 +859,4 @@ Be professional, engaging, and help users derive meaningful insights."""
 
 # Singleton instance
 llm_service = LLMService()
+

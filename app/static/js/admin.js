@@ -51,6 +51,7 @@ Be engaging, thought-provoking, and encourage exploration of ideas.`,
 let currentFiles = [];
 let currentSystemPrompt = '';
 let selectedFile = null;
+let currentPreviewedFile = null; // Track the file currently being previewed
 
 /**
  * Initialize the admin dashboard on page load
@@ -67,12 +68,16 @@ document.addEventListener('DOMContentLoaded', function() {
     loadEmbeddingSettings();
     loadConversationStarters();
     loadModelNames();
+    loadSummarizePrompt();
+    loadSynthesisPrompt();
 
     // Setup event listeners
     setupFileUpload();
     setupCharacterCounter();
     setupWelcomeMessageCounter();
     setupNewChatTextCounter();
+    setupSummarizePromptCounter();
+    setupSynthesisPromptCounter();
     setupLLMProviderChange();
     setupContextModeChange();
 
@@ -112,6 +117,9 @@ function switchTab(tabName) {
         loadAdminInsights();
     } else if (tabName === 'statistics') {
         loadStatistics();
+    } else if (tabName === 'users') {
+        loadRegistrationMode();
+        loadUsers();
     }
 }
 
@@ -1117,6 +1125,86 @@ function setupNewChatTextCounter() {
     }
 }
 
+/**
+ * Setup character counter for summarize prompt textarea
+ */
+function setupSummarizePromptCounter() {
+    const textarea = document.getElementById('summarize-prompt');
+    if (textarea) {
+        textarea.addEventListener('input', () => {
+            updateCharCount('summarize-prompt', 'summarize-prompt-chars');
+        });
+    }
+}
+
+/**
+ * Load the summarize prompt from the server
+ */
+async function loadSummarizePrompt() {
+    try {
+        const response = await fetch('/api/admin/summarize-prompt', {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            console.log('No summarize prompt found, using default');
+            return;
+        }
+
+        const data = await response.json();
+
+        const textarea = document.getElementById('summarize-prompt');
+        if (textarea && data.prompt) {
+            textarea.value = data.prompt;
+            updateCharCount('summarize-prompt', 'summarize-prompt-chars');
+        }
+
+        console.log('Summarize prompt loaded successfully');
+    } catch (error) {
+        console.error('Error loading summarize prompt:', error);
+    }
+}
+
+/**
+ * Setup character counter for synthesis prompt textarea
+ */
+function setupSynthesisPromptCounter() {
+    const textarea = document.getElementById('synthesis-prompt');
+    if (textarea) {
+        textarea.addEventListener('input', () => {
+            updateCharCount('synthesis-prompt', 'synthesis-prompt-chars');
+        });
+    }
+}
+
+/**
+ * Load the synthesis prompt from the server
+ */
+async function loadSynthesisPrompt() {
+    try {
+        const response = await fetch('/api/admin/synthesis-prompt', {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            console.log('No synthesis prompt found, using default');
+            return;
+        }
+
+        const data = await response.json();
+
+        const textarea = document.getElementById('synthesis-prompt');
+        if (textarea && data.prompt) {
+            textarea.value = data.prompt;
+            updateCharCount('synthesis-prompt', 'synthesis-prompt-chars');
+        }
+
+        console.log('Synthesis prompt loaded successfully');
+    } catch (error) {
+        console.error('Error loading synthesis prompt:', error);
+    }
+}
+
 // ============================
 // SETTINGS FUNCTIONALITY
 // ============================
@@ -1295,6 +1383,8 @@ async function saveSettings() {
     const chunkSize = document.getElementById('chunk-size')?.value;
     const chunkOverlap = document.getElementById('chunk-overlap')?.value;
     const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
+    const summarizePrompt = document.getElementById('summarize-prompt')?.value?.trim();
+    const synthesisPrompt = document.getElementById('synthesis-prompt')?.value?.trim();
 
     // Get embedding provider settings
     const embeddingProvider = document.getElementById('embedding-provider')?.value;
@@ -1327,6 +1417,16 @@ async function saveSettings() {
         return;
     }
 
+    if (!summarizePrompt) {
+        showSettingsError('Individual model prompt cannot be empty');
+        return;
+    }
+
+    if (!synthesisPrompt) {
+        showSettingsError('Synthesis prompt cannot be empty');
+        return;
+    }
+
     // Validate model names
     if (!claudeModel || !geminiModel || !grokModel || !perplexityModel) {
         showSettingsError('All model names must be specified');
@@ -1334,8 +1434,8 @@ async function saveSettings() {
     }
 
     try {
-        // Save LLM provider, welcome message, new chat text, embeddings settings, embedding provider, model names, and conversation starters
-        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, embeddingProviderResponse, modelNamesResponse, startersResponse] = await Promise.all([
+        // Save all settings in parallel
+        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, embeddingProviderResponse, modelNamesResponse, startersResponse, summarizePromptResponse, synthesisPromptResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -1400,10 +1500,26 @@ async function saveSettings() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ starters: starters })
+            }),
+            fetch('/api/admin/summarize-prompt', {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: summarizePrompt })
+            }),
+            fetch('/api/admin/synthesis-prompt', {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: synthesisPrompt })
             })
         ]);
 
-        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !embeddingProviderResponse.ok || !modelNamesResponse.ok || !startersResponse.ok) {
+        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !embeddingProviderResponse.ok || !modelNamesResponse.ok || !startersResponse.ok || !summarizePromptResponse.ok || !synthesisPromptResponse.ok) {
             throw new Error('Failed to save settings');
         }
 
@@ -2067,6 +2183,9 @@ async function openFilePreview(fileIndex) {
 
     if (!dialog) return;
 
+    // Store the current file for download/summarize functions
+    currentPreviewedFile = file;
+
     // Set dialog content
     if (filename) filename.textContent = file.name;
     if (size) size.textContent = formatFileSize(file.size);
@@ -2127,6 +2246,223 @@ function closeFilePreview() {
     const dialog = document.getElementById('file-preview-dialog');
     if (dialog) {
         dialog.classList.remove('active');
+    }
+    currentPreviewedFile = null;
+}
+
+/**
+ * Download the currently previewed file
+ */
+function downloadPreviewFile() {
+    if (!currentPreviewedFile) {
+        alert('No file is currently being previewed');
+        return;
+    }
+
+    const content = currentPreviewedFile.content || '';
+    const filename = currentPreviewedFile.name;
+
+    // Create a blob from the content
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+
+    // Create a temporary link and trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    // Cleanup
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log(`Downloaded: ${filename}`);
+}
+
+/**
+ * Create multi-model summary of the currently previewed file
+ */
+async function summarizePreviewFile() {
+    if (!currentPreviewedFile) {
+        alert('No file is currently being previewed');
+        return;
+    }
+
+    // Save filename before closing the dialog (closeFilePreview clears currentPreviewedFile)
+    const filename = currentPreviewedFile.name;
+
+    // Confirm before proceeding
+    if (!await showConfirm(`Create multi-model summary of "${filename}"?\n\nThis will use all 4 models (Claude, Gemini, Grok, Perplexity) and synthesize their outputs.`, {
+        confirmText: 'Create Summary',
+        confirmStyle: 'primary'
+    })) {
+        return;
+    }
+
+    // Close the preview dialog
+    closeFilePreview();
+
+    // Open the progress dialog
+    const progressDialog = document.getElementById('summarization-progress-dialog');
+    const statusIndicator = document.getElementById('summary-status-indicator');
+    const statusText = document.getElementById('summary-status-text');
+    const progressLog = document.getElementById('summarization-progress-log');
+
+    if (!progressDialog) {
+        console.error('Progress dialog not found');
+        return;
+    }
+
+    // Reset and show the progress dialog
+    statusIndicator.classList.remove('finished');
+    statusText.textContent = 'Initializing...';
+    progressLog.value = '';
+    progressDialog.classList.add('active');
+
+    try {
+        // Update status
+        statusText.textContent = 'Starting summarization...';
+        progressLog.value += `=== Multi-Model Summarization ===\n`;
+        progressLog.value += `File: ${filename}\n`;
+        progressLog.value += `Started at: ${new Date().toLocaleTimeString()}\n`;
+        progressLog.value += `\n`;
+
+        // Use EventSource for streaming updates
+        const authHeaders = getAuthHeaders();
+        const authToken = authHeaders['X-User-ID'];
+
+        // Create EventSource URL with auth token as query param
+        const streamUrl = `/api/admin/summarize-file-stream?filename=${encodeURIComponent(filename)}&auth=${encodeURIComponent(authToken)}`;
+
+        // We need to use fetch with streaming instead of EventSource because EventSource doesn't support POST or custom headers
+        statusText.textContent = 'Connecting...';
+
+        const response = await fetch('/api/admin/summarize-file-stream', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({
+                filename: filename
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to start summarization stream');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // Process complete SSE messages
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop(); // Keep incomplete message in buffer
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const jsonData = line.substring(6);
+                    try {
+                        const event = JSON.parse(jsonData);
+
+                        switch (event.type) {
+                            case 'start':
+                                progressLog.value += `Processing with models: ${event.models.join(', ')}\n\n`;
+                                statusText.textContent = 'Processing models...';
+                                break;
+
+                            case 'model_start':
+                                progressLog.value += `--- ${event.model.toUpperCase()} ---\n`;
+                                progressLog.value += `Starting ${event.model}...\n`;
+                                statusText.textContent = `Processing ${event.model}...`;
+                                progressLog.scrollTop = progressLog.scrollHeight;
+                                break;
+
+                            case 'model_complete':
+                                progressLog.value += `${event.model.toUpperCase()} completed (${event.length} characters)\n\n`;
+                                progressLog.value += `${event.summary}\n\n`;
+                                progressLog.scrollTop = progressLog.scrollHeight;
+                                break;
+
+                            case 'model_warning':
+                                progressLog.value += `⚠️ Warning: ${event.model} - ${event.message}\n\n`;
+                                progressLog.scrollTop = progressLog.scrollHeight;
+                                break;
+
+                            case 'model_error':
+                                progressLog.value += `❌ Error in ${event.model}: ${event.error}\n\n`;
+                                progressLog.scrollTop = progressLog.scrollHeight;
+                                break;
+
+                            case 'synthesis_start':
+                                progressLog.value += `\n=== SYNTHESIZING WITH CLAUDE ===\n`;
+                                statusText.textContent = 'Synthesizing all summaries...';
+                                progressLog.scrollTop = progressLog.scrollHeight;
+                                break;
+
+                            case 'synthesis_complete':
+                                progressLog.value += `Synthesis completed (${event.length} characters)\n\n`;
+                                progressLog.value += `${event.summary}\n\n`;
+                                progressLog.scrollTop = progressLog.scrollHeight;
+                                break;
+
+                            case 'complete':
+                                progressLog.value += `\n=== COMPLETED ===\n`;
+                                progressLog.value += `Summary saved to: ${event.filename}\n`;
+                                progressLog.value += `Total size: ${event.size} characters\n`;
+                                progressLog.value += `Finished at: ${new Date().toLocaleTimeString()}\n`;
+                                progressLog.scrollTop = progressLog.scrollHeight;
+
+                                // Mark as finished
+                                statusIndicator.classList.add('finished');
+                                statusText.textContent = 'Finished';
+
+                                // Reload the file list
+                                await loadContextFiles();
+                                break;
+
+                            case 'error':
+                                throw new Error(event.message);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing SSE event:', e);
+                    }
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('Error creating summary:', error);
+
+        // Show error in progress log
+        progressLog.value += `\n\n!!! ERROR !!!\n`;
+        progressLog.value += `${error.message}\n`;
+        progressLog.scrollTop = progressLog.scrollHeight;
+
+        // Update status
+        statusIndicator.classList.add('finished');
+        statusText.textContent = 'Error occurred';
+
+        alert(`Failed to create summary: ${error.message}`);
+    }
+}
+
+/**
+ * Close the summarization progress dialog
+ */
+function closeSummarizationProgress() {
+    const progressDialog = document.getElementById('summarization-progress-dialog');
+    if (progressDialog) {
+        progressDialog.classList.remove('active');
     }
 }
 
@@ -2337,6 +2673,307 @@ async function loadEmbeddingSettings() {
 // Expose functions to global scope for HTML onclick handlers
 window.deleteFileByIndex = deleteFileByIndex;
 window.openFilePreview = openFilePreview;
+// ===================================
+// USER MANAGEMENT FUNCTIONS
+// ===================================
+
+async function loadRegistrationMode() {
+    try {
+        const response = await fetch('/api/admin/registration-mode');
+        const data = await response.json();
+
+        if (data.success) {
+            const toggle = document.getElementById('registration-mode-toggle');
+            if (toggle) {
+                // 'open' = checked, 'invite_only' = unchecked
+                toggle.checked = (data.mode === 'open');
+                updateRegistrationModeUI(data.mode);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading registration mode:', error);
+    }
+}
+
+async function toggleRegistrationMode() {
+    const toggle = document.getElementById('registration-mode-toggle');
+    const newMode = toggle.checked ? 'open' : 'invite_only';
+
+    try {
+        const response = await fetch('/api/admin/registration-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: newMode })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            updateRegistrationModeUI(newMode);
+            console.log(`Registration mode updated to: ${newMode}`);
+        } else {
+            // Revert toggle on error
+            toggle.checked = !toggle.checked;
+            alert(data.error || 'Failed to update registration mode');
+        }
+    } catch (error) {
+        console.error('Error updating registration mode:', error);
+        // Revert toggle on error
+        toggle.checked = !toggle.checked;
+        alert('Failed to update registration mode');
+    }
+}
+
+function updateRegistrationModeUI(mode) {
+    const inviteOnlyOption = document.getElementById('mode-invite-only');
+    const openOption = document.getElementById('mode-open-registration');
+
+    if (mode === 'open') {
+        inviteOnlyOption?.classList.remove('active');
+        openOption?.classList.add('active');
+    } else {
+        inviteOnlyOption?.classList.add('active');
+        openOption?.classList.remove('active');
+    }
+}
+
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/admin/users');
+        const data = await response.json();
+
+        if (data.success) {
+            renderUsersList(data.users);
+        } else {
+            throw new Error(data.error || 'Failed to load users');
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        document.getElementById('users-list').innerHTML = `
+            <div class="error-state">
+                <i data-lucide="alert-circle"></i>
+                <p>Error loading users: ${error.message}</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function renderUsersList(users) {
+    const listEl = document.getElementById('users-list');
+
+    if (!users || users.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-state">
+                <i data-lucide="users"></i>
+                <p>No users yet</p>
+                <small>Upload a CSV file to add users</small>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    listEl.innerHTML = users.map(user => {
+        const statusBadge = getInviteStatusBadge(user.invite_status, user.sent_at, user.accepted_at);
+        const canSendInvite = (!user.invite_status || user.invite_status === 'pending') && user.invite_status !== 'accepted';
+
+        return `
+            <div class="user-item">
+                <div class="user-info">
+                    <div class="user-avatar" style="background: ${user.avatar_gradient}">
+                        ${user.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">${escapeHtml(user.name)}</div>
+                        <div class="user-email">${escapeHtml(user.email)}</div>
+                    </div>
+                </div>
+                <div class="user-status">
+                    ${statusBadge}
+                </div>
+                <div class="user-actions">
+                    ${canSendInvite ? `
+                        <button class="btn btn-sm btn-primary" onclick="sendInvite(${user.id})">
+                            <i data-lucide="mail"></i>
+                            <span>Send Invite</span>
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-sm ${user.is_allowed ? 'btn-warning' : 'btn-success'}" onclick="toggleUserAccess(${user.id})">
+                        <i data-lucide="${user.is_allowed ? 'lock' : 'unlock'}"></i>
+                        <span>${user.is_allowed ? 'Disable' : 'Enable'}</span>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteUserConfirm(${user.id}, '${escapeHtml(user.email)}')">
+                        <i data-lucide="trash-2"></i>
+                        <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function getInviteStatusBadge(status, sentAt, acceptedAt) {
+    if (acceptedAt) {
+        return '<span class="status-badge status-accepted">Accepted</span>';
+    } else if (sentAt) {
+        return '<span class="status-badge status-sent">Invite Sent</span>';
+    } else if (status === 'pending') {
+        return '<span class="status-badge status-pending">Pending</span>';
+    } else {
+        return '<span class="status-badge status-pending">Not Sent</span>';
+    }
+}
+
+async function uploadCSV() {
+    const input = document.getElementById('user-csv-input');
+    const file = input.files[0];
+
+    if (!file) {
+        alert('Please select a CSV file');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/api/admin/users/upload-csv', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            let message = `Successfully created ${data.created} user(s)`;
+            if (data.skipped > 0) {
+                message += `\n${data.skipped} user(s) skipped (already exist)`;
+            }
+            if (data.errors > 0) {
+                message += `\n${data.errors} error(s) occurred`;
+            }
+            alert(message);
+
+            // Reload users list
+            await loadUsers();
+
+            // Clear input
+            input.value = '';
+        } else {
+            throw new Error(data.error || 'Failed to upload CSV');
+        }
+    } catch (error) {
+        console.error('Error uploading CSV:', error);
+        alert(`Error uploading CSV: ${error.message}`);
+    }
+}
+
+async function sendInvite(userId) {
+    if (!confirm('Send invite email to this user?')) return;
+
+    try {
+        const response = await fetch(`/api/admin/users/${userId}/send-invite`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(data.message);
+            await loadUsers();
+        } else {
+            alert(data.message || 'Failed to send invite');
+        }
+    } catch (error) {
+        console.error('Error sending invite:', error);
+        alert(`Error sending invite: ${error.message}`);
+    }
+}
+
+async function sendBulkInvites() {
+    if (!confirm('Send invites to all pending users?')) return;
+
+    try {
+        const response = await fetch('/api/admin/users/send-bulk-invites', {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            let message = `Sent ${data.sent} invite(s)`;
+            if (data.failed > 0) {
+                message += `\n${data.failed} invite(s) failed to send`;
+            }
+            alert(message);
+            await loadUsers();
+        } else {
+            throw new Error(data.error || 'Failed to send bulk invites');
+        }
+    } catch (error) {
+        console.error('Error sending bulk invites:', error);
+        alert(`Error sending bulk invites: ${error.message}`);
+    }
+}
+
+async function toggleUserAccess(userId) {
+    try {
+        const response = await fetch(`/api/admin/users/${userId}/toggle-access`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(data.message);
+            await loadUsers();
+        } else {
+            throw new Error(data.error || 'Failed to toggle user access');
+        }
+    } catch (error) {
+        console.error('Error toggling user access:', error);
+        alert(`Error toggling user access: ${error.message}`);
+    }
+}
+
+async function deleteUserConfirm(userId, email) {
+    if (!confirm(`Are you sure you want to delete user ${email}? This action cannot be undone.`)) return;
+
+    try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(data.message);
+            await loadUsers();
+        } else {
+            throw new Error(data.error || 'Failed to delete user');
+        }
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        alert(`Error deleting user: ${error.message}`);
+    }
+}
+
+// Set up user management event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const csvInput = document.getElementById('user-csv-input');
+    if (csvInput) {
+        csvInput.addEventListener('change', uploadCSV);
+    }
+
+    const registrationToggle = document.getElementById('registration-mode-toggle');
+    if (registrationToggle) {
+        registrationToggle.addEventListener('change', toggleRegistrationMode);
+    }
+});
+
 window.moveFileToMode = moveFileToMode;
 window.deleteInsight = deleteInsight;
 window.toggleFileEnabled = toggleFileEnabled;
@@ -2344,11 +2981,19 @@ window.switchTab = switchTab;
 window.saveEmbeddingSettings = saveEmbeddingSettings;
 window.processEmbeddings = processEmbeddings;
 window.closeFilePreview = closeFilePreview;
+window.downloadPreviewFile = downloadPreviewFile;
+window.summarizePreviewFile = summarizePreviewFile;
 window.saveSystemPrompt = saveSystemPrompt;
 window.resetSystemPrompt = resetSystemPrompt;
 window.testSystemPrompt = testSystemPrompt;
 window.loadTemplate = loadTemplate;
 window.saveSettings = saveSettings;
 window.filterActivity = filterActivity;
+window.loadRegistrationMode = loadRegistrationMode;
+window.loadUsers = loadUsers;
+window.sendInvite = sendInvite;
+window.sendBulkInvites = sendBulkInvites;
+window.toggleUserAccess = toggleUserAccess;
+window.deleteUserConfirm = deleteUserConfirm;
 
 } // End of adminDashboardInitialized guard

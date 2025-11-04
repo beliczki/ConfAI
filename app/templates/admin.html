@@ -34,6 +34,10 @@
                 <i data-lucide="sliders"></i>
                 <span>Settings</span>
             </button>
+            <button class="tab-btn" onclick="switchTab('users')">
+                <i data-lucide="users"></i>
+                <span>Users</span>
+            </button>
         </div>
     </div>
 
@@ -140,10 +144,16 @@
         <div id="file-preview-dialog" class="preview-dialog-overlay">
             <div class="dialog-container">
                 <div class="dialog-header">
-                    <h3><i data-lucide="eye"></i> File Preview: <span id="preview-dialog-filename">-</span></h3>
-                    <button class="dialog-close" onclick="closeFilePreview()">
-                        <i data-lucide="x"></i>
-                    </button>
+                    <h3><span id="preview-dialog-filename">-</span></h3>
+                    <div class="dialog-header-actions">
+                        <button class="btn btn-sm btn-primary" onclick="summarizePreviewFile()" title="Generate multi-model summary using all available models">
+                            <i data-lucide="sparkles"></i>
+                            <span>Create Multi-Model Summary</span>
+                        </button>
+                        <button class="dialog-close" onclick="closeFilePreview()">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="dialog-body">
                     <pre id="preview-dialog-content"></pre>
@@ -154,7 +164,37 @@
                         <span id="preview-dialog-chars">-</span> characters |
                         <span id="preview-dialog-tokens">-</span> tokens
                     </div>
-                    <button class="btn btn-secondary" onclick="closeFilePreview()">Close</button>
+                    <div class="dialog-footer-actions">
+                        <button class="btn btn-secondary" onclick="downloadPreviewFile()" title="Download file">
+                            <i data-lucide="download"></i>
+                            <span>Download</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeFilePreview()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summarization Progress Dialog -->
+        <div id="summarization-progress-dialog" class="preview-dialog-overlay">
+            <div class="dialog-container" style="max-width: 900px;">
+                <div class="dialog-header">
+                    <h3>Multi-Model Summarization Progress</h3>
+                    <div class="dialog-header-actions">
+                        <div id="summary-status-indicator" class="status-indicator">
+                            <div class="spinner"></div>
+                            <span id="summary-status-text">Initializing...</span>
+                        </div>
+                        <button class="dialog-close" onclick="closeSummarizationProgress()">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="dialog-body">
+                    <textarea id="summarization-progress-log" readonly style="width: 100%; height: 500px; font-family: monospace; font-size: 13px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+                </div>
+                <div class="dialog-footer">
+                    <button class="btn btn-secondary" onclick="closeSummarizationProgress()">Close</button>
                 </div>
             </div>
         </div>
@@ -473,10 +513,102 @@
             </div>
         </div>
 
+        <div class="section-card">
+            <h3>Summarization</h3>
+            <p class="help-text">Configure the prompts used for multi-model summarization.</p>
+
+            <div class="form-group">
+                <label for="summarize-prompt">Individual Model Prompt</label>
+                <textarea id="summarize-prompt" rows="6" placeholder="Enter the prompt template for individual summaries..."></textarea>
+                <small class="help-text">This prompt is sent to each model (Claude, Gemini, Grok, Perplexity) with the file content appended.</small>
+                <div class="char-count">
+                    <span id="summarize-prompt-chars">0</span> characters
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="synthesis-prompt">Synthesis Prompt (Claude)</label>
+                <textarea id="synthesis-prompt" rows="8" placeholder="Enter the prompt template for synthesizing multiple summaries..."></textarea>
+                <small class="help-text">This prompt is used by Claude to synthesize the 4 individual summaries into one comprehensive summary. The 4 summaries will be appended to this prompt.</small>
+                <div class="char-count">
+                    <span id="synthesis-prompt-chars">0</span> characters
+                </div>
+            </div>
+        </div>
+
         <button class="btn btn-primary" onclick="saveSettings()">
             <i data-lucide="save"></i>
             <span>Save Settings</span>
         </button>
+    </div>
+
+    <!-- Tab: User Management -->
+    <div id="users" class="tab-content">
+        <!-- Registration Mode Selector -->
+        <div class="section-card">
+            <h2><i data-lucide="settings"></i> Registration Mode</h2>
+            <p class="help-text">Control who can register and request login PINs.</p>
+
+            <div class="form-group">
+                <div class="context-mode-toggle-container">
+                    <div class="context-mode-option" id="mode-invite-only">
+                        <div class="mode-icon"><i data-lucide="lock"></i></div>
+                        <div class="mode-details">
+                            <strong>Invite Only</strong>
+                            <span>Secure and controlled. (Only invited emails can request PINs)</span>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="registration-mode-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <div class="context-mode-option" id="mode-open-registration">
+                        <div class="mode-icon"><i data-lucide="unlock"></i></div>
+                        <div class="mode-details">
+                            <strong>Open Registration</strong>
+                            <span>Public and open. (Any valid email can request a PIN and register)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload CSV Section -->
+        <div class="section-card">
+            <h2><i data-lucide="upload"></i> Upload Users</h2>
+            <p class="help-text">Upload a CSV file with email addresses to create invites in bulk.</p>
+
+            <div class="upload-csv-section">
+                <input type="file" id="user-csv-input" accept=".csv" hidden>
+                <button class="btn btn-secondary" onclick="document.getElementById('user-csv-input').click()">
+                    <i data-lucide="upload"></i>
+                    <span>Choose CSV File</span>
+                </button>
+                <div class="csv-format-hint">
+                    <strong>CSV Format:</strong>
+                    <code>One email per line</code>
+                    <small>Names are auto-generated from email addresses (e.g., john.doe@example.com → John Doe).</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users List Section -->
+        <div class="section-card">
+            <div class="section-header-with-actions">
+                <h2><i data-lucide="users"></i> Invited Users</h2>
+                <button class="btn btn-primary" onclick="sendBulkInvites()">
+                    <i data-lucide="mail"></i>
+                    <span>Send All Pending Invites</span>
+                </button>
+            </div>
+
+            <div id="users-list" class="users-list">
+                <div class="loading-state">
+                    <i data-lucide="loader"></i>
+                    <p>Loading users...</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
