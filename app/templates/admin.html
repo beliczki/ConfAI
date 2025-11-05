@@ -610,7 +610,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}?v={{ range(1, 99999999) | random }}"></script>
 <script>
     // Initialize Lucide icons
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
