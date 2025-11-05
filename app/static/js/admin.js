@@ -3083,6 +3083,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.moveFileToMode = moveFileToMode;
 window.deleteInsight = deleteInsight;
+window.exportInsights = exportInsights;
 window.toggleFileEnabled = toggleFileEnabled;
 window.switchTab = switchTab;
 window.saveEmbeddingSettings = saveEmbeddingSettings;
