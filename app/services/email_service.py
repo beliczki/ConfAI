@@ -60,7 +60,7 @@ The ConfAI Team
             html_content = f"""
 <html>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: linear-gradient(135deg, #E20074, #001E50); padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+    <div style="background: #4a4a4a; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
     </div>
     <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -76,7 +76,7 @@ The ConfAI Team
       </p>
     </div>
     <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
-      <p>© 2024 ConfAI. All rights reserved.</p>
+      <p>© 2025 Telekom ConfAI. All rights reserved.</p>
     </div>
   </body>
 </html>
@@ -140,7 +140,7 @@ The ConfAI Team
             html_content = f"""
 <html>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: linear-gradient(135deg, #E20074, #001E50); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+    <div style="background: #4a4a4a; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
       <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
     </div>
@@ -162,7 +162,7 @@ The ConfAI Team
       </p>
     </div>
     <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
-      <p>© 2024 ConfAI. All rights reserved.</p>
+      <p>© 2025 Telekom ConfAI. All rights reserved.</p>
     </div>
   </body>
 </html>
