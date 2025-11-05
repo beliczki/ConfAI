@@ -1,8 +1,11 @@
 """Email service for sending PIN codes."""
 import os
+import base64
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import make_msgid
 
 
 class EmailService:
@@ -14,6 +17,18 @@ class EmailService:
         self.username = os.getenv('SMTP_USERNAME')
         self.password = os.getenv('SMTP_PASSWORD')
         self.from_email = os.getenv('EMAIL_FROM', 'noreply@confai.com')
+        self.logo_base64 = self._load_logo()
+
+    def _load_logo(self):
+        """Load and encode the logo as base64."""
+        try:
+            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'img', 'telekom-confai-white.png')
+            with open(logo_path, 'rb') as f:
+                logo_data = f.read()
+                return base64.b64encode(logo_data).decode('utf-8')
+        except Exception as e:
+            print(f"Warning: Could not load logo for email: {e}")
+            return None
 
     def send_pin_email(self, to_email, pin):
         """Send PIN code to user's email."""
@@ -23,6 +38,7 @@ class EmailService:
             msg['Subject'] = 'Your ConfAI Login PIN'
             msg['From'] = self.from_email
             msg['To'] = to_email
+            msg['Message-ID'] = make_msgid(domain=self.from_email.split('@')[1])
 
             # Create HTML and plain text versions
             text_content = f"""
@@ -38,11 +54,14 @@ Best regards,
 The ConfAI Team
             """
 
+            # Build logo HTML
+            logo_html = f'<img src="data:image/png;base64,{self.logo_base64}" alt="ConfAI" style="max-height: 50px; margin: 0;">' if self.logo_base64 else '<h1 style="color: white; margin: 0;">ConfAI</h1>'
+
             html_content = f"""
 <html>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: linear-gradient(135deg, #E20074, #001E50); padding: 20px; border-radius: 10px 10px 0 0;">
-      <h1 style="color: white; margin: 0;">ConfAI</h1>
+    <div style="background: linear-gradient(135deg, #E20074, #001E50); padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+      {logo_html}
     </div>
     <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
       <h2 style="color: #333;">Your Login PIN</h2>
@@ -91,6 +110,7 @@ The ConfAI Team
             msg['Subject'] = 'You\'re invited to ConfAI!'
             msg['From'] = self.from_email
             msg['To'] = to_email
+            msg['Message-ID'] = make_msgid(domain=self.from_email.split('@')[1])
 
             # Create HTML and plain text versions
             text_content = f"""
@@ -107,11 +127,14 @@ Best regards,
 The ConfAI Team
             """
 
+            # Build logo HTML
+            logo_html = f'<img src="data:image/png;base64,{self.logo_base64}" alt="ConfAI" style="max-height: 50px; margin: 0;">' if self.logo_base64 else '<h1 style="color: white; margin: 0; font-size: 32px;">ConfAI</h1>'
+
             html_content = f"""
 <html>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: linear-gradient(135deg, #E20074, #001E50); padding: 30px; border-radius: 10px 10px 0 0;">
-      <h1 style="color: white; margin: 0; font-size: 32px;">ConfAI</h1>
+    <div style="background: linear-gradient(135deg, #E20074, #001E50); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+      {logo_html}
       <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
     </div>
     <div style="background: #f8f8f8; padding: 40px; border-radius: 0 0 10px 10px;">
