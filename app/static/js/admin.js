@@ -1736,7 +1736,26 @@ async function loadAdminInsights() {
     const emptyEl = document.getElementById('admin-insights-empty');
 
     try {
-        const response = await fetch('/api/admin/insights');
+        const response = await fetch('/api/admin/insights', {
+            headers: getAuthHeaders(),
+            credentials: 'same-origin'  // Ensure cookies are sent
+        });
+
+        // Check if response is OK before parsing
+        if (!response.ok) {
+            const text = await response.text();
+            console.error('API Error Response:', text);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        // Check content type
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response:', text);
+            throw new Error('Expected JSON response but got ' + contentType);
+        }
+
         const data = await response.json();
 
         loadingEl.style.display = 'none';
@@ -1751,7 +1770,7 @@ async function loadAdminInsights() {
         }
     } catch (error) {
         console.error('Error loading insights:', error);
-        loadingEl.innerHTML = '<p style="color: #ff6b6b;">Error loading insights</p>';
+        loadingEl.innerHTML = '<p style="color: #ff6b6b;">Error loading insights: ' + error.message + '</p>';
     }
 }
 
