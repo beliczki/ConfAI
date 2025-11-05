@@ -33,6 +33,14 @@ function getAIGradient(model) {
 
 // Load user info and threads on page load
 document.addEventListener('DOMContentLoaded', async () => {
+    // Check session first
+    const isAuthenticated = await checkSession();
+    if (!isAuthenticated) {
+        // Redirect to login if not authenticated
+        window.location.replace('/login');
+        return;
+    }
+
     await loadUserInfo();
     await loadWelcomeMessage();
     await loadConversationStarters();
@@ -43,6 +51,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check URL for thread ID and auto-select if present
     checkAndLoadThreadFromURL();
 });
+
+// Check if user session is valid
+async function checkSession() {
+    try {
+        const response = await fetch('/me');
+        if (response.status === 401 || !response.ok) {
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error('Session check failed:', error);
+        return false;
+    }
+}
+
+// Helper function to safely handle API responses
+async function handleApiResponse(response) {
+    // Check for authentication errors
+    if (response.status === 401 || response.status === 403) {
+        console.warn('Authentication failed, redirecting to login');
+        window.location.replace('/login');
+        throw new Error('Authentication required');
+    }
+
+    // Check if response is actually JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        console.error('Expected JSON but got:', contentType);
+        throw new Error('Invalid response format');
+    }
+
+    // Parse JSON
+    const data = await response.json();
+
+    // Check if response is OK
+    if (!response.ok) {
+        throw new Error(data.error || `HTTP error ${response.status}`);
+    }
+
+    return data;
+}
 
 // Handle browser back/forward navigation
 window.addEventListener('popstate', (event) => {
@@ -360,19 +409,18 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadThreads() {
     try {
         const response = await fetch('/api/threads');
-        if (response.ok) {
-            const data = await response.json();
-            renderThreads(data.threads);
+        const data = await handleApiResponse(response);
+        renderThreads(data.threads);
 
-            // Auto-select first thread if exists, otherwise show welcome screen
-            if (data.threads.length > 0 && !currentThreadId) {
-                selectThread(data.threads[0].id, data.threads[0].title, data.threads[0].hash_id);
-            } else if (data.threads.length === 0) {
-                showWelcomeScreen();
-            }
+        // Auto-select first thread if exists, otherwise show welcome screen
+        if (data.threads.length > 0 && !currentThreadId) {
+            selectThread(data.threads[0].id, data.threads[0].title, data.threads[0].hash_id);
+        } else if (data.threads.length === 0) {
+            showWelcomeScreen();
         }
     } catch (error) {
         console.error('Failed to load threads:', error);
+        // Don't show error dialog here, as this is called frequently
     }
 }
 
@@ -414,13 +462,12 @@ async function createNewThread() {
             body: JSON.stringify({title: title})
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            await loadThreads();
-            selectThread(data.thread_id, title, data.hash_id);
-        }
+        const data = await handleApiResponse(response);
+        await loadThreads();
+        selectThread(data.thread_id, title, data.hash_id);
     } catch (error) {
         console.error('Failed to create thread:', error);
+        showDialog('Failed to create new chat. Please try again.', 'error');
     }
 }
 
@@ -461,29 +508,28 @@ async function selectThread(threadId, title, hashId = null) {
 async function loadMessages(threadId) {
     try {
         const response = await fetch(`/api/threads/${threadId}/messages`);
-        if (response.ok) {
-            const data = await response.json();
+        const data = await handleApiResponse(response);
 
-            // Count user messages to track prompt count
-            const userMessages = data.messages.filter(m => m.role === 'user');
-            messageCount = userMessages.length;
+        // Count user messages to track prompt count
+        const userMessages = data.messages.filter(m => m.role === 'user');
+        messageCount = userMessages.length;
 
-            // Store first two user prompts for auto-rename
-            conversationHistory = userMessages.slice(0, 2).map(m => m.content);
+        // Store first two user prompts for auto-rename
+        conversationHistory = userMessages.slice(0, 2).map(m => m.content);
 
-            // Store current model from first assistant message
-            const assistantMsg = data.messages.find(m => m.role === 'assistant');
-            if (assistantMsg && assistantMsg.model) {
-                currentModel = assistantMsg.model;
-            }
-
-            // Check which messages are shared
-            await checkSharedStatus(data.messages);
-
-            renderMessages(data.messages);
+        // Store current model from first assistant message
+        const assistantMsg = data.messages.find(m => m.role === 'assistant');
+        if (assistantMsg && assistantMsg.model) {
+            currentModel = assistantMsg.model;
         }
+
+        // Check which messages are shared
+        await checkSharedStatus(data.messages);
+
+        renderMessages(data.messages);
     } catch (error) {
         console.error('Failed to load messages:', error);
+        showDialog('Failed to load messages. Please try again.', 'error');
     }
 }
 
@@ -686,6 +732,17 @@ async function sendMessage() {
             })
         });
 
+        // Check for authentication errors before reading stream
+        if (response.status === 401 || response.status === 403) {
+            console.warn('Authentication failed, redirecting to login');
+            window.location.replace('/login');
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let assistantMessage = '';
@@ -884,18 +941,19 @@ async function deleteThread(threadId) {
             method: 'DELETE'
         });
 
-        if (response.ok) {
-            if (currentThreadId === threadId) {
-                currentThreadId = null;
-                document.getElementById('chat-messages').innerHTML = '<div class="empty-state"><h3>Chat deleted</h3><p>Create a new chat to continue.</p></div>';
-                document.getElementById('main-title').textContent = 'Select or create a chat';
-                document.getElementById('chat-input').disabled = true;
-                document.getElementById('send-btn').disabled = true;
-            }
-            await loadThreads();
+        await handleApiResponse(response);
+
+        if (currentThreadId === threadId) {
+            currentThreadId = null;
+            document.getElementById('chat-messages').innerHTML = '<div class="empty-state"><h3>Chat deleted</h3><p>Create a new chat to continue.</p></div>';
+            document.getElementById('main-title').textContent = 'Select or create a chat';
+            document.getElementById('chat-input').disabled = true;
+            document.getElementById('send-btn').disabled = true;
         }
+        await loadThreads();
     } catch (error) {
         console.error('Failed to delete thread:', error);
+        showDialog('Failed to delete chat. Please try again.', 'error');
     }
 }
 
