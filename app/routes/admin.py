@@ -1274,9 +1274,9 @@ def get_all_insights():
             {
                 'id': i['id'],
                 'content': i['content'],
-                'title': i.get('title', ''),
+                'title': i['title'] if 'title' in i.keys() else '',
                 'user_name': i['user_name'],
-                'user_email': i.get('email', 'N/A'),  # Include user email
+                'user_email': i['email'] if 'email' in i.keys() else 'N/A',
                 'avatar_gradient': i['avatar_gradient'],
                 'upvotes': i['upvotes'],
                 'downvotes': i['downvotes'],
@@ -1317,7 +1317,8 @@ def export_insights():
     for i, insight in enumerate(insights, 1):
         # Header with user info and date
         date_str = datetime.fromisoformat(insight['created_at'].replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S')
-        lines.append(f"## {i}. {insight.get('title', 'Untitled Insight')}")
+        title = insight['title'] if 'title' in insight.keys() else 'Untitled Insight'
+        lines.append(f"## {i}. {title}")
         lines.append(f"\n**Author:** {insight['user_name']} ({insight['email']})")
         lines.append(f"\n**Date:** {date_str}")
         lines.append(f"\n**Score:** {insight['net_votes']} (👍 {insight['upvotes']} | 👎 {insight['downvotes']})")
