@@ -5,6 +5,7 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from email.utils import make_msgid
 
 
@@ -17,15 +18,14 @@ class EmailService:
         self.username = os.getenv('SMTP_USERNAME')
         self.password = os.getenv('SMTP_PASSWORD')
         self.from_email = os.getenv('EMAIL_FROM', 'noreply@confai.com')
-        self.logo_base64 = self._load_logo()
+        self.logo_data = self._load_logo()
 
     def _load_logo(self):
-        """Load and encode the logo as base64."""
+        """Load the logo image as bytes."""
         try:
             logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'img', 'telekom-confai-white.png')
             with open(logo_path, 'rb') as f:
-                logo_data = f.read()
-                return base64.b64encode(logo_data).decode('utf-8')
+                return f.read()
         except Exception as e:
             print(f"Warning: Could not load logo for email: {e}")
             return None
@@ -54,8 +54,8 @@ Best regards,
 The ConfAI Team
             """
 
-            # Build logo HTML
-            logo_html = f'<img src="data:image/png;base64,{self.logo_base64}" alt="ConfAI" style="max-height: 50px; margin: 0;">' if self.logo_base64 else '<h1 style="color: white; margin: 0;">ConfAI</h1>'
+            # Build logo HTML (use CID if logo available)
+            logo_html = '<img src="cid:logo" alt="ConfAI" style="max-height: 50px; margin: 0;">' if self.logo_data else '<h1 style="color: white; margin: 0;">ConfAI</h1>'
 
             html_content = f"""
 <html>
@@ -87,6 +87,13 @@ The ConfAI Team
             part2 = MIMEText(html_content, 'html')
             msg.attach(part1)
             msg.attach(part2)
+
+            # Attach logo as inline image with CID
+            if self.logo_data:
+                logo_img = MIMEImage(self.logo_data)
+                logo_img.add_header('Content-ID', '<logo>')
+                logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
+                msg.attach(logo_img)
 
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
@@ -127,8 +134,8 @@ Best regards,
 The ConfAI Team
             """
 
-            # Build logo HTML
-            logo_html = f'<img src="data:image/png;base64,{self.logo_base64}" alt="ConfAI" style="max-height: 50px; margin: 0;">' if self.logo_base64 else '<h1 style="color: white; margin: 0; font-size: 32px;">ConfAI</h1>'
+            # Build logo HTML (use CID if logo available)
+            logo_html = '<img src="cid:logo" alt="ConfAI" style="max-height: 50px; margin: 0;">' if self.logo_data else '<h1 style="color: white; margin: 0; font-size: 32px;">ConfAI</h1>'
 
             html_content = f"""
 <html>
@@ -166,6 +173,13 @@ The ConfAI Team
             part2 = MIMEText(html_content, 'html')
             msg.attach(part1)
             msg.attach(part2)
+
+            # Attach logo as inline image with CID
+            if self.logo_data:
+                logo_img = MIMEImage(self.logo_data)
+                logo_img.add_header('Content-ID', '<logo>')
+                logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
+                msg.attach(logo_img)
 
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
