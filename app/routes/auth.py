@@ -1,6 +1,6 @@
 """Authentication routes."""
 from datetime import datetime, timedelta
-from flask import Blueprint, request, session, redirect, url_for, render_template, jsonify
+from flask import Blueprint, request, session, redirect, url_for, render_template, jsonify, make_response
 from app.models import User, Settings, get_db
 from app.services.email_service import email_service
 from app.utils.helpers import (
@@ -153,7 +153,12 @@ def verify():
 def logout():
     """Logout user."""
     session.clear()
-    return redirect(url_for('auth.login'))
+    response = make_response(redirect(url_for('auth.login')))
+    # Add cache-control headers to prevent caching
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @auth_bp.route('/me')
