@@ -73,6 +73,43 @@ def login_required(f):
     return decorated_function
 
 
+def api_login_required(f):
+    """Decorator to require login for API routes - returns JSON on failure."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        from flask import jsonify
+
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        # Execute the route function
+        result = f(*args, **kwargs)
+
+        # If result is already a Response object, add cache headers
+        if hasattr(result, 'headers'):
+            result.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            result.headers['Pragma'] = 'no-cache'
+            result.headers['Expires'] = '0'
+            return result
+
+        # If result is a tuple (response, status_code), convert and add headers
+        if isinstance(result, tuple):
+            response = make_response(result)
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
+
+        # Otherwise, make response and add headers
+        response = make_response(result)
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+
+    return decorated_function
+
+
 def admin_required(f):
     """Decorator to require admin access via session or API key."""
     @wraps(f)

@@ -1,6 +1,6 @@
 """Chat routes with LLM integration."""
 from flask import Blueprint, render_template, request, jsonify, session, Response
-from app.utils.helpers import login_required, sanitize_input
+from app.utils.helpers import login_required, api_login_required, sanitize_input
 from app.models import ChatThread, ChatMessage, Settings, ActivityLog, TokenUsage
 from app.services.llm_service import llm_service
 from app.services.embedding_service import embedding_service
@@ -20,7 +20,7 @@ def chat_page(hash_id=None):
 
 
 @chat_bp.route('/api/welcome', methods=['GET'])
-@login_required
+@api_login_required
 def get_welcome_message():
     """Get the welcome message."""
     welcome_message = Settings.get('welcome_message', '# Welcome to ConfAI!\n\nStart a new chat to begin.')
@@ -30,7 +30,7 @@ def get_welcome_message():
 
 
 @chat_bp.route('/api/conversation-starters', methods=['GET'])
-@login_required
+@api_login_required
 def get_conversation_starters():
     """Get conversation starters for empty chats."""
     starters = [
@@ -45,7 +45,7 @@ def get_conversation_starters():
 
 
 @chat_bp.route('/api/new-chat-text', methods=['GET'])
-@login_required
+@api_login_required
 def get_new_chat_text():
     """Get the new chat instructions text."""
     new_chat_text = Settings.get('new_chat_text', 'Start the conversation!\n\nAsk me anything about the conference materials.')
@@ -55,7 +55,7 @@ def get_new_chat_text():
 
 
 @chat_bp.route('/api/config', methods=['GET'])
-@login_required
+@api_login_required
 def get_config():
     """Get application configuration including LLM provider."""
     # Get provider from session first (per-user), then fall back to env default
@@ -85,7 +85,7 @@ def get_config():
 
 
 @chat_bp.route('/api/config', methods=['POST'])
-@login_required
+@api_login_required
 def update_config():
     """Update application configuration (LLM provider)."""
     data = request.json
@@ -121,7 +121,7 @@ def update_config():
 
 
 @chat_bp.route('/api/threads', methods=['GET'])
-@login_required
+@api_login_required
 def get_threads():
     """Get user's chat threads."""
     user_id = session['user_id']
@@ -141,7 +141,7 @@ def get_threads():
 
 
 @chat_bp.route('/api/threads', methods=['POST'])
-@login_required
+@api_login_required
 def create_thread():
     """Create a new chat thread."""
     user_id = session['user_id']
@@ -177,7 +177,7 @@ def create_thread():
 
 
 @chat_bp.route('/api/threads/<int:thread_id>', methods=['DELETE'])
-@login_required
+@api_login_required
 def delete_thread(thread_id):
     """Delete a chat thread."""
     # Verify ownership
@@ -191,7 +191,7 @@ def delete_thread(thread_id):
 
 
 @chat_bp.route('/api/threads/<int:thread_id>/rename', methods=['POST'])
-@login_required
+@api_login_required
 def auto_rename_thread(thread_id):
     """Auto-rename thread using Gemini based on user prompts."""
     # Verify ownership
@@ -254,7 +254,7 @@ Title:"""
 
 
 @chat_bp.route('/api/threads/<int:thread_id>/messages', methods=['GET'])
-@login_required
+@api_login_required
 def get_messages(thread_id):
     """Get messages for a thread."""
     # Verify ownership
@@ -279,7 +279,7 @@ def get_messages(thread_id):
 
 
 @chat_bp.route('/api/chat', methods=['POST'])
-@login_required
+@api_login_required
 def send_message():
     """Send a message and get streaming response."""
     data = request.json
@@ -314,7 +314,7 @@ def send_message():
 
 
 @chat_bp.route('/api/chat/stream', methods=['POST'])
-@login_required
+@api_login_required
 def stream_message():
     """Stream AI response using Server-Sent Events."""
     data = request.json
@@ -445,7 +445,7 @@ def stream_message():
 
 
 @chat_bp.route('/api/chat/debug-context', methods=['POST'])
-@login_required
+@api_login_required
 def get_debug_context():
     """Get debug context showing all LLM input before sending."""
     data = request.json

@@ -1,6 +1,6 @@
 """Insights wall routes."""
 from flask import Blueprint, render_template, request, jsonify, session
-from app.utils.helpers import login_required, sanitize_input
+from app.utils.helpers import login_required, api_login_required, sanitize_input
 from app.models import Insight, ActivityLog, get_db
 import os
 import json
@@ -54,7 +54,7 @@ def insights_page():
 
 
 @insights_bp.route('/api/insights', methods=['GET'])
-@login_required
+@api_login_required
 def get_insights():
     """Get all insights."""
     insights = Insight.get_all()
@@ -97,7 +97,7 @@ def get_insights():
 
 
 @insights_bp.route('/api/insights', methods=['POST'])
-@login_required
+@api_login_required
 def create_insight():
     """Share a new insight."""
     content = request.json.get('content', '')
@@ -143,7 +143,7 @@ def create_insight():
 
 
 @insights_bp.route('/api/insights/<int:insight_id>/vote', methods=['POST'])
-@login_required
+@api_login_required
 def vote_insight(insight_id):
     """Vote on an insight (up or down)."""
     vote_type = request.json.get('vote_type')  # 'up' or 'down'
@@ -180,7 +180,7 @@ def vote_insight(insight_id):
 
 
 @insights_bp.route('/api/insights/<int:insight_id>/vote', methods=['DELETE'])
-@login_required
+@api_login_required
 def remove_vote(insight_id):
     """Remove a vote from an insight."""
     user_id = session['user_id']
@@ -236,7 +236,7 @@ def remove_vote(insight_id):
 
 
 @insights_bp.route('/api/insights/<int:insight_id>/unshare', methods=['DELETE'])
-@login_required
+@api_login_required
 def unshare_insight(insight_id):
     """Unshare/revoke an insight (user can only unshare their own)."""
     user_id = session['user_id']
@@ -254,7 +254,7 @@ def unshare_insight(insight_id):
 
 
 @insights_bp.route('/api/insights/check', methods=['POST'])
-@login_required
+@api_login_required
 def check_shared_messages():
     """Check which messages in a thread are shared by the current user."""
     message_ids = request.json.get('message_ids', [])
