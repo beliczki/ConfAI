@@ -16,15 +16,288 @@
     opacity: 0.9;
 }
 
+/* Header message container (admin-editable) - matches empty-state styling */
+#header-message-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 20px;
+    background: transparent;
+    border: none;
+    color: #888;
+    text-align: center;
+}
+
+#header-message-container h1,
+#header-message-container h2,
+#header-message-container h3 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: #e0e0e0;
+}
+
+#header-message-container h4,
+#header-message-container h5,
+#header-message-container h6 {
+    font-size: 20px;
+    margin-bottom: 12px;
+    color: #e0e0e0;
+}
+
+#header-message-container p {
+    font-size: 16px;
+    color: #888;
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+#header-message-container ul,
+#header-message-container ol {
+    color: #888;
+    text-align: left;
+    display: inline-block;
+    max-width: 600px;
+    margin: 8px 0;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+#header-message-container a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+#header-message-container a:hover {
+    text-decoration: underline;
+}
+
+#header-message-container strong {
+    color: #e0e0e0;
+    font-weight: 600;
+}
+
+#header-message-container em {
+    color: #b0b0b0;
+    font-style: italic;
+}
+
+#header-message-container code {
+    background: #2a2a2a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
 .header-controls {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
+}
+
+.votes-info {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.votes-info span {
+    font-weight: 500;
+}
+
+.votes-info #votes-count,
+.votes-info #shares-count {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+/* Filter and Sort Controls */
+.filter-sort-controls {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 20px 20px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+}
+
+
+.button-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Text Filter */
+.text-filter-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(226, 0, 116, 0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: all 0.2s;
+}
+
+.text-filter-wrapper:focus-within {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(226, 0, 116, 0.3);
+}
+
+.text-filter-wrapper i {
+    width: 16px;
+    height: 16px;
+    color: white;
+    stroke: white;
+}
+
+.text-filter-wrapper svg {
+    stroke: white;
+}
+
+.text-filter-input {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    outline: none;
+    min-width: 200px;
+}
+
+.text-filter-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.control-btn {
+    background: transparent;
+    border: 2px solid #3a3a3a;
+    color: #999;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.control-btn:hover {
+    background: rgba(226, 0, 116, 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.control-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* Sort Selector - Model dropdown style */
+.sort-selector-inline {
+    position: relative;
+    min-width: 160px;
+}
+
+.sort-selector-btn-inline {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(226, 0, 116, 0.1);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sort-selector-btn-inline:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(226, 0, 116, 0.3);
+}
+
+.sort-selector-btn-inline i {
+    width: 16px;
+    height: 16px;
+    color: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+}
+
+.sort-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #2a2a2a;
+    border: 1px solid rgba(226, 0, 116, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.sort-dropdown-menu.show {
+    display: block;
+}
+
+.sort-dropdown-item {
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    display: block;
+}
+
+.sort-dropdown-item:hover {
+    background: rgba(226, 0, 116, 0.1);
+    color: white;
+}
+
+.sort-dropdown-item.active {
+    background: rgba(226, 0, 116, 0.15);
+    color: var(--primary);
+    font-weight: 500;
+}
+
+/* Auto-sort toggle */
+#auto-sort-toggle-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+#auto-sort-toggle {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary);
 }
 
 .sort-controls {
@@ -125,7 +398,7 @@
 .insights-container {
     max-width: 1200px;
     margin: 40px auto;
-    padding: 0 20px;
+    padding: 0;
 }
 
 .insights-grid {
@@ -138,18 +411,49 @@
 .insight-card {
     background: #1a1a1a;
     border-radius: 12px;
-    padding: 24px;
+    padding: 0;
     display: flex;
     flex-direction: column;
     border: 1px solid #3a3a3a;
     position: relative;
+    overflow: hidden;
+}
+
+/* Score header section (magenta bar at top) */
+.insight-score-header {
+    background: var(--primary);
+    padding: 20px 24px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+.insight-score-title {
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
 }
 
 .insight-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    margin: 16px 24px 0 24px;
+    padding-bottom: 12px;
+}
+
+/* User name badge (replaces old vote badge when scores visible) */
+.insight-user-badge {
+    font-size: 12px;
+    color: #999;
+    background: #2a2a2a;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #3a3a3a;
 }
 
 .insight-vote-badge {
@@ -176,7 +480,7 @@
     color: white;
     font-size: 32px;
     font-weight: 600;
-    margin: 0 0 12px 0;
+    margin: 12px 24px;
     line-height: 1.3;
 }
 
@@ -184,7 +488,7 @@
     flex: 1;
     color: white;
     line-height: 1.6;
-    margin-bottom: 16px;
+    margin: 0 24px 16px 24px;
     font-size: 15px;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -257,7 +561,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 16px;
+    padding: 16px 0 24px 0;
+    margin: 0 24px;
     border-top: 1px solid #3a3a3a;
 }
 
@@ -428,6 +733,15 @@
     .header-controls {
         flex-direction: column;
         gap: 16px;
+    }
+
+    .filter-sort-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .control-group {
+        flex-wrap: wrap;
     }
 
     .insight-footer {
