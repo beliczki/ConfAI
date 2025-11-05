@@ -3,7 +3,7 @@ import random
 import string
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import session, redirect, url_for, request
+from flask import session, redirect, url_for, request, make_response
 
 
 def generate_pin(length=4):
@@ -60,7 +60,16 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             return redirect(url_for('auth.login'))
-        return f(*args, **kwargs)
+
+        # Execute the route function
+        response = make_response(f(*args, **kwargs))
+
+        # Add cache-control headers to prevent caching of authenticated pages
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+
+        return response
     return decorated_function
 
 
