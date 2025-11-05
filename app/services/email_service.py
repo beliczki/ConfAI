@@ -60,7 +60,7 @@ The ConfAI Team
             html_content = f"""
 <html>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: #4a4a4a; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+    <div style="background: #1a1a1a; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
     </div>
     <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
