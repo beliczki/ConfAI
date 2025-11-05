@@ -16,7 +16,10 @@ chat_bp = Blueprint('chat', __name__)
 @login_required
 def chat_page(hash_id=None):
     """Main chat interface."""
-    return render_template('chat.html', hash_id=hash_id)
+    return render_template('chat.html',
+                         hash_id=hash_id,
+                         initial_view=None,
+                         insights_mode=None)
 
 
 @chat_bp.route('/api/welcome', methods=['GET'])

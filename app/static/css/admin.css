@@ -1607,9 +1607,20 @@
     font-size: 12px;
 }
 
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .user-name {
     color: white;
     font-weight: 500;
+}
+
+.user-email {
+    font-size: 12px;
+    color: #999;
 }
 
 .insight-stats {

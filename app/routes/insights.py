@@ -8,7 +8,16 @@ import google.generativeai as genai
 
 insights_bp = Blueprint('insights', __name__)
 
-VOTES_PER_USER = int(os.getenv('VOTES_PER_USER', 3))
+# Helper function to get limit settings from database
+def get_votes_per_user():
+    """Get votes per user limit from settings (defaults to 3)."""
+    from app.models import Settings
+    return int(Settings.get('votes_per_user', '3'))
+
+def get_shares_per_user():
+    """Get shares per user limit from settings (defaults to 3)."""
+    from app.models import Settings
+    return int(Settings.get('shares_per_user', '3'))
 
 # Configure Gemini
 gemini_key = os.getenv('GEMINI_API_KEY')
@@ -49,16 +58,59 @@ Insight content:
 @insights_bp.route('/insights')
 @login_required
 def insights_page():
-    """Insights wall page."""
-    return render_template('insights.html')
+    """General insights wall - all insights with filters."""
+    return render_template('chat.html',
+                         hash_id=None,
+                         initial_view='insights',
+                         insights_mode='all')
+
+
+@insights_bp.route('/myshares')
+@login_required
+def my_shares_page():
+    """My shared insights - only show insights I shared with unshare buttons."""
+    return render_template('chat.html',
+                         hash_id=None,
+                         initial_view='insights',
+                         insights_mode='myshares')
+
+
+@insights_bp.route('/myvotes')
+@login_required
+def my_votes_page():
+    """My voted insights - only show insights I voted on with vote buttons."""
+    return render_template('chat.html',
+                         hash_id=None,
+                         initial_view='insights',
+                         insights_mode='myvotes')
 
 
 @insights_bp.route('/api/insights', methods=['GET'])
 @api_login_required
 def get_insights():
-    """Get all insights."""
-    insights = Insight.get_all()
+    """Get all insights with optional filtering and sorting."""
     user_id = session['user_id']
+
+    # Get query parameters for filtering and sorting
+    filter_ownership = request.args.get('filter_ownership', 'all')
+    filter_votes = request.args.get('filter_votes', 'all')
+    sort_by = request.args.get('sort_by', 'newest')
+
+    # Validate parameters
+    valid_ownership = ['all', 'mine', 'voted']
+    valid_votes = ['all', 'top', 'controversial', 'unvoted']
+    valid_sorts = ['newest', 'oldest', 'alpha', 'mine_first', 'votes_desc', 'votes_asc', 'upvotes', 'controversial']
+
+    if filter_ownership not in valid_ownership:
+        filter_ownership = 'all'
+    if filter_votes not in valid_votes:
+        filter_votes = 'all'
+    if sort_by not in valid_sorts:
+        sort_by = 'newest'
+
+    # Get filtered and sorted insights
+    insights = Insight.get_filtered_sorted(user_id, filter_ownership, filter_votes, sort_by)
+
     user_votes_used = Insight.get_user_vote_count(user_id)
     shares_used = Insight.get_user_share_count(user_id)
 
@@ -71,7 +123,16 @@ def get_insights():
             user_votes[row['insight_id']] = row['vote_type']
 
     # Only show vote counts if user has used all 3 votes
-    show_counts = user_votes_used >= VOTES_PER_USER
+    show_counts = user_votes_used >= get_votes_per_user()
+
+    # Get header message from settings and replace macros
+    from app.models import Settings
+    header_message = Settings.get('insights_header_message', '')
+
+    # Replace macros with actual values
+    if header_message:
+        header_message = header_message.replace('${shares-per-user}', str(get_shares_per_user()))
+        header_message = header_message.replace('${votes-per-user}', str(get_votes_per_user()))
 
     return jsonify({
         'insights': [
@@ -90,9 +151,12 @@ def get_insights():
             } for i in insights
         ],
         'votes_used': user_votes_used,
-        'votes_remaining': VOTES_PER_USER - user_votes_used,
+        'votes_remaining': get_votes_per_user() - user_votes_used,
+        'votes_limit': get_votes_per_user(),
         'shares_used': shares_used,
-        'show_counts': show_counts
+        'shares_limit': get_shares_per_user(),
+        'show_counts': show_counts,
+        'header_message': header_message
     })
 
 
@@ -108,10 +172,11 @@ def create_insight():
 
     user_id = session['user_id']
 
-    # Check if user has reached the share limit (max 3)
+    # Check if user has reached the share limit
     share_count = Insight.get_user_share_count(user_id)
-    if share_count >= 3:
-        return jsonify({'error': 'You have reached the maximum of 3 shared insights. Please unshare one to share another.'}), 400
+    shares_limit = get_shares_per_user()
+    if share_count >= shares_limit:
+        return jsonify({'error': f'You have reached the maximum of {shares_limit} shared insights. Please unshare one to share another.'}), 400
 
     # Check if this message is already shared by this user
     if message_id:
@@ -138,7 +203,7 @@ def create_insight():
         'success': True,
         'insight_id': insight_id,
         'title': title,
-        'shares_remaining': 2 - share_count
+        'shares_remaining': get_shares_per_user() - share_count - 1
     })
 
 
@@ -155,7 +220,7 @@ def vote_insight(insight_id):
 
     # Check vote limit
     user_votes_used = Insight.get_user_vote_count(user_id)
-    if user_votes_used >= VOTES_PER_USER:
+    if user_votes_used >= get_votes_per_user():
         return jsonify({'error': 'You have used all your votes'}), 400
 
     success, message = Insight.vote(insight_id, user_id, vote_type)
@@ -175,7 +240,7 @@ def vote_insight(insight_id):
     return jsonify({
         'success': True,
         'message': message,
-        'votes_remaining': VOTES_PER_USER - (user_votes_used + 1)
+        'votes_remaining': get_votes_per_user() - (user_votes_used + 1)
     })
 
 
@@ -231,7 +296,7 @@ def remove_vote(insight_id):
     return jsonify({
         'success': True,
         'message': 'Vote removed',
-        'votes_remaining': VOTES_PER_USER - user_votes_used
+        'votes_remaining': get_votes_per_user() - user_votes_used
     })
 
 
@@ -247,7 +312,7 @@ def unshare_insight(insight_id):
         return jsonify({
             'success': True,
             'message': 'Insight unshared successfully',
-            'shares_remaining': 3 - share_count
+            'shares_remaining': get_shares_per_user() - share_count
         })
     else:
         return jsonify({'error': 'Insight not found or you do not have permission to unshare it'}), 404
@@ -279,5 +344,5 @@ def check_shared_messages():
     return jsonify({
         'shared_messages': shared_messages,
         'share_count': share_count,
-        'shares_remaining': 3 - share_count
+        'shares_remaining': get_shares_per_user() - share_count
     })

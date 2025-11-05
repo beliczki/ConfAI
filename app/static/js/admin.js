@@ -66,10 +66,12 @@ document.addEventListener('DOMContentLoaded', function() {
     loadLLMProviderSetting();
     loadContextModeSetting();
     loadEmbeddingSettings();
+    loadInsightsLimits();
     loadConversationStarters();
     loadModelNames();
     loadSummarizePrompt();
     loadSynthesisPrompt();
+    loadInsightsHeaderMessage();
 
     // Setup event listeners
     setupFileUpload();
@@ -78,6 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupNewChatTextCounter();
     setupSummarizePromptCounter();
     setupSynthesisPromptCounter();
+    setupInsightsHeaderCounter();
     setupLLMProviderChange();
     setupContextModeChange();
 
@@ -1205,6 +1208,47 @@ async function loadSynthesisPrompt() {
     }
 }
 
+/**
+ * Load insights header message from settings
+ */
+async function loadInsightsHeaderMessage() {
+    try {
+        const response = await fetch('/api/admin/insights-header-message', {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            console.log('No insights header message found');
+            return;
+        }
+
+        const data = await response.json();
+
+        const textarea = document.getElementById('insights-header-message');
+        if (textarea) {
+            textarea.value = data.message || '';
+            updateCharCount('insights-header-message', 'insights-header-chars');
+        }
+
+        console.log('Insights header message loaded successfully');
+    } catch (error) {
+        console.error('Error loading insights header message:', error);
+    }
+}
+
+/**
+ * Setup character counter for insights header message
+ */
+function setupInsightsHeaderCounter() {
+    const textarea = document.getElementById('insights-header-message');
+    if (textarea) {
+        textarea.addEventListener('input', () => {
+            updateCharCount('insights-header-message', 'insights-header-chars');
+        });
+        updateCharCount('insights-header-message', 'insights-header-chars');
+    }
+}
+
 // ============================
 // SETTINGS FUNCTIONALITY
 // ============================
@@ -1380,9 +1424,12 @@ async function saveSettings() {
     const provider = document.getElementById('llm-provider')?.value;
     const welcomeMessage = document.getElementById('welcome-message')?.value?.trim();
     const newChatText = document.getElementById('new-chat-text')?.value?.trim();
+    const insightsHeaderMessage = document.getElementById('insights-header-message')?.value?.trim() || '';
     const chunkSize = document.getElementById('chunk-size')?.value;
     const chunkOverlap = document.getElementById('chunk-overlap')?.value;
     const chunksToRetrieve = document.getElementById('chunks-to-retrieve')?.value;
+    const votesPerUser = document.getElementById('votes-per-user')?.value;
+    const sharesPerUser = document.getElementById('shares-per-user')?.value;
     const summarizePrompt = document.getElementById('summarize-prompt')?.value?.trim();
     const synthesisPrompt = document.getElementById('synthesis-prompt')?.value?.trim();
 
@@ -1433,7 +1480,7 @@ async function saveSettings() {
 
     try {
         // Save all settings in parallel
-        const [providerResponse, welcomeResponse, newChatResponse, embeddingsResponse, modelNamesResponse, startersResponse, summarizePromptResponse, synthesisPromptResponse] = await Promise.all([
+        const [providerResponse, welcomeResponse, newChatResponse, insightsHeaderResponse, embeddingsResponse, insightsLimitsResponse, modelNamesResponse, startersResponse, summarizePromptResponse, synthesisPromptResponse] = await Promise.all([
             fetch('/api/config', {
                 method: 'POST',
                 headers: {
@@ -1455,6 +1502,14 @@ async function saveSettings() {
                 },
                 body: JSON.stringify({ text: newChatText || '' })
             }),
+            fetch('/api/admin/insights-header-message', {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: insightsHeaderMessage })
+            }),
             fetch('/api/admin/embedding-settings', {
                 method: 'POST',
                 headers: {
@@ -1465,6 +1520,17 @@ async function saveSettings() {
                     chunk_size: parseInt(chunkSize),
                     chunk_overlap: parseInt(chunkOverlap),
                     chunks_to_retrieve: parseInt(chunksToRetrieve)
+                })
+            }),
+            fetch('/api/admin/insights-limits', {
+                method: 'POST',
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    votes_per_user: parseInt(votesPerUser),
+                    shares_per_user: parseInt(sharesPerUser)
                 })
             }),
             fetch('/api/admin/model-names', {
@@ -1506,7 +1572,7 @@ async function saveSettings() {
             })
         ]);
 
-        if (!providerResponse.ok || !welcomeResponse.ok || !embeddingsResponse.ok || !modelNamesResponse.ok || !startersResponse.ok || !summarizePromptResponse.ok || !synthesisPromptResponse.ok) {
+        if (!providerResponse.ok || !welcomeResponse.ok || !insightsHeaderResponse.ok || !embeddingsResponse.ok || !insightsLimitsResponse.ok || !modelNamesResponse.ok || !startersResponse.ok || !summarizePromptResponse.ok || !synthesisPromptResponse.ok) {
             throw new Error('Failed to save settings');
         }
 
@@ -1722,7 +1788,10 @@ function renderAdminInsights(insights) {
                         <div class="user-avatar-small" style="background: ${insight.avatar_gradient}">
                             ${insight.user_name.substring(0, 2).toUpperCase()}
                         </div>
-                        <span class="user-name">${escapeHtml(insight.user_name)}</span>
+                        <div class="user-info">
+                            <span class="user-name">${escapeHtml(insight.user_name)}</span>
+                            <span class="user-email">${escapeHtml(insight.user_email || 'N/A')}</span>
+                        </div>
                     </div>
                     <div class="insight-stats">
                         <span class="vote-stat">👍 ${insight.upvotes}</span>
@@ -1831,6 +1900,20 @@ async function deleteInsight(insightId) {
     } catch (error) {
         console.error('Error deleting insight:', error);
         showDialog('Failed to delete insight', 'error');
+    }
+}
+
+/**
+ * Export all insights to markdown file
+ */
+async function exportInsights() {
+    try {
+        // Trigger download
+        window.location.href = '/api/admin/insights/export';
+        showDialog('Insights export started', 'success');
+    } catch (error) {
+        console.error('Error exporting insights:', error);
+        showDialog('Failed to export insights', 'error');
     }
 }
 
@@ -2602,6 +2685,39 @@ async function loadEmbeddingSettings() {
 
     } catch (error) {
         console.error('Error loading embedding settings:', error);
+    }
+}
+
+/**
+ * Load insights limits (votes per user, shares per user)
+ */
+async function loadInsightsLimits() {
+    try {
+        const response = await fetch('/api/admin/insights-limits', {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            console.log('No insights limits found, using defaults');
+        } else {
+            const data = await response.json();
+
+            const votesPerUser = document.getElementById('votes-per-user');
+            const sharesPerUser = document.getElementById('shares-per-user');
+
+            if (votesPerUser && data.votes_per_user) {
+                votesPerUser.value = data.votes_per_user;
+            }
+
+            if (sharesPerUser && data.shares_per_user) {
+                sharesPerUser.value = data.shares_per_user;
+            }
+
+            console.log('Loaded insights limits:', data);
+        }
+
+    } catch (error) {
+        console.error('Error loading insights limits:', error);
     }
 }
 

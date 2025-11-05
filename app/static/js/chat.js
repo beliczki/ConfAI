@@ -42,10 +42,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     await loadUserInfo();
+    await loadModelInfo(); // Always load model info for avatar dropdown
+
+    // Check if we're on an insights page - if so, skip chat-specific initialization
+    if (typeof initialView !== 'undefined' && initialView === 'insights') {
+        await loadThreads(); // Load threads for sidebar
+        return; // Skip chat-specific initialization
+    }
+
+    // Chat-specific initialization
     await loadWelcomeMessage();
     await loadConversationStarters();
     await loadNewChatText();
-    await loadModelInfo();
     await loadThreads();
 
     // Check URL for thread ID and auto-select if present
@@ -217,7 +225,6 @@ function useConversationStarter(text) {
         input.value = text;
         autoResizeTextarea(input);
         input.focus();
-        hideConversationStarters();
     }
 }
 
@@ -412,6 +419,11 @@ async function loadThreads() {
         const data = await handleApiResponse(response);
         renderThreads(data.threads);
 
+        // Don't auto-select threads on insights pages
+        if (typeof initialView !== 'undefined' && initialView === 'insights') {
+            return; // Skip auto-selection on insights pages
+        }
+
         // Auto-select first thread if exists, otherwise show welcome screen
         if (data.threads.length > 0 && !currentThreadId) {
             selectThread(data.threads[0].id, data.threads[0].title, data.threads[0].hash_id);
@@ -495,8 +507,8 @@ async function selectThread(threadId, title, hashId = null) {
         window.history.pushState({threadId: threadId}, '', url);
     }
 
-    // Show chat view
-    showChat();
+    // Show chat view (thread selection should always show chat)
+    await showChat();
 
     // Update active thread in sidebar
     await loadThreads();
@@ -599,12 +611,8 @@ function renderMessages(messages) {
 
         container.innerHTML = '';
         container.appendChild(emptyStateDiv);
-        showConversationStarters();
         return;
     }
-
-    // Hide conversation starters when there are messages
-    hideConversationStarters();
 
     container.innerHTML = messages.map(m => {
         const isUser = m.role === 'user';

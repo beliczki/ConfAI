@@ -269,8 +269,16 @@
     <!-- Tab: Insights Management -->
     <div id="insights" class="tab-content">
         <div class="section-card">
-            <h2>Shared Insights Management</h2>
-            <p class="help-text">Manage user-shared insights from the Insights Wall. You can delete inappropriate or duplicate content.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                    <h2 style="margin-bottom: 8px;">Shared Insights Management</h2>
+                    <p class="help-text">Manage user-shared insights from the Insights Wall. You can delete inappropriate or duplicate content.</p>
+                </div>
+                <button class="btn btn-primary" onclick="exportInsights()" style="height: fit-content;">
+                    <i data-lucide="download"></i>
+                    <span>Export to Markdown</span>
+                </button>
+            </div>
 
             <div class="insights-section">
                 <div id="admin-insights-loading" class="loading">
@@ -441,6 +449,18 @@
             <div class="form-group">
                 <label for="rate-limit">Requests per Minute</label>
                 <input type="number" id="rate-limit" value="200" min="10" max="1000">
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Insights Wall Header</h3>
+            <p class="help-text">This message appears at the top of the Insights Wall. Use it to provide context, instructions, or encourage participation. Supports markdown.</p>
+            <div class="form-group">
+                <label for="insights-header-message">Header Message</label>
+                <textarea id="insights-header-message" rows="6" placeholder="Enter a message to display at the top of the Insights Wall..."></textarea>
+                <div class="char-count">
+                    <span id="insights-header-chars">0</span> characters
+                </div>
             </div>
         </div>
 

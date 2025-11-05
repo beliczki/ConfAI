@@ -12,35 +12,59 @@
     <p>Share and vote on the best AI-generated insights from our community</p>
 </div>
 
+<!-- Header Message (if set by admin) -->
+<div id="header-message-container" class="header-message" style="display: none;"></div>
+
 <div class="header-controls">
     <a href="/chat" class="nav-link">
         <span>←</span>
         <span>Back to Chat</span>
     </a>
-    <div class="filter-buttons">
-        <button id="filter-all" class="filter-btn active" onclick="filterInsights('all')">
-            All Insights
-        </button>
-        <button id="filter-votes" class="filter-btn" onclick="filterInsights('votes')">
-            <span>My Votes</span>
-            <span id="votes-count" class="count">0/3</span>
-        </button>
-        <button id="filter-shares" class="filter-btn" onclick="filterInsights('shares')">
-            <span>My Shares</span>
-            <span id="shares-count" class="count">0/3</span>
-        </button>
+    <div class="votes-info">
+        <span id="votes-info-text">Votes: <span id="votes-count">0/3</span></span>
+        <span id="shares-info-text">Shares: <span id="shares-count">0/3</span></span>
     </div>
 </div>
 
-<div class="sort-controls">
-    <label>Sort by:</label>
-    <div class="sort-buttons">
-        <button id="sort-time" class="sort-btn active" onclick="sortInsights('time')">
-            Time
-        </button>
-        <button id="sort-votes" class="sort-btn" onclick="sortInsights('votes')" style="display: none;">
-            Votes
-        </button>
+<div class="filter-sort-controls">
+    <div class="control-group">
+        <label>Filter by ownership:</label>
+        <div class="button-group">
+            <button class="control-btn active" data-ownership="all" onclick="updateOwnershipFilter('all')">All</button>
+            <button class="control-btn" data-ownership="mine" onclick="updateOwnershipFilter('mine')">My Insights</button>
+            <button class="control-btn" data-ownership="voted" onclick="updateOwnershipFilter('voted')">Voted On</button>
+        </div>
+    </div>
+
+    <div id="vote-status-filter-group" class="control-group" style="display: none;">
+        <label>Filter by votes:</label>
+        <div class="button-group">
+            <button class="control-btn active" data-vote-status="all" onclick="updateVoteStatusFilter('all')">All</button>
+            <button class="control-btn" data-vote-status="top" onclick="updateVoteStatusFilter('top')">Top Voted</button>
+            <button class="control-btn" data-vote-status="controversial" onclick="updateVoteStatusFilter('controversial')">Controversial</button>
+            <button class="control-btn" data-vote-status="unvoted" onclick="updateVoteStatusFilter('unvoted')">Unvoted</button>
+        </div>
+    </div>
+
+    <div class="control-group">
+        <label>Sort by:</label>
+        <div class="button-group">
+            <button class="control-btn active" data-sort="newest" onclick="updateSort('newest')">Newest</button>
+            <button class="control-btn" data-sort="oldest" onclick="updateSort('oldest')">Oldest</button>
+            <button class="control-btn" data-sort="alpha" onclick="updateSort('alpha')">A-Z</button>
+            <button class="control-btn" data-sort="mine_first" onclick="updateSort('mine_first')">Mine First</button>
+            <button class="control-btn" data-sort="votes_desc" style="display: none;" onclick="updateSort('votes_desc')">Most Voted</button>
+            <button class="control-btn" data-sort="votes_asc" style="display: none;" onclick="updateSort('votes_asc')">Least Voted</button>
+            <button class="control-btn" data-sort="upvotes" style="display: none;" onclick="updateSort('upvotes')">Most Upvoted</button>
+            <button class="control-btn" data-sort="controversial" style="display: none;" onclick="updateSort('controversial')">Most Controversial</button>
+        </div>
+    </div>
+
+    <div id="auto-sort-toggle-group" class="control-group" style="display: none;">
+        <label>
+            <input type="checkbox" id="auto-sort-toggle" onchange="toggleAutoSort()">
+            Auto-sort by votes when casting 3rd vote
+        </label>
     </div>
 </div>
 
@@ -61,5 +85,30 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Load external libraries first -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
+
+<!-- Configure libraries -->
+<script>
+    // Configure marked for security
+    if (typeof marked !== 'undefined' && marked.setOptions) {
+        marked.setOptions({
+            headerIds: false,
+            mangle: false,
+            breaks: true,
+            gfm: true,
+            sanitize: false,
+            smartypants: false
+        });
+    }
+
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+</script>
+
+<!-- Load insights.js -->
 <script src="{{ url_for('static', filename='js/insights.js') }}"></script>
 {% endblock %}

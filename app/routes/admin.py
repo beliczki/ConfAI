@@ -265,6 +265,40 @@ def update_new_chat_text():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/insights-header-message', methods=['GET'])
+@admin_required
+def get_insights_header_message():
+    """Get current insights header message for admin editing."""
+    try:
+        header_message = Settings.get('insights_header_message', '')
+        return jsonify({
+            'success': True,
+            'message': header_message
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/insights-header-message', methods=['POST'])
+@admin_required
+def update_insights_header_message():
+    """Update insights header message."""
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+
+        Settings.set('insights_header_message', message)
+
+        print(f"Insights header message updated at {datetime.now()}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Insights header message updated successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/api/admin/conversation-starters', methods=['GET'])
 @admin_required
 def get_conversation_starters():
@@ -1064,6 +1098,53 @@ def save_embedding_settings():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/insights-limits', methods=['GET'])
+@admin_required
+def get_insights_limits():
+    """Get insights limits (votes per user, shares per user)."""
+    try:
+        insights_limits = {
+            'votes_per_user': int(Settings.get('votes_per_user', 3)),
+            'shares_per_user': int(Settings.get('shares_per_user', 3))
+        }
+
+        return jsonify(insights_limits)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/insights-limits', methods=['POST'])
+@admin_required
+def save_insights_limits():
+    """Save insights limits (votes per user, shares per user)."""
+    try:
+        data = request.get_json()
+        votes_per_user = data.get('votes_per_user', 3)
+        shares_per_user = data.get('shares_per_user', 3)
+
+        # Validate settings
+        if not isinstance(votes_per_user, int) or votes_per_user < 1 or votes_per_user > 10:
+            return jsonify({'error': 'Invalid votes_per_user. Must be between 1 and 10'}), 400
+
+        if not isinstance(shares_per_user, int) or shares_per_user < 1 or shares_per_user > 10:
+            return jsonify({'error': 'Invalid shares_per_user. Must be between 1 and 10'}), 400
+
+        # Save to database
+        Settings.set('votes_per_user', votes_per_user)
+        Settings.set('shares_per_user', shares_per_user)
+
+        print(f"Updated insights limits: votes_per_user={votes_per_user}, shares_per_user={shares_per_user}")
+
+        return jsonify({
+            'success': True,
+            'votes_per_user': votes_per_user,
+            'shares_per_user': shares_per_user,
+            'message': 'Insights limits saved successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/api/admin/stats', methods=['GET'])
 @admin_required
 def get_stats():
@@ -1193,7 +1274,9 @@ def get_all_insights():
             {
                 'id': i['id'],
                 'content': i['content'],
+                'title': i.get('title', ''),
                 'user_name': i['user_name'],
+                'user_email': i.get('email', 'N/A'),  # Include user email
                 'avatar_gradient': i['avatar_gradient'],
                 'upvotes': i['upvotes'],
                 'downvotes': i['downvotes'],
@@ -1213,6 +1296,46 @@ def delete_insight(insight_id):
         return jsonify({'success': True, 'message': 'Insight deleted successfully'})
     else:
         return jsonify({'error': 'Insight not found'}), 404
+
+
+@admin_bp.route('/api/admin/insights/export', methods=['GET'])
+@admin_required
+def export_insights():
+    """Export all insights to a markdown file."""
+    from datetime import datetime
+    from flask import Response
+
+    insights = Insight.get_all()
+
+    # Build markdown content
+    lines = []
+    lines.append("# ConfAI Insights Export")
+    lines.append(f"\nExported: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"\nTotal Insights: {len(insights)}\n")
+    lines.append("---\n")
+
+    for i, insight in enumerate(insights, 1):
+        # Header with user info and date
+        date_str = datetime.fromisoformat(insight['created_at'].replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M:%S')
+        lines.append(f"## {i}. {insight.get('title', 'Untitled Insight')}")
+        lines.append(f"\n**Author:** {insight['user_name']} ({insight['email']})")
+        lines.append(f"\n**Date:** {date_str}")
+        lines.append(f"\n**Score:** {insight['net_votes']} (👍 {insight['upvotes']} | 👎 {insight['downvotes']})")
+        lines.append("\n### Content\n")
+        lines.append(insight['content'])
+        lines.append("\n\n---\n")
+
+    # Create response with markdown file
+    markdown_content = "\n".join(lines)
+    filename = f"insights_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+
+    return Response(
+        markdown_content,
+        mimetype='text/markdown',
+        headers={
+            'Content-Disposition': f'attachment; filename={filename}'
+        }
+    )
 
 
 @admin_bp.route('/api/admin/embeddings/process', methods=['POST'])

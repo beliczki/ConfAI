@@ -397,16 +397,94 @@ class Insight:
 
     @staticmethod
     def get_all():
-        """Get all insights with vote counts."""
+        """Get all insights with vote counts and user emails (for admin)."""
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT i.*, u.name as user_name, u.avatar_gradient,
+                SELECT i.*, u.name as user_name, u.email, u.avatar_gradient,
                        (i.upvotes - i.downvotes) as net_votes
                 FROM insights i
                 JOIN users u ON i.user_id = u.id
                 ORDER BY net_votes DESC, i.created_at DESC
             ''')
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_filtered_sorted(user_id, filter_ownership='all', filter_votes='all', sort_by='newest'):
+        """Get insights with filtering and sorting options.
+
+        Args:
+            user_id: Current user ID
+            filter_ownership: 'all' | 'mine' | 'voted'
+            filter_votes: 'all' | 'top' | 'controversial' | 'unvoted'
+            sort_by: 'newest' | 'oldest' | 'alpha' | 'mine_first' | 'votes_desc' | 'votes_asc' | 'upvotes' | 'controversial'
+        """
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Base query
+            query = '''
+                SELECT i.*, u.name as user_name, u.avatar_gradient,
+                       (i.upvotes - i.downvotes) as net_votes,
+                       ABS(i.upvotes - i.downvotes) as vote_spread
+                FROM insights i
+                JOIN users u ON i.user_id = u.id
+            '''
+
+            where_clauses = []
+            params = []
+
+            # Filter by ownership
+            if filter_ownership == 'mine':
+                where_clauses.append('i.user_id = ?')
+                params.append(user_id)
+            elif filter_ownership == 'voted':
+                where_clauses.append('EXISTS (SELECT 1 FROM votes v WHERE v.insight_id = i.id AND v.user_id = ?)')
+                params.append(user_id)
+
+            # Filter by vote status
+            if filter_votes == 'top':
+                # Top 25% by net votes
+                where_clauses.append('net_votes > 0')
+            elif filter_votes == 'controversial':
+                # High engagement but close split (both upvotes and downvotes > 0, small spread)
+                where_clauses.append('i.upvotes > 0 AND i.downvotes > 0')
+            elif filter_votes == 'unvoted':
+                # User hasn't voted on this
+                where_clauses.append('NOT EXISTS (SELECT 1 FROM votes v WHERE v.insight_id = i.id AND v.user_id = ?)')
+                params.append(user_id)
+
+            # Add WHERE clause if any filters
+            if where_clauses:
+                query += ' WHERE ' + ' AND '.join(where_clauses)
+
+            # Sorting
+            order_clauses = []
+            if sort_by == 'newest':
+                order_clauses.append('i.created_at DESC')
+            elif sort_by == 'oldest':
+                order_clauses.append('i.created_at ASC')
+            elif sort_by == 'alpha':
+                order_clauses.append('LOWER(COALESCE(i.title, i.content)) ASC')
+            elif sort_by == 'mine_first':
+                order_clauses.append('(i.user_id = ?) DESC, i.created_at DESC')
+                params.append(user_id)
+            elif sort_by == 'votes_desc':
+                order_clauses.append('net_votes DESC, i.created_at DESC')
+            elif sort_by == 'votes_asc':
+                order_clauses.append('net_votes ASC, i.created_at DESC')
+            elif sort_by == 'upvotes':
+                order_clauses.append('i.upvotes DESC, i.created_at DESC')
+            elif sort_by == 'controversial':
+                # Most controversial = high total engagement but low spread
+                order_clauses.append('(i.upvotes + i.downvotes) DESC, vote_spread ASC, i.created_at DESC')
+            else:
+                # Default to newest
+                order_clauses.append('i.created_at DESC')
+
+            query += ' ORDER BY ' + ', '.join(order_clauses)
+
+            cursor.execute(query, params)
             return cursor.fetchall()
 
     @staticmethod
