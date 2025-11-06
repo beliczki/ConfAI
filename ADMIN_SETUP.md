@@ -25,12 +25,22 @@ The admin dashboard provides a comprehensive interface for managing ConfAI's AI 
 - **Context Preview**: See what content will be injected into AI context
 - **Statistics**: Real-time character and token counting
 
-### 3. Application Statistics
+### 3. Insights Wall Management
+- **View All Insights**: Centralized dashboard showing all user-shared insights
+- **User Attribution**: Display user emails for each shared insight
+- **Text Search**: Real-time filtering across insight content
+- **Sort Options**: Latest First, Oldest First, Most Voted, Most Shared
+- **Vote Statistics**: View vote counts (upvotes/downvotes) for each insight
+- **Share Statistics**: Track how many users have shared each insight
+- **Markdown Export**: Export all insights to markdown format for documentation
+- **Filter Indicators**: Visual feedback showing active search/sort states
+
+### 4. Application Statistics
 - **User Metrics**: Total users, chat threads, shared insights, votes cast
 - **Recent Activity**: Timeline of user actions and system events
 - **Context Window Usage**: Visual indicator of context window utilization
 
-### 4. Settings (UI Ready)
+### 5. Settings (UI Ready)
 - LLM Provider selection
 - Max tokens per response
 - Rate limiting configuration
@@ -182,6 +192,31 @@ curl -H "X-Admin-Key: your-admin-key" \
     ]
   }
   ```
+
+#### GET `/api/admin/insights`
+- **Description**: Get all shared insights from all users
+- **Auth**: Session or API key
+- **Response**:
+  ```json
+  {
+    "insights": [
+      {
+        "id": 1,
+        "content": "Insight text...",
+        "created_at": "2025-11-06T10:30:00",
+        "user_email": "user@example.com",
+        "upvotes": 5,
+        "downvotes": 1,
+        "share_count": 3
+      }
+    ]
+  }
+  ```
+
+#### GET `/api/admin/insights/export`
+- **Description**: Export all insights to markdown format
+- **Auth**: Session or API key
+- **Response**: Markdown file download with all insights formatted
 
 ## How It Works
 
@@ -337,6 +372,6 @@ For issues or questions:
 
 ---
 
-**Last Updated**: 2025-10-29
-**Version**: 1.0.0
-**ConfAI Admin Dashboard Implementation Complete**
+**Last Updated**: 2025-11-06
+**Version**: 1.1.0
+**ConfAI Admin Dashboard - Now with Insights Management**
