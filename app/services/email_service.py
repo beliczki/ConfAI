@@ -60,24 +60,38 @@ The ConfAI Team
             html_content = f"""
 <html>
   <head>
-    <meta name="color-scheme" content="light dark">
-    <meta name="supported-color-schemes" content="light dark">
+    <meta name="color-scheme" content="only light">
+    <meta name="supported-color-schemes" content="light">
     <style>
       :root {{
-        color-scheme: light dark;
-        supported-color-schemes: light dark;
+        color-scheme: only light;
+        supported-color-schemes: light;
       }}
-      [data-ogsc] .email-header {{ background-color: #1a1a1a !important; }}
-      .email-header {{ background-color: #1a1a1a !important; }}
+      .email-header {{
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+        mso-line-height-rule: exactly;
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }}
+      [data-ogsc] .email-header {{
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+      }}
+      u + .body .email-header {{ background-color: #1a1a1a !important; }}
       @media (prefers-color-scheme: dark) {{
-        .email-header {{ background-color: #1a1a1a !important; }}
+        .email-header {{
+          background-color: #1a1a1a !important;
+          background: #1a1a1a !important;
+        }}
       }}
     </style>
   </head>
-  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  <body class="body" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="display:none;max-height:0px;overflow:hidden;"></div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #1a1a1a !important;">
       <tr>
-        <td class="email-header" bgcolor="#1a1a1a" style="background-color: #1a1a1a !important; background: #1a1a1a !important; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+        <td class="email-header" bgcolor="#1a1a1a" style="background-color: #1a1a1a !important; background: #1a1a1a !important; mso-line-height-rule: exactly; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
           {logo_html}
         </td>
       </tr>
@@ -159,24 +173,38 @@ The ConfAI Team
             html_content = f"""
 <html>
   <head>
-    <meta name="color-scheme" content="light dark">
-    <meta name="supported-color-schemes" content="light dark">
+    <meta name="color-scheme" content="only light">
+    <meta name="supported-color-schemes" content="light">
     <style>
       :root {{
-        color-scheme: light dark;
-        supported-color-schemes: light dark;
+        color-scheme: only light;
+        supported-color-schemes: light;
       }}
-      [data-ogsc] .email-header {{ background-color: #1a1a1a !important; }}
-      .email-header {{ background-color: #1a1a1a !important; }}
+      .email-header {{
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+        mso-line-height-rule: exactly;
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }}
+      [data-ogsc] .email-header {{
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+      }}
+      u + .body .email-header {{ background-color: #1a1a1a !important; }}
       @media (prefers-color-scheme: dark) {{
-        .email-header {{ background-color: #1a1a1a !important; }}
+        .email-header {{
+          background-color: #1a1a1a !important;
+          background: #1a1a1a !important;
+        }}
       }}
     </style>
   </head>
-  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+  <body class="body" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="display:none;max-height:0px;overflow:hidden;"></div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #1a1a1a !important;">
       <tr>
-        <td class="email-header" bgcolor="#1a1a1a" style="background-color: #1a1a1a !important; background: #1a1a1a !important; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+        <td class="email-header" bgcolor="#1a1a1a" style="background-color: #1a1a1a !important; background: #1a1a1a !important; mso-line-height-rule: exactly; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
           {logo_html}
           <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
         </td>
