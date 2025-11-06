@@ -80,11 +80,9 @@ The ConfAI Team
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div class="email-header" style="position: relative; overflow: hidden; background: linear-gradient(to bottom, #1a1a1a, #2a2a2a); padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
-      <img src="cid:bggrad" alt="" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;">
-      <div style="position: relative; z-index: 1;">
-        {logo_html}
-      </div>
+    <div class="email-header" style="overflow: hidden; background: linear-gradient(to bottom, #1a1a1a, #2a2a2a); padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+      <img src="cid:bggrad" alt="" style="height: 1px; opacity: 0.1;">
+      {logo_html}
     </div>
     <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
       <h2 style="color: #333;">Your Login PIN</h2>
@@ -180,12 +178,10 @@ The ConfAI Team
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div class="email-header" style="position: relative; overflow: hidden; background: linear-gradient(to bottom, #1a1a1a, #2a2a2a); padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
-      <img src="cid:bggrad" alt="" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;">
-      <div style="position: relative; z-index: 1;">
-        {logo_html}
-        <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
-      </div>
+    <div class="email-header" style="overflow: hidden; background: linear-gradient(to bottom, #1a1a1a, #2a2a2a); padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+      <img src="cid:bggrad" alt="" style="height: 1px; opacity: 0.1;">
+      {logo_html}
+      <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
     </div>
     <div style="background: #f8f8f8; padding: 40px; border-radius: 0 0 10px 10px;">
       <h2 style="color: #333; font-size: 24px; margin-top: 0;">Welcome, {name}!</h2>
