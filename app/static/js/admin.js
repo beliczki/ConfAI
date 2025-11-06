@@ -1805,12 +1805,9 @@ function renderAdminInsights(insights) {
                 <div class="insight-header">
                     <div class="insight-user">
                         <div class="user-avatar-small" style="background: ${insight.avatar_gradient}">
-                            ${insight.user_name.substring(0, 2).toUpperCase()}
+                            ${insight.user_email.substring(0, 2).toUpperCase()}
                         </div>
-                        <div class="user-info">
-                            <span class="user-name">${escapeHtml(insight.user_name)}</span>
-                            <span class="user-email">${escapeHtml(insight.user_email || 'N/A')}</span>
-                        </div>
+                        <span class="insight-user-email">${escapeHtml(insight.user_email || 'N/A')}</span>
                     </div>
                     <div class="insight-stats">
                         <span class="vote-stat">👍 ${insight.upvotes}</span>
