@@ -63,11 +63,15 @@ The ConfAI Team
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
     <style>
-      .email-header {{ background-color: #1a1a1a !important; }}
+      .email-header {{
+        background-color: #1a1a1a !important;
+        background-image: url(cid:bgpixel) !important;
+        background-repeat: repeat !important;
+      }}
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div class="email-header" style="background-color: #1a1a1a; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+    <div class="email-header" style="background-color: #1a1a1a; background-image: url(cid:bgpixel); background-repeat: repeat; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
     </div>
     <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -101,6 +105,13 @@ The ConfAI Team
                 logo_img.add_header('Content-ID', '<logo>')
                 logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
                 msg.attach(logo_img)
+
+            # Attach 1x1 dark pixel for background (prevents Gmail dark mode inversion)
+            dark_pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAW9EJRAAAAABJRU5ErkJggg==')
+            bg_img = MIMEImage(dark_pixel, 'png')
+            bg_img.add_header('Content-ID', '<bgpixel>')
+            bg_img.add_header('Content-Disposition', 'inline', filename='bg.png')
+            msg.attach(bg_img)
 
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
@@ -150,11 +161,15 @@ The ConfAI Team
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
     <style>
-      .email-header {{ background-color: #1a1a1a !important; }}
+      .email-header {{
+        background-color: #1a1a1a !important;
+        background-image: url(cid:bgpixel) !important;
+        background-repeat: repeat !important;
+      }}
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div class="email-header" style="background-color: #1a1a1a; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+    <div class="email-header" style="background-color: #1a1a1a; background-image: url(cid:bgpixel); background-repeat: repeat; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
       <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
     </div>
@@ -194,6 +209,13 @@ The ConfAI Team
                 logo_img.add_header('Content-ID', '<logo>')
                 logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
                 msg.attach(logo_img)
+
+            # Attach 1x1 dark pixel for background (prevents Gmail dark mode inversion)
+            dark_pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAW9EJRAAAAABJRU5ErkJggg==')
+            bg_img = MIMEImage(dark_pixel, 'png')
+            bg_img.add_header('Content-ID', '<bgpixel>')
+            bg_img.add_header('Content-Disposition', 'inline', filename='bg.png')
+            msg.attach(bg_img)
 
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
