@@ -1,6 +1,6 @@
 # ConfAI Design Guide
 
-This document outlines the official design system for ConfAI, extracted from the actual CSS implementation across chat, insights, and dialog systems.
+This document outlines the official design system for ConfAI, extracted from the actual CSS implementation across chat, insights, dialog systems, and email templates. It includes guidelines for both web application UI and email design compatibility.
 
 ## Color Palette
 
@@ -397,15 +397,17 @@ Use horizontal dividers to separate categories within a single surface:
 
 ## Design Principles
 
-1. **Outline First**: Default button style is outline (transparent background, colored border) that fills on hover
-2. **Consistent Spacing**: Use the spacing system for margins and padding
-3. **Clear Hierarchy**: Use color, size, and weight to establish visual hierarchy
-4. **Subtle Interactions**: Use `0.2s` transitions for smooth state changes
-5. **Dark Theme**: All components designed for dark mode (#0a0a0a background)
-6. **Accessibility**: Maintain sufficient color contrast, focus states, and semantic HTML
-7. **Icon Consistency**: Always use Lucide icons, initialize with `lucide.createIcons()`
-8. **Surface Organization**: Each navigation section leads to one full-width surface, with categories separated by dividers and margins
-9. **Grid-Based Layouts**: Use 4-column responsive grids for displaying multiple items (colors, gradients, etc.)
+1. **Mobile First**: Design and develop for mobile screens first, then progressively enhance for larger screens
+2. **Light & Dark Mode Ready**: All components must support both light and dark modes across the app and emails
+3. **Outline First**: Default button style is outline (transparent background, colored border) that fills on hover
+4. **Consistent Spacing**: Use the spacing system for margins and padding
+5. **Clear Hierarchy**: Use color, size, and weight to establish visual hierarchy
+6. **Subtle Interactions**: Use `0.2s` transitions for smooth state changes
+7. **Dark Theme**: All components designed for dark mode (#0a0a0a background)
+8. **Accessibility**: Maintain sufficient color contrast, focus states, and semantic HTML
+9. **Icon Consistency**: Always use Lucide icons, initialize with `lucide.createIcons()`
+10. **Surface Organization**: Each navigation section leads to one full-width surface, with categories separated by dividers and margins
+11. **Grid-Based Layouts**: Use 4-column responsive grids for displaying multiple items (colors, gradients, etc.)
 
 ## Component States
 
@@ -424,6 +426,56 @@ Generally adds background fill or increases brightness/opacity
 - Tabs: Primary color text + bottom border
 - Buttons: Filled background
 - Checkboxes/toggles: Primary color background
+
+## Email Design Compatibility
+
+### Dark Mode Inversion Bypass
+
+Email clients like Gmail and Outlook often invert dark backgrounds to light when in dark mode. We've discovered effective techniques to prevent this:
+
+#### CSS Gradient Trick
+**Problem**: Email clients invert solid background colors (`background-color: #1a1a1a`) in dark mode
+**Solution**: Use CSS gradient instead of solid color
+
+```css
+/* ❌ Gets inverted in dark mode */
+background-color: #1a1a1a;
+
+/* ✅ Stays dark in all modes */
+background: linear-gradient(to bottom, #1a1a1a, #2a2a2a);
+```
+
+**Why it works**: Email clients treat CSS gradients differently than solid colors and don't apply color inversion to them.
+
+#### CID Image Attachment Trick
+**Additional protection**: Attaching an image with Content-ID reference (`cid:`) also helps prevent background inversion
+
+```html
+<!-- Attach image as MIME part with Content-ID -->
+<img src="cid:bggrad" alt="" style="height: 1px; opacity: 0.1;">
+```
+
+**Why it works**: The presence of CID-referenced images signals to email clients that the element has intentional styling that shouldn't be modified.
+
+### Email Client Compatibility Notes
+
+1. **Position properties stripped**: Gmail removes `position: relative`, `position: absolute`, and `z-index` styles for security
+2. **Background images**: CID attachments work better than `background-image` URLs or data URIs
+3. **CSS support**: Use inline styles, avoid external stylesheets
+4. **Rounded corners**: Use `overflow: hidden` on parent containers to maintain `border-radius`
+5. **Gradients work**: CSS `linear-gradient()` is well-supported and prevents dark mode inversion
+6. **Tables for layout**: Consider using tables for complex layouts in emails for better compatibility
+
+### Email Testing Checklist
+
+When designing emails, test across:
+- ✅ Desktop Gmail (light mode)
+- ✅ Desktop Gmail (dark mode)
+- ✅ Mobile Gmail (light mode)
+- ✅ Mobile Gmail (dark mode)
+- ✅ Outlook (desktop)
+- ✅ Outlook (web)
+- ✅ Apple Mail
 
 ## Reference
 For live examples and complete CSS reference, visit: `/designlanguage`
