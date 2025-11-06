@@ -106,8 +106,8 @@ The ConfAI Team
                 logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
                 msg.attach(logo_img)
 
-            # Attach 1x1 dark pixel for background (prevents Gmail dark mode inversion)
-            dark_pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAW9EJRAAAAABJRU5ErkJggg==')
+            # Attach 10x10 dark tile for background (Gmail blocks 1x1 as tracking pixel)
+            dark_pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNgYGD4z4AEmBhGFaILAgAVgQQB+U6BXgAAAABJRU5ErkJggg==')
             bg_img = MIMEImage(dark_pixel, 'png')
             bg_img.add_header('Content-ID', '<bgpixel>')
             bg_img.add_header('Content-Disposition', 'inline', filename='bg.png')
@@ -210,8 +210,8 @@ The ConfAI Team
                 logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
                 msg.attach(logo_img)
 
-            # Attach 1x1 dark pixel for background (prevents Gmail dark mode inversion)
-            dark_pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAW9EJRAAAAABJRU5ErkJggg==')
+            # Attach 10x10 dark tile for background (Gmail blocks 1x1 as tracking pixel)
+            dark_pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNgYGD4z4AEmBhGFaILAgAVgQQB+U6BXgAAAABJRU5ErkJggg==')
             bg_img = MIMEImage(dark_pixel, 'png')
             bg_img.add_header('Content-ID', '<bgpixel>')
             bg_img.add_header('Content-Disposition', 'inline', filename='bg.png')
