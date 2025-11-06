@@ -11,7 +11,10 @@
       "Bash(git push:*)",
       "Bash(git add:*)",
       "Bash(git reset:*)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(powershell.exe -Command \"Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(nslookup:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
