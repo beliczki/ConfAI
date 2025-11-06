@@ -1929,7 +1929,6 @@ async function exportInsights() {
     try {
         // Trigger download
         window.location.href = '/api/admin/insights/export';
-        showDialog('Insights export started', 'success');
     } catch (error) {
         console.error('Error exporting insights:', error);
         showDialog('Failed to export insights', 'error');
