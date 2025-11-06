@@ -878,7 +878,7 @@ input:checked + .toggle-slider-small:before {
     top: 0;
     bottom: 0;
     width: 4px;
-    background: linear-gradient(135deg, #D2691E, #CC785C);
+    background: linear-gradient(135deg, #FF491E, #C2891E);
     border-radius: 4px 0 0 4px;
 }
 

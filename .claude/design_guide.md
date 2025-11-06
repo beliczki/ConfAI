@@ -29,7 +29,7 @@ This document outlines the official design system for ConfAI, extracted from the
 ### AI Model Avatar Gradients
 Each LLM has a unique gradient for visual differentiation:
 
-- **Claude**: `linear-gradient(135deg, #D2691E, #CC785C)` - Dark orange to lighter orange
+- **Claude**: `linear-gradient(135deg, #FF491E, #C2891E)` - Orange gradient
 - **Gemini**: `linear-gradient(135deg, #001E50, #00A0E9)` - Dark blue to light blue
 - **Grok**: `linear-gradient(135deg, #4A5568, #718096)` - Dark gray to light gray
 - **Perplexity**: `linear-gradient(135deg, #0D9488, #14B8A6)` - Dark teal to light teal

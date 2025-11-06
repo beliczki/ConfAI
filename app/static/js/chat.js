@@ -24,7 +24,7 @@ function parseMarkdown(text) {
 function getAIGradient(model) {
     const gradients = {
         'gemini': 'linear-gradient(135deg, #001E50, #00A0E9)', // Blue gradient
-        'claude': 'linear-gradient(135deg, #D2691E, #CC785C)', // Dark orange gradient
+        'claude': 'linear-gradient(135deg, #FF491E, #C2891E)', // Orange gradient
         'grok': 'linear-gradient(135deg, #4A5568, #718096)', // Grey gradient
         'perplexity': 'linear-gradient(135deg, #0D9488, #14B8A6)' // Teal gradient
     };
