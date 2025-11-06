@@ -631,7 +631,7 @@ function renderMessages(messages) {
         const shareLimitReached = shareCount >= 3;
 
         return `
-            <div class="message ${m.role}" data-message-id="${m.id || ''}">
+            <div class="message ${m.role}" data-message-id="${m.id || ''}" ${m.role === 'assistant' ? `data-model="${m.model || 'gemini'}"` : ''}>
                 <div class="message-avatar" style="background: ${gradient}"><span>${avatar}</span></div>
                 <div>
                     <div class="message-content">${content}</div>
@@ -870,6 +870,7 @@ function addStreamingMessage() {
 
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message assistant';
+    messageDiv.setAttribute('data-model', currentModel || 'gemini');
     messageDiv.innerHTML = `
         <div class="message-avatar" style="background: ${gradient}"><span>AI</span></div>
         <div>
