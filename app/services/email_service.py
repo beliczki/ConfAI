@@ -60,42 +60,24 @@ The ConfAI Team
             html_content = f"""
 <html>
   <head>
-    <meta name="color-scheme" content="only light">
+    <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
     <style>
-      :root {{
-        color-scheme: only light;
-        supported-color-schemes: light;
-      }}
       .email-header {{
         background-color: #1a1a1a !important;
-        background: #1a1a1a !important;
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==) !important;
+        background-repeat: repeat !important;
         mso-line-height-rule: exactly;
-        -webkit-text-size-adjust: 100%;
-        -ms-text-size-adjust: 100%;
       }}
       [data-ogsc] .email-header {{
-        background-color: #1a1a1a !important;
-        background: #1a1a1a !important;
-      }}
-      u + .body .email-header {{ background-color: #1a1a1a !important; }}
-      @media (prefers-color-scheme: dark) {{
-        .email-header {{
-          background-color: #1a1a1a !important;
-          background: #1a1a1a !important;
-        }}
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==) !important;
       }}
     </style>
   </head>
-  <body class="body" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="display:none;max-height:0px;overflow:hidden;"></div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #1a1a1a !important;">
-      <tr>
-        <td class="email-header" bgcolor="#1a1a1a" style="background-color: #1a1a1a !important; background: #1a1a1a !important; mso-line-height-rule: exactly; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
-          {logo_html}
-        </td>
-      </tr>
-    </table>
+  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div class="email-header" style="background-color: #1a1a1a; background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==); background-repeat: repeat; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+      {logo_html}
+    </div>
     <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
       <h2 style="color: #333;">Your Login PIN</h2>
       <p style="color: #666; font-size: 16px;">Hello,</p>
@@ -173,43 +155,25 @@ The ConfAI Team
             html_content = f"""
 <html>
   <head>
-    <meta name="color-scheme" content="only light">
+    <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
     <style>
-      :root {{
-        color-scheme: only light;
-        supported-color-schemes: light;
-      }}
       .email-header {{
         background-color: #1a1a1a !important;
-        background: #1a1a1a !important;
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==) !important;
+        background-repeat: repeat !important;
         mso-line-height-rule: exactly;
-        -webkit-text-size-adjust: 100%;
-        -ms-text-size-adjust: 100%;
       }}
       [data-ogsc] .email-header {{
-        background-color: #1a1a1a !important;
-        background: #1a1a1a !important;
-      }}
-      u + .body .email-header {{ background-color: #1a1a1a !important; }}
-      @media (prefers-color-scheme: dark) {{
-        .email-header {{
-          background-color: #1a1a1a !important;
-          background: #1a1a1a !important;
-        }}
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==) !important;
       }}
     </style>
   </head>
-  <body class="body" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="display:none;max-height:0px;overflow:hidden;"></div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #1a1a1a !important;">
-      <tr>
-        <td class="email-header" bgcolor="#1a1a1a" style="background-color: #1a1a1a !important; background: #1a1a1a !important; mso-line-height-rule: exactly; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
-          {logo_html}
-          <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
-        </td>
-      </tr>
-    </table>
+  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div class="email-header" style="background-color: #1a1a1a; background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==); background-repeat: repeat; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+      {logo_html}
+      <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
+    </div>
     <div style="background: #f8f8f8; padding: 40px; border-radius: 0 0 10px 10px;">
       <h2 style="color: #333; font-size: 24px; margin-top: 0;">Welcome, {name}!</h2>
       <p style="color: #666; font-size: 16px; line-height: 1.6;">
