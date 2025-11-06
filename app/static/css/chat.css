@@ -855,27 +855,53 @@ input:checked + .toggle-slider-small:before {
     color: #e0e0e0;
     border-bottom-left-radius: 4px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
 }
 
-/* Model-specific gradient borders */
-.message.assistant[data-model="gemini"] .message-content {
-    border-left: 4px solid;
-    border-image: linear-gradient(135deg, #4285F4, #34A853) 1;
+/* Model-specific gradient borders using pseudo-element to preserve border-radius */
+.message.assistant[data-model="gemini"] .message-content::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #001E50, #00A0E9);
+    border-radius: 4px 0 0 4px;
 }
 
-.message.assistant[data-model="openai"] .message-content {
-    border-left: 4px solid;
-    border-image: linear-gradient(135deg, #10A37F, #1A7F64) 1;
+.message.assistant[data-model="claude"] .message-content::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #D2691E, #CC785C);
+    border-radius: 4px 0 0 4px;
 }
 
-.message.assistant[data-model="claude"] .message-content {
-    border-left: 4px solid;
-    border-image: linear-gradient(135deg, #D97757, #C96846) 1;
+.message.assistant[data-model="grok"] .message-content::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #4A5568, #718096);
+    border-radius: 4px 0 0 4px;
 }
 
-.message.assistant[data-model="perplexity"] .message-content {
-    border-left: 4px solid;
-    border-image: linear-gradient(135deg, #0D9488, #14B8A6) 1;
+.message.assistant[data-model="perplexity"] .message-content::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #0D9488, #14B8A6);
+    border-radius: 4px 0 0 4px;
 }
 
 .message-time {
