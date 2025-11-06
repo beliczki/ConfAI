@@ -67,17 +67,17 @@ The ConfAI Team
         color-scheme: light dark;
         supported-color-schemes: light dark;
       }}
-      [data-ogsc] .email-header {{ background-color: #a1a1a1 !important; }}
-      .email-header {{ background-color: #a1a1a1 !important; }}
+      [data-ogsc] .email-header {{ background-color: #1a1a1a !important; }}
+      .email-header {{ background-color: #1a1a1a !important; }}
       @media (prefers-color-scheme: dark) {{
-        .email-header {{ background-color: #a1a1a1 !important; }}
+        .email-header {{ background-color: #1a1a1a !important; }}
       }}
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td class="email-header" bgcolor="#a1a1a1" style="background-color: #a1a1a1 !important; background: #a1a1a1 !important; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+        <td class="email-header" bgcolor="#1a1a1a" style="background-color: #1a1a1a !important; background: #1a1a1a !important; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
           {logo_html}
         </td>
       </tr>
@@ -166,17 +166,17 @@ The ConfAI Team
         color-scheme: light dark;
         supported-color-schemes: light dark;
       }}
-      [data-ogsc] .email-header {{ background-color: #a1a1a1 !important; }}
-      .email-header {{ background-color: #a1a1a1 !important; }}
+      [data-ogsc] .email-header {{ background-color: #1a1a1a !important; }}
+      .email-header {{ background-color: #1a1a1a !important; }}
       @media (prefers-color-scheme: dark) {{
-        .email-header {{ background-color: #a1a1a1 !important; }}
+        .email-header {{ background-color: #1a1a1a !important; }}
       }}
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td class="email-header" bgcolor="#a1a1a1" style="background-color: #a1a1a1 !important; background: #a1a1a1 !important; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+        <td class="email-header" bgcolor="#1a1a1a" style="background-color: #1a1a1a !important; background: #1a1a1a !important; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
           {logo_html}
           <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
         </td>
