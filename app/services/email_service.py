@@ -1,6 +1,5 @@
 """Email service for sending PIN codes."""
 import os
-import base64
 import smtplib
 import time
 from email.mime.text import MIMEText
@@ -19,6 +18,7 @@ class EmailService:
         self.password = os.getenv('SMTP_PASSWORD')
         self.from_email = os.getenv('EMAIL_FROM', 'noreply@confai.com')
         self.logo_data = self._load_logo()
+        self.bg_gradient_data = self._load_bg_gradient()
 
     def _load_logo(self):
         """Load the logo image as bytes."""
@@ -28,6 +28,16 @@ class EmailService:
                 return f.read()
         except Exception as e:
             print(f"Warning: Could not load logo for email: {e}")
+            return None
+
+    def _load_bg_gradient(self):
+        """Load the background gradient image as bytes."""
+        try:
+            bg_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'img', 'greybggrad.jpg')
+            with open(bg_path, 'rb') as f:
+                return f.read()
+        except Exception as e:
+            print(f"Warning: Could not load background gradient for email: {e}")
             return None
 
     def send_pin_email(self, to_email, pin):
@@ -65,13 +75,14 @@ The ConfAI Team
     <style>
       .email-header {{
         background-color: #1a1a1a !important;
-        background-image: url(cid:bgpixel) !important;
-        background-repeat: repeat !important;
+        background-image: url(cid:bggrad) !important;
+        background-size: cover !important;
+        background-position: center !important;
       }}
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div class="email-header" style="background-color: #1a1a1a; background-image: url(cid:bgpixel); background-repeat: repeat; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+    <div class="email-header" style="background-color: #1a1a1a; background-image: url(cid:bggrad); background-size: cover; background-position: center; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
     </div>
     <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -106,12 +117,12 @@ The ConfAI Team
                 logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
                 msg.attach(logo_img)
 
-            # Attach 10x10 dark tile for background (Gmail blocks 1x1 as tracking pixel)
-            dark_pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNgYGD4z4AEmBhGFaILAgAVgQQB+U6BXgAAAABJRU5ErkJggg==')
-            bg_img = MIMEImage(dark_pixel, 'png')
-            bg_img.add_header('Content-ID', '<bgpixel>')
-            bg_img.add_header('Content-Disposition', 'inline', filename='bg.png')
-            msg.attach(bg_img)
+            # Attach background gradient image
+            if self.bg_gradient_data:
+                bg_img = MIMEImage(self.bg_gradient_data, 'jpeg')
+                bg_img.add_header('Content-ID', '<bggrad>')
+                bg_img.add_header('Content-Disposition', 'inline', filename='bggrad.jpg')
+                msg.attach(bg_img)
 
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
@@ -163,13 +174,14 @@ The ConfAI Team
     <style>
       .email-header {{
         background-color: #1a1a1a !important;
-        background-image: url(cid:bgpixel) !important;
-        background-repeat: repeat !important;
+        background-image: url(cid:bggrad) !important;
+        background-size: cover !important;
+        background-position: center !important;
       }}
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div class="email-header" style="background-color: #1a1a1a; background-image: url(cid:bgpixel); background-repeat: repeat; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+    <div class="email-header" style="background-color: #1a1a1a; background-image: url(cid:bggrad); background-size: cover; background-position: center; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
       <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
     </div>
@@ -210,12 +222,12 @@ The ConfAI Team
                 logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
                 msg.attach(logo_img)
 
-            # Attach 10x10 dark tile for background (Gmail blocks 1x1 as tracking pixel)
-            dark_pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNgYGD4z4AEmBhGFaILAgAVgQQB+U6BXgAAAABJRU5ErkJggg==')
-            bg_img = MIMEImage(dark_pixel, 'png')
-            bg_img.add_header('Content-ID', '<bgpixel>')
-            bg_img.add_header('Content-Disposition', 'inline', filename='bg.png')
-            msg.attach(bg_img)
+            # Attach background gradient image
+            if self.bg_gradient_data:
+                bg_img = MIMEImage(self.bg_gradient_data, 'jpeg')
+                bg_img.add_header('Content-ID', '<bggrad>')
+                bg_img.add_header('Content-Disposition', 'inline', filename='bggrad.jpg')
+                msg.attach(bg_img)
 
             # Send email
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
