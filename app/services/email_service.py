@@ -63,19 +63,11 @@ The ConfAI Team
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
     <style>
-      .email-header {{
-        background-color: #1a1a1a !important;
-        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==) !important;
-        background-repeat: repeat !important;
-        mso-line-height-rule: exactly;
-      }}
-      [data-ogsc] .email-header {{
-        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==) !important;
-      }}
+      .email-header {{ background-color: #1a1a1a !important; }}
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div class="email-header" style="background-color: #1a1a1a; background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==); background-repeat: repeat; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+    <div class="email-header" style="background-color: #1a1a1a; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
     </div>
     <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -158,19 +150,11 @@ The ConfAI Team
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
     <style>
-      .email-header {{
-        background-color: #1a1a1a !important;
-        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==) !important;
-        background-repeat: repeat !important;
-        mso-line-height-rule: exactly;
-      }}
-      [data-ogsc] .email-header {{
-        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==) !important;
-      }}
+      .email-header {{ background-color: #1a1a1a !important; }}
     </style>
   </head>
   <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div class="email-header" style="background-color: #1a1a1a; background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mM4cOj4fwAHvALHkSvjCAAAAABJRU5ErkJggg==); background-repeat: repeat; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+    <div class="email-header" style="background-color: #1a1a1a; padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
       {logo_html}
       <p style="color: rgba(255,255,255,0.9); margin-top: 10px; font-size: 16px;">Conference Intelligence Assistant</p>
     </div>
