@@ -21,7 +21,7 @@ def index():
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("100 per minute")
 def login():
     """Login page and PIN request."""
     if request.method == 'GET':
@@ -83,7 +83,7 @@ def login():
 
 
 @auth_bp.route('/verify', methods=['POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("100 per minute")
 def verify():
     """Verify PIN and log in user."""
     email = request.json.get('email', '').strip().lower()
