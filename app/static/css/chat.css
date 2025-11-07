@@ -40,7 +40,8 @@ button:focus-visible,
 
 .chat-container {
     display: flex;
-    height: 100vh;
+    height: 100vh; /* Fallback for older browsers */
+    height: 100dvh; /* Dynamic viewport height - adjusts for mobile browser chrome */
 }
 
 /* Sidebar */
