@@ -39,8 +39,10 @@ Thumbs.db
 # Documents (sensitive)
 documents/books/*
 documents/transcripts/*
+documents/context/*
 !documents/books/.gitkeep
 !documents/transcripts/.gitkeep
+!documents/context/.gitkeep
 
 # Vector storage
 *.faiss
