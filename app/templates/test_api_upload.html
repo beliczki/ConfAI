@@ -3,286 +3,450 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test API Upload - ConfAI</title>
+    <title>Test API - ConfAI</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a1a; min-height: 100vh; padding: 20px; color: #e0e0e0; }
+        .page-container { max-width: 1200px; margin: 0 auto; }
+        .page-header { text-align: center; color: white; margin-bottom: 30px; }
+        .page-header img { height: 48px; margin-bottom: 16px; }
+        .page-header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+        .page-header p { opacity: 0.7; font-size: 14px; }
+        .sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .sections-grid { grid-template-columns: 1fr; } }
+        .section { background: #2a2a2a; border-radius: 12px; padding: 28px; border: 1px solid #3a3a3a; }
+        .section h2 { font-size: 20px; margin-bottom: 6px; color: #fff; font-weight: 600; }
+        .section .subtitle { color: #888; margin-bottom: 20px; font-size: 13px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-weight: 500; margin-bottom: 6px; color: #ccc; font-size: 13px; }
+        input[type="text"], input[type="file"], textarea, select {
+            width: 100%; padding: 10px 12px; border: 1px solid #444; border-radius: 6px; font-size: 14px;
+            background: #333; color: #fff; transition: border-color 0.2s;
         }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #E20074, #001E50);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            max-width: 500px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-
-        h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-            color: #001E50;
-        }
-
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #333;
-        }
-
-        input[type="file"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px dashed #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: border-color 0.3s;
-        }
-
-        input[type="file"]:hover {
-            border-color: #E20074;
-        }
-
-        .file-info {
-            margin-top: 10px;
-            padding: 12px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            font-size: 14px;
-            color: #666;
-            display: none;
-        }
-
-        .file-info.active {
-            display: block;
-        }
-
-        button {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #E20074, #001E50);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(226, 0, 116, 0.4);
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .response {
-            margin-top: 20px;
-            padding: 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .response.active {
-            display: block;
-        }
-
-        .response.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .response.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .response pre {
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 4px;
-            overflow-x: auto;
-            font-size: 12px;
-        }
-
-        .note {
-            margin-top: 20px;
-            padding: 12px;
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            font-size: 13px;
-            color: #856404;
-        }
+        input[type="file"] { border-style: dashed; cursor: pointer; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #E20074; }
+        input::placeholder, textarea::placeholder { color: #666; }
+        textarea { min-height: 100px; font-family: monospace; resize: vertical; }
+        select { cursor: pointer; }
+        select option { background: #333; color: #fff; }
+        .btn { padding: 10px 18px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
+        .btn:hover { opacity: 0.9; }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: #E20074; color: white; }
+        .btn-secondary { background: #444; color: #ddd; }
+        .btn-success { background: #00a854; color: white; }
+        .btn-danger { background: #cf1322; color: white; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .response { margin-top: 16px; padding: 14px; border-radius: 8px; font-size: 13px; display: none; }
+        .response.active { display: block; }
+        .response.success { background: rgba(0, 168, 84, 0.15); color: #52c41a; border: 1px solid rgba(0, 168, 84, 0.3); }
+        .response.error { background: rgba(207, 19, 34, 0.15); color: #ff4d4f; border: 1px solid rgba(207, 19, 34, 0.3); }
+        .response.info { background: rgba(226, 0, 116, 0.1); color: #E20074; border: 1px solid rgba(226, 0, 116, 0.3); }
+        .response pre { margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow-x: auto; font-size: 11px; white-space: pre-wrap; color: #aaa; }
+        .file-info { margin-top: 10px; padding: 12px; background: #333; border-radius: 6px; font-size: 13px; color: #aaa; display: none; }
+        .file-info.active { display: block; }
+        .help-section { margin-top: 20px; padding: 16px; background: #222; border-radius: 8px; border-left: 3px solid #E20074; }
+        .help-section h4 { color: #E20074; margin-bottom: 12px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .help-section p { font-size: 12px; color: #999; margin-bottom: 8px; line-height: 1.6; }
+        .help-section code { background: #333; padding: 2px 6px; border-radius: 3px; font-size: 11px; color: #E20074; }
+        .help-section .endpoint { background: #333; padding: 10px 12px; border-radius: 6px; margin: 8px 0; font-family: 'SF Mono', Monaco, monospace; font-size: 11px; color: #ccc; }
+        .help-section .endpoint .method { font-weight: bold; color: #52c41a; }
+        .help-section .endpoint .method.post { color: #faad14; }
+        .help-section .endpoint .method.delete { color: #ff4d4f; }
+        .help-section .endpoint small { color: #777; display: block; margin-top: 4px; }
+        .session-info { margin-top: 16px; padding: 14px; background: rgba(226, 0, 116, 0.1); border-radius: 8px; border: 1px solid rgba(226, 0, 116, 0.2); display: none; }
+        .session-info.active { display: block; }
+        .session-info h4 { color: #E20074; margin-bottom: 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .session-info .stat { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+        .session-info .stat-label { color: #888; }
+        .session-info .stat-value { font-weight: 600; color: #fff; font-family: 'SF Mono', Monaco, monospace; }
+        .divider { height: 1px; background: #3a3a3a; margin: 20px 0; }
+        .note { margin-top: 20px; padding: 12px 16px; background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 8px; font-size: 12px; color: #888; }
+        .note strong { color: #ccc; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Test API Upload</h1>
-        <p class="subtitle">Test the public context file upload endpoint</p>
+    <div class="page-container">
+        <div class="page-header">
+            <img src="/static/img/telekom-confai-white.png" alt="ConfAI">
+            <h1>API Test Console</h1>
+            <p>Test file upload and streaming transcription endpoints</p>
+        </div>
 
-        <form id="uploadForm">
-            <div class="form-group">
-                <label for="fileInput">Select File (.txt or .md)</label>
-                <input type="file" id="fileInput" accept=".txt,.md" required>
-                <div class="file-info" id="fileInfo"></div>
+        <div class="sections-grid">
+            <!-- File Upload Section -->
+            <div class="section">
+                <h2>File Upload</h2>
+                <p class="subtitle">Upload a complete file to context</p>
+
+                <form id="uploadForm">
+                    <div class="form-group">
+                        <label for="fileInput">Select File (.txt or .md)</label>
+                        <input type="file" id="fileInput" accept=".txt,.md" required>
+                        <div class="file-info" id="fileInfo"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="uploadBtn">Upload File</button>
+                </form>
+
+                <div class="response" id="uploadResponse"></div>
+
+                <div class="help-section">
+                    <h4>API Endpoint</h4>
+                    <div class="endpoint"><span class="method post">POST</span> /api/upload-context</div>
+                    <p>Upload a .txt or .md file. The file will be added to base context and available immediately for chat queries.</p>
+                    <p><strong>Request:</strong> multipart/form-data with <code>file</code> field</p>
+                </div>
             </div>
 
-            <button type="submit" id="submitBtn">Upload File</button>
-        </form>
+            <!-- Streaming Transcription Section -->
+            <div class="section">
+                <h2>Streaming Transcription</h2>
+                <p class="subtitle">Test real-time streaming content API</p>
 
-        <div class="response" id="response"></div>
+                <div class="form-group">
+                    <label for="streamFilename">Filename</label>
+                    <input type="text" id="streamFilename" placeholder="live_transcript.txt" value="live_transcript.txt">
+                </div>
+
+                <div class="form-group">
+                    <label for="sourceId">Source Identifier (optional)</label>
+                    <input type="text" id="sourceId" placeholder="my-transcription-service">
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" id="startStreamBtn">Start Session</button>
+                    <button type="button" class="btn btn-secondary" id="listSessionsBtn">List Sessions</button>
+                    <button type="button" class="btn btn-success" id="closeStreamBtn" disabled>Close Stream</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="sessionSelector">Active Session</label>
+                    <select id="sessionSelector" disabled>
+                        <option value="">No active sessions</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="appendContent">Content to Append</label>
+                    <textarea id="appendContent" placeholder="Enter text to append to the stream..."></textarea>
+                </div>
+
+                <button type="button" class="btn btn-primary" id="appendBtn" disabled>Append Content</button>
+
+                <div class="session-info" id="sessionInfo">
+                    <h4>Active Session</h4>
+                    <div class="stat">
+                        <span class="stat-label">Session ID</span>
+                        <span class="stat-value" id="activeSessionId">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Filename</span>
+                        <span class="stat-value" id="activeFilename">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Total Chars</span>
+                        <span class="stat-value" id="activeTotalChars">0</span>
+                    </div>
+                </div>
+
+                <div class="response" id="streamResponse"></div>
+
+                <div class="help-section">
+                    <h4>How Streaming Works</h4>
+                    <p><strong>1. Start a session</strong> - Creates an empty file and returns a session ID</p>
+                    <p><strong>2. Append content</strong> - Send chunks of text as they become available</p>
+                    <p><strong>3. Close stream</strong> - Ends the session and saves file to base context</p>
+                    <p style="color: #888; font-size: 11px;">File management (delete, move, rename) is handled in Admin panel</p>
+
+                    <h4 style="margin-top: 16px;">API Endpoints</h4>
+                    <div class="endpoint"><span class="method post">POST</span> /api/transcription/start<small>{"filename": "...", "source_identifier": "..."}</small></div>
+                    <div class="endpoint"><span class="method post">POST</span> /api/transcription/append<small>{"session_id": "...", "content": "..."}</small></div>
+                    <div class="endpoint"><span class="method">GET</span> /api/transcription/status/{session_id}</div>
+                    <div class="endpoint"><span class="method post">POST</span> /api/transcription/finalize<small>{"session_id": "..."}</small></div>
+                    <div class="endpoint"><span class="method">GET</span> /api/transcription/sessions</div>
+
+                    <p style="margin-top: 12px;"><strong>Note:</strong> All streaming endpoints require admin authentication via <code>X-Admin-Key</code> header or session cookie.</p>
+                </div>
+            </div>
+        </div>
 
         <div class="note">
-            <strong>Note:</strong> Open your browser's Developer Console (F12) to see detailed logs of the upload process.
+            <strong>Developer Console:</strong> Open F12 to see detailed API request/response logs.
         </div>
     </div>
 
     <script>
+        // ===== File Upload Section =====
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('fileInfo');
         const uploadForm = document.getElementById('uploadForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const responseDiv = document.getElementById('response');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadResponse = document.getElementById('uploadResponse');
 
-        // Log file input change
         fileInput.addEventListener('change', (e) => {
-            console.log('=== FILE INPUT CHANGED ===');
             const file = e.target.files[0];
-
             if (file) {
-                console.log('Selected file:', {
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                    lastModified: new Date(file.lastModified).toISOString()
-                });
-
-                // Show file info on page
-                fileInfo.innerHTML = `
-                    <strong>Selected:</strong> ${file.name}<br>
-                    <strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB<br>
-                    <strong>Type:</strong> ${file.type || 'text/plain'}
-                `;
+                fileInfo.innerHTML = '<strong>Selected:</strong> ' + file.name + '<br><strong>Size:</strong> ' + (file.size / 1024).toFixed(2) + ' KB';
                 fileInfo.classList.add('active');
             } else {
-                console.log('No file selected');
                 fileInfo.classList.remove('active');
             }
-            console.log('========================\n');
         });
 
-        // Handle form submission
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            console.log('=== FORM SUBMIT ===');
             const file = fileInput.files[0];
-
-            if (!file) {
-                console.error('No file selected');
-                return;
-            }
-
-            // Create FormData payload
+            if (!file) return;
             const formData = new FormData();
             formData.append('file', file);
-
-            console.log('Payload:', {
-                file: file.name,
-                size: file.size,
-                formDataKeys: Array.from(formData.keys())
-            });
-
-            // Disable submit button
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Uploading...';
-            responseDiv.classList.remove('active', 'success', 'error');
-
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            uploadResponse.classList.remove('active', 'success', 'error');
             try {
-                console.log('Making API request to: /api/upload-context');
-                console.log('Request method: POST');
-                console.log('Request body: FormData with file');
-
-                const response = await fetch('/api/upload-context', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                console.log('Response status:', response.status);
-                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
+                const response = await fetch('/api/upload-context', { method: 'POST', body: formData });
                 const data = await response.json();
-
-                console.log('=== API RESPONSE ===');
-                console.log('Response data:', data);
-                console.log('===================\n');
-
+                console.log('Upload response:', data);
                 if (response.ok && data.success) {
-                    responseDiv.className = 'response active success';
-                    responseDiv.innerHTML = `
-                        <strong>✓ Upload successful!</strong>
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
-                    `;
+                    uploadResponse.className = 'response active success';
+                    uploadResponse.innerHTML = '<strong>Success!</strong><pre>' + JSON.stringify(data, null, 2) + '</pre>';
                 } else {
-                    responseDiv.className = 'response active error';
-                    responseDiv.innerHTML = `
-                        <strong>✗ Upload failed</strong>
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
-                    `;
+                    uploadResponse.className = 'response active error';
+                    uploadResponse.innerHTML = '<strong>Failed</strong><pre>' + JSON.stringify(data, null, 2) + '</pre>';
                 }
             } catch (error) {
-                console.error('=== ERROR ===');
-                console.error('Error:', error);
-                console.error('============\n');
-
-                responseDiv.className = 'response active error';
-                responseDiv.innerHTML = `
-                    <strong>✗ Error</strong>
-                    <pre>${error.message}</pre>
-                `;
+                console.error('Upload error:', error);
+                uploadResponse.className = 'response active error';
+                uploadResponse.innerHTML = '<strong>Error</strong><pre>' + error.message + '</pre>';
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Upload File';
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload File';
             }
         });
 
-        console.log('Test API Upload page loaded');
-        console.log('Endpoint: /api/upload-context');
-        console.log('Accepted file types: .txt, .md');
+        // ===== Streaming Section =====
+        const streamFilename = document.getElementById('streamFilename');
+        const sourceId = document.getElementById('sourceId');
+        const startStreamBtn = document.getElementById('startStreamBtn');
+        const listSessionsBtn = document.getElementById('listSessionsBtn');
+        const sessionInfo = document.getElementById('sessionInfo');
+        const activeSessionId = document.getElementById('activeSessionId');
+        const activeFilename = document.getElementById('activeFilename');
+        const activeTotalChars = document.getElementById('activeTotalChars');
+        const sessionSelector = document.getElementById('sessionSelector');
+        const appendContent = document.getElementById('appendContent');
+        const appendBtn = document.getElementById('appendBtn');
+        const closeStreamBtn = document.getElementById('closeStreamBtn');
+        const streamResponse = document.getElementById('streamResponse');
+
+        // Store sessions data for lookup
+        let sessionsData = [];
+
+        let currentSessionId = null;
+
+        function showStreamResponse(type, message, data) {
+            streamResponse.className = 'response active ' + type;
+            let html = '<strong>' + message + '</strong>';
+            if (data) html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            streamResponse.innerHTML = html;
+        }
+
+        function updateSessionUI(sessionId, filename, totalChars) {
+            currentSessionId = sessionId;
+            if (sessionId) {
+                sessionInfo.classList.add('active');
+                activeSessionId.textContent = sessionId;
+                activeFilename.textContent = filename;
+                activeTotalChars.textContent = (totalChars || 0).toLocaleString();
+                appendBtn.disabled = false;
+                closeStreamBtn.disabled = false;
+                // Update selector value
+                if (sessionSelector.querySelector(`option[value="${sessionId}"]`)) {
+                    sessionSelector.value = sessionId;
+                }
+            } else {
+                sessionInfo.classList.remove('active');
+                appendBtn.disabled = true;
+                closeStreamBtn.disabled = true;
+                sessionSelector.value = '';
+            }
+        }
+
+        function populateSessionSelector(sessions) {
+            sessionsData = sessions;
+            sessionSelector.innerHTML = '';
+            if (sessions.length === 0) {
+                sessionSelector.innerHTML = '<option value="">No active sessions</option>';
+                sessionSelector.disabled = true;
+            } else {
+                sessions.forEach(s => {
+                    const option = document.createElement('option');
+                    option.value = s.session_id;
+                    option.textContent = `${s.filename} (${s.total_chars.toLocaleString()} chars)`;
+                    sessionSelector.appendChild(option);
+                });
+                sessionSelector.disabled = false;
+            }
+        }
+
+        sessionSelector.addEventListener('change', () => {
+            const selectedId = sessionSelector.value;
+            if (selectedId) {
+                const session = sessionsData.find(s => s.session_id === selectedId);
+                if (session) {
+                    updateSessionUI(session.session_id, session.filename, session.total_chars);
+                }
+            } else {
+                updateSessionUI(null, null);
+            }
+        });
+
+        startStreamBtn.addEventListener('click', async () => {
+            const filename = streamFilename.value.trim() || 'live_transcript.txt';
+            const source = sourceId.value.trim() || 'test-page';
+            startStreamBtn.disabled = true;
+            startStreamBtn.textContent = 'Starting...';
+            try {
+                const response = await fetch('/api/transcription/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: filename, source_identifier: source })
+                });
+                const data = await response.json();
+                console.log('Start stream response:', data);
+                if (response.ok && data.success) {
+                    // Add new session to selector
+                    const newSession = { session_id: data.session_id, filename: data.filename, total_chars: 0 };
+                    sessionsData.push(newSession);
+                    const option = document.createElement('option');
+                    option.value = data.session_id;
+                    option.textContent = `${data.filename} (0 chars)`;
+                    if (sessionSelector.querySelector('option[value=""]')) {
+                        sessionSelector.innerHTML = '';
+                    }
+                    sessionSelector.appendChild(option);
+                    sessionSelector.disabled = false;
+
+                    updateSessionUI(data.session_id, data.filename, 0);
+                    showStreamResponse('success', data.resumed ? 'Resumed session' : 'Session started', data);
+                } else {
+                    showStreamResponse('error', 'Failed to start', data);
+                }
+            } catch (error) {
+                console.error('Start stream error:', error);
+                showStreamResponse('error', 'Error', { message: error.message });
+            } finally {
+                startStreamBtn.disabled = false;
+                startStreamBtn.textContent = 'Start Session';
+            }
+        });
+
+        listSessionsBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/transcription/sessions');
+                const data = await response.json();
+                console.log('Sessions:', data);
+                if (response.ok && data.success) {
+                    // Populate the session selector
+                    populateSessionSelector(data.sessions);
+
+                    if (data.sessions.length === 0) {
+                        showStreamResponse('info', 'No active sessions', data);
+                        updateSessionUI(null, null);
+                    } else {
+                        showStreamResponse('info', 'Found ' + data.count + ' session(s)', data);
+                        // Auto-select first session
+                        const first = data.sessions[0];
+                        updateSessionUI(first.session_id, first.filename, first.total_chars);
+                    }
+                } else {
+                    showStreamResponse('error', 'Failed to list', data);
+                }
+            } catch (error) {
+                console.error('List sessions error:', error);
+                showStreamResponse('error', 'Error', { message: error.message });
+            }
+        });
+
+        appendBtn.addEventListener('click', async () => {
+            if (!currentSessionId) return;
+            const content = appendContent.value;
+            if (!content) { showStreamResponse('error', 'Please enter content'); return; }
+            appendBtn.disabled = true;
+            appendBtn.textContent = 'Appending...';
+            try {
+                const response = await fetch('/api/transcription/append', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: currentSessionId, content: content })
+                });
+                const data = await response.json();
+                console.log('Append response:', data);
+                if (response.ok && data.success) {
+                    activeTotalChars.textContent = data.total_chars.toLocaleString();
+                    appendContent.value = '';
+                    // Update selector text
+                    const option = sessionSelector.querySelector(`option[value="${currentSessionId}"]`);
+                    if (option) {
+                        const session = sessionsData.find(s => s.session_id === currentSessionId);
+                        if (session) {
+                            session.total_chars = data.total_chars;
+                            option.textContent = `${session.filename} (${data.total_chars.toLocaleString()} chars)`;
+                        }
+                    }
+                    showStreamResponse('success', 'Content appended', data);
+                } else {
+                    showStreamResponse('error', 'Failed to append', data);
+                }
+            } catch (error) {
+                console.error('Append error:', error);
+                showStreamResponse('error', 'Error', { message: error.message });
+            } finally {
+                appendBtn.disabled = false;
+                appendBtn.textContent = 'Append Content';
+            }
+        });
+
+        closeStreamBtn.addEventListener('click', async () => {
+            if (!currentSessionId) return;
+            closeStreamBtn.disabled = true;
+            closeStreamBtn.textContent = 'Closing...';
+            try {
+                const response = await fetch('/api/transcription/finalize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: currentSessionId })
+                });
+                const data = await response.json();
+                console.log('Close stream response:', data);
+                if (response.ok && data.success) {
+                    // Remove session from selector
+                    const closedSessionId = currentSessionId;
+                    const option = sessionSelector.querySelector(`option[value="${closedSessionId}"]`);
+                    if (option) option.remove();
+                    sessionsData = sessionsData.filter(s => s.session_id !== closedSessionId);
+
+                    // If no more sessions, show empty state
+                    if (sessionsData.length === 0) {
+                        sessionSelector.innerHTML = '<option value="">No active sessions</option>';
+                        sessionSelector.disabled = true;
+                    }
+
+                    updateSessionUI(null, null);
+                    showStreamResponse('success', 'Stream closed - file saved to base context', data);
+                } else {
+                    showStreamResponse('error', 'Failed to close stream', data);
+                }
+            } catch (error) {
+                console.error('Close stream error:', error);
+                showStreamResponse('error', 'Error', { message: error.message });
+            } finally {
+                closeStreamBtn.disabled = !currentSessionId;
+                closeStreamBtn.textContent = 'Close Stream';
+            }
+        });
+
+        console.log('Test API page loaded');
     </script>
 </body>
 </html>

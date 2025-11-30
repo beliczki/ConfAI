@@ -1,5 +1,5 @@
 """Admin routes for document management."""
-from flask import Blueprint, request, jsonify, render_template, session, send_file, current_app
+from flask import Blueprint, request, jsonify, render_template, session, send_file, current_app, Response
 from app.utils.helpers import admin_required, login_required, generate_gradient, extract_name_from_email, is_valid_email
 from app.models import Settings, Insight, User, Invite, get_db
 from app.services.email_service import email_service
@@ -585,16 +585,12 @@ def summarize_file_stream():
             with open(summary_path, 'w', encoding='utf-8') as f:
                 f.write(final_summary)
 
-            # Load context config and set this file to window mode
+            # Load context config and add to base_context (summary is always-in)
             config = load_context_config()
-            file_modes = config.get('file_modes', {})
-            file_modes[summary_filename] = 'window'
-            config['file_modes'] = file_modes
-
-            enabled_files = config.get('enabled_files', {})
-            enabled_files[summary_filename] = True
-            config['enabled_files'] = enabled_files
-
+            if 'base_context' not in config:
+                config['base_context'] = []
+            if summary_filename not in config['base_context']:
+                config['base_context'].append(summary_filename)
             save_context_config(config)
 
             # Send completion event
@@ -698,17 +694,12 @@ def summarize_file():
         with open(summary_path, 'w', encoding='utf-8') as f:
             f.write(final_summary)
 
-        # Load context config and set this file to window mode
+        # Load context config and add to base_context (summary is always-in)
         config = load_context_config()
-        file_modes = config.get('file_modes', {})
-        file_modes[summary_filename] = 'window'  # Set to window mode
-        config['file_modes'] = file_modes
-
-        # Enable the file by default
-        enabled_files = config.get('enabled_files', {})
-        enabled_files[summary_filename] = True
-        config['enabled_files'] = enabled_files
-
+        if 'base_context' not in config:
+            config['base_context'] = []
+        if summary_filename not in config['base_context']:
+            config['base_context'].append(summary_filename)
         save_context_config(config)
 
         print(f"Multi-model summary created: {summary_filename} ({len(final_summary)} chars)")
@@ -770,66 +761,95 @@ def update_context_mode():
 @admin_bp.route('/api/admin/context-files', methods=['GET'])
 @admin_required
 def get_context_files():
-    """List all context files with preview."""
+    """List all context files organized by type (base, vectorized categories, streaming)."""
     try:
         # Ensure context folder exists
         os.makedirs(CONTEXT_FOLDER, exist_ok=True)
 
-        # Load enabled/disabled state and file modes
+        # Load configuration with new schema
         config = load_context_config()
-        enabled_files = config.get('enabled_files', {})
-        file_modes = config.get('file_modes', {})
+        base_context = config.get('base_context', [])
+        vectorized_files = config.get('vectorized_files', {
+            'transcript': [],
+            'books': [],
+            'background_info': []
+        })
+        streaming_sessions = config.get('streaming_sessions', {})
 
-        files_info = []
-        total_chars = 0
-        preview_parts = []
-
-        # Get all files in context folder
-        for filename in os.listdir(CONTEXT_FOLDER):
+        def get_file_info(filename):
+            """Get file size, char count, and modified time for a file."""
             filepath = os.path.join(CONTEXT_FOLDER, filename)
-
-            if os.path.isfile(filepath) and allowed_context_file(filename):
+            if os.path.isfile(filepath):
                 file_size = os.path.getsize(filepath)
+                modified_time = datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat() + 'Z'
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    char_count = len(content)
+                except:
+                    char_count = 0
+                return {'filename': filename, 'modified': modified_time, 'size': file_size, 'chars': char_count}
+            return None
 
-                # Read file content for char count only
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    content = f.read()
+        # Build response structure
+        result = {
+            'base_context': [],
+            'vectorized': {
+                'transcript': [],
+                'books': [],
+                'background_info': []
+            },
+            'streaming': []
+        }
 
-                char_count = len(content)
-                total_chars += char_count
+        total_base_chars = 0
 
-                # Check if file is enabled (default to True if not specified)
-                is_enabled = enabled_files.get(filename, True)
+        # Get file types for base context
+        base_context_types = config.get('base_context_types', {})
 
-                # Get file mode (default to 'window' if not specified)
-                file_mode = file_modes.get(filename, 'window')
+        # Get base context files info
+        for filename in base_context:
+            info = get_file_info(filename)
+            if info:
+                info['file_type'] = base_context_types.get(filename, 'background_info')
+                result['base_context'].append(info)
+                total_base_chars += info['chars']
 
-                files_info.append({
-                    'name': filename,
-                    'size': file_size,
-                    'chars': char_count,
-                    # Don't send full content in list - load on-demand for preview
-                    'enabled': is_enabled,
-                    'mode': file_mode
-                })
+        # Get streaming files info - also add to base_context with streaming flag
+        for filename, session_data in streaming_sessions.items():
+            info = get_file_info(filename)
+            if info:
+                info['is_streaming'] = True
+                info['session_id'] = session_data.get('session_id', '')
+                info['started_at'] = session_data.get('started_at', '')
+                info['last_updated'] = session_data.get('last_updated', '')
+                info['file_type'] = 'transcript'  # Streaming files default to transcript
+                # Add to both streaming section AND base_context
+                result['streaming'].append(info)
+                result['base_context'].append(info)
+                total_base_chars += info['chars']
 
-                # Add to preview (with separator) - limit preview size
-                preview_sample = content[:1000] + ('...' if len(content) > 1000 else '')
-                preview_parts.append(f"--- {filename} ---\n{preview_sample}\n")
+        # Get vectorized files info by category
+        for category, files in vectorized_files.items():
+            if category not in result['vectorized']:
+                result['vectorized'][category] = []
+            for filename in files:
+                info = get_file_info(filename)
+                if info:
+                    result['vectorized'][category].append(info)
 
-        # Create preview (limit to first 2000 chars for display)
-        full_preview = '\n'.join(preview_parts)
-        preview = full_preview[:2000] + ('...' if len(full_preview) > 2000 else '')
-
-        # Estimate tokens (rough estimate: chars / 4)
-        total_tokens = total_chars // 4
+        # Calculate totals
+        total_vectorized_chars = sum(
+            sum(f['chars'] for f in files)
+            for files in result['vectorized'].values()
+        )
 
         return jsonify({
             'success': True,
-            'files': files_info,
-            'preview': preview,
-            'total_chars': total_chars,
-            'total_tokens': total_tokens
+            **result,
+            'total_base_chars': total_base_chars,
+            'total_base_tokens': total_base_chars // 4,
+            'total_vectorized_chars': total_vectorized_chars
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -838,15 +858,26 @@ def get_context_files():
 @admin_bp.route('/api/admin/context-files', methods=['POST'])
 @admin_required
 def upload_context_files():
-    """Upload new context file(s)."""
+    """Upload new context file(s) to a specific target location.
+
+    Form data:
+    - files: The file(s) to upload
+    - target: Where to place the file (base_context, vectorized:transcript, vectorized:books, vectorized:background_info)
+    """
     try:
         if 'files' not in request.files:
             return jsonify({'error': 'No files provided'}), 400
 
         files = request.files.getlist('files')
+        target = request.form.get('target', 'base_context')
 
         if not files or len(files) == 0:
             return jsonify({'error': 'No files selected'}), 400
+
+        # Validate target
+        valid_targets = ['base_context', 'vectorized:transcript', 'vectorized:books', 'vectorized:background_info']
+        if target not in valid_targets:
+            return jsonify({'error': f'Invalid target. Must be one of: {", ".join(valid_targets)}'}), 400
 
         # Ensure context folder exists
         os.makedirs(CONTEXT_FOLDER, exist_ok=True)
@@ -869,19 +900,54 @@ def upload_context_files():
             if file_size > max_size:
                 return jsonify({'error': f'File {file.filename} exceeds 500KB limit'}), 400
 
-            # Save file
+            # Save file with backup versioning if exists
             filename = secure_filename(file.filename)
+            base_name, extension = os.path.splitext(filename)
             filepath = os.path.join(CONTEXT_FOLDER, filename)
-            file.save(filepath)
 
+            # If file exists, backup the old one
+            if os.path.exists(filepath):
+                backup_version = 1
+                while os.path.exists(os.path.join(CONTEXT_FOLDER, f"{base_name}_bak{backup_version}{extension}")):
+                    backup_version += 1
+                backup_filename = f"{base_name}_bak{backup_version}{extension}"
+                backup_filepath = os.path.join(CONTEXT_FOLDER, backup_filename)
+                os.rename(filepath, backup_filepath)
+                print(f"Backed up existing file: {filename} -> {backup_filename}")
+
+            file.save(filepath)
             uploaded_files.append(filename)
 
-        print(f"Uploaded context files: {uploaded_files}")
+        # Update config with new files
+        config = load_context_config()
+
+        # Ensure structure exists
+        if 'base_context' not in config:
+            config['base_context'] = []
+        if 'vectorized_files' not in config:
+            config['vectorized_files'] = {'transcript': [], 'books': [], 'background_info': []}
+
+        for filename in uploaded_files:
+            if target == 'base_context':
+                if filename not in config['base_context']:
+                    config['base_context'].append(filename)
+            else:
+                # target is vectorized:category
+                category = target.split(':')[1]
+                if category not in config['vectorized_files']:
+                    config['vectorized_files'][category] = []
+                if filename not in config['vectorized_files'][category]:
+                    config['vectorized_files'][category].append(filename)
+
+        save_context_config(config)
+
+        print(f"Uploaded context files to {target}: {uploaded_files}")
 
         return jsonify({
             'success': True,
-            'message': f'Successfully uploaded {len(uploaded_files)} file(s)',
-            'files': uploaded_files
+            'message': f'Successfully uploaded {len(uploaded_files)} file(s) to {target}',
+            'files': uploaded_files,
+            'target': target
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -898,14 +964,34 @@ def delete_context_file(filename):
         if not os.path.exists(filepath):
             return jsonify({'error': 'File not found'}), 404
 
+        # Load config and check if file is in streaming mode
+        config = load_context_config()
+        streaming_sessions = config.get('streaming_sessions', {})
+
+        if filename in streaming_sessions:
+            return jsonify({
+                'error': 'Cannot delete file in streaming mode. Abort the stream first.'
+            }), 409
+
+        # Delete the file
         os.remove(filepath)
 
-        # Also remove from config
-        config = load_context_config()
-        enabled_files = config.get('enabled_files', {})
-        if filename in enabled_files:
-            del enabled_files[filename]
-            config['enabled_files'] = enabled_files
+        # Remove from config (check all locations)
+        modified = False
+
+        # Remove from base_context
+        if 'base_context' in config and filename in config['base_context']:
+            config['base_context'].remove(filename)
+            modified = True
+
+        # Remove from vectorized_files categories
+        if 'vectorized_files' in config:
+            for category in config['vectorized_files']:
+                if filename in config['vectorized_files'][category]:
+                    config['vectorized_files'][category].remove(filename)
+                    modified = True
+
+        if modified:
             save_context_config(config)
 
         print(f"Deleted context file: {filename}")
@@ -918,10 +1004,10 @@ def delete_context_file(filename):
         return jsonify({'error': str(e)}), 500
 
 
-@admin_bp.route('/api/admin/context-files/<filename>/toggle', methods=['POST'])
+@admin_bp.route('/api/admin/context-files/<filename>/move', methods=['PUT'])
 @admin_required
-def toggle_context_file(filename):
-    """Toggle whether a context file is enabled."""
+def move_context_file(filename):
+    """Move a context file to a different location (base_context or vectorized category)."""
     try:
         filename = secure_filename(filename)
         filepath = os.path.join(CONTEXT_FOLDER, filename)
@@ -930,26 +1016,102 @@ def toggle_context_file(filename):
             return jsonify({'error': 'File not found'}), 404
 
         data = request.get_json()
-        enabled = data.get('enabled', True)
+        target = data.get('target', '')
+
+        # Validate target
+        valid_targets = ['base_context', 'vectorized:transcript', 'vectorized:books', 'vectorized:background_info']
+        if target not in valid_targets:
+            return jsonify({'error': f'Invalid target. Must be one of: {", ".join(valid_targets)}'}), 400
 
         # Load config
         config = load_context_config()
-        enabled_files = config.get('enabled_files', {})
 
-        # Update enabled state
-        enabled_files[filename] = enabled
-        config['enabled_files'] = enabled_files
+        # Check if file is in streaming mode
+        streaming_sessions = config.get('streaming_sessions', {})
+        if filename in streaming_sessions:
+            return jsonify({
+                'error': 'Cannot move file in streaming mode. Finalize or abort first.'
+            }), 409
+
+        # Ensure structure exists
+        if 'base_context' not in config:
+            config['base_context'] = []
+        if 'vectorized_files' not in config:
+            config['vectorized_files'] = {'transcript': [], 'books': [], 'background_info': []}
+
+        # Remove from current location
+        if filename in config['base_context']:
+            config['base_context'].remove(filename)
+        for category in config['vectorized_files']:
+            if filename in config['vectorized_files'][category]:
+                config['vectorized_files'][category].remove(filename)
+
+        # Add to new location
+        if target == 'base_context':
+            config['base_context'].append(filename)
+        else:
+            category = target.split(':')[1]
+            if category not in config['vectorized_files']:
+                config['vectorized_files'][category] = []
+            config['vectorized_files'][category].append(filename)
 
         # Save config
         if not save_context_config(config):
             return jsonify({'error': 'Failed to save configuration'}), 500
 
-        print(f"Toggled context file {filename}: enabled={enabled}")
+        print(f"Moved context file {filename} to {target}")
 
         return jsonify({
             'success': True,
-            'enabled': enabled,
-            'message': f'File {"enabled" if enabled else "disabled"}: {filename}'
+            'target': target,
+            'message': f'File moved to {target}: {filename}'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/context-files/<filename>/type', methods=['PUT'])
+@admin_required
+def set_base_context_file_type(filename):
+    """Set the type/category for a base context file (for display purposes)."""
+    try:
+        filename = secure_filename(filename)
+        filepath = os.path.join(CONTEXT_FOLDER, filename)
+
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'File not found'}), 404
+
+        data = request.get_json()
+        file_type = data.get('type', '')
+
+        # Validate type
+        valid_types = ['transcript', 'books', 'background_info']
+        if file_type not in valid_types:
+            return jsonify({'error': f'Invalid type. Must be one of: {", ".join(valid_types)}'}), 400
+
+        # Load config
+        config = load_context_config()
+
+        # Check if file is in base_context
+        base_context = config.get('base_context', [])
+        if filename not in base_context:
+            return jsonify({'error': 'File is not in base context'}), 400
+
+        # Update base_context_types
+        if 'base_context_types' not in config:
+            config['base_context_types'] = {}
+        config['base_context_types'][filename] = file_type
+
+        # Save config
+        if not save_context_config(config):
+            return jsonify({'error': 'Failed to save configuration'}), 500
+
+        print(f"Set base context file type: {filename} -> {file_type}")
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'type': file_type
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1385,6 +1547,33 @@ def process_embeddings():
         return jsonify({'error': error_msg}), 500
 
 
+@admin_bp.route('/api/admin/embeddings/process/stream', methods=['POST'])
+@admin_required
+def process_embeddings_stream():
+    """Process embeddings with streaming progress updates."""
+    def generate():
+        try:
+            from app.services.embedding_service import embedding_service
+
+            for update in embedding_service.process_context_files_streaming():
+                yield f"data: {json.dumps(update)}\n\n"
+
+        except ImportError as import_error:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Failed to import embedding service: {str(import_error)}'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive'
+        }
+    )
+
+
 @admin_bp.route('/api/admin/embeddings/stats', methods=['GET'])
 @admin_required
 def get_embedding_stats():
@@ -1812,29 +2001,30 @@ def public_upload_context():
         original_filename = secure_filename(file.filename)
         base_name, extension = os.path.splitext(original_filename)
 
-        # Check if file exists and find next available version number
-        final_filename = original_filename
-        version = 1
-        while os.path.exists(os.path.join(CONTEXT_FOLDER, final_filename)):
-            version += 1
-            final_filename = f"{base_name}_v{version}{extension}"
+        # Check if file exists - if so, backup the old file instead of versioning the new one
+        filepath = os.path.join(CONTEXT_FOLDER, original_filename)
+        backup_version = None
+        if os.path.exists(filepath):
+            # Find next available backup version number
+            backup_version = 1
+            while os.path.exists(os.path.join(CONTEXT_FOLDER, f"{base_name}_bak{backup_version}{extension}")):
+                backup_version += 1
+            backup_filename = f"{base_name}_bak{backup_version}{extension}"
+            backup_filepath = os.path.join(CONTEXT_FOLDER, backup_filename)
+            # Rename old file to backup
+            os.rename(filepath, backup_filepath)
+            print(f"Backed up existing file: {original_filename} -> {backup_filename}")
 
-        # Save the file
-        filepath = os.path.join(CONTEXT_FOLDER, final_filename)
+        # Save the new file with original filename
         file.save(filepath)
+        final_filename = original_filename
 
-        # Load context config and set this file to vector mode
+        # Load context config and add to base_context
         config = load_context_config()
-        file_modes = config.get('file_modes', {})
-        file_modes[final_filename] = 'vector'
-        config['file_modes'] = file_modes
-
-        # Enable the file by default
-        enabled_files = config.get('enabled_files', {})
-        enabled_files[final_filename] = True
-        config['enabled_files'] = enabled_files
-
-        # Save config
+        if 'base_context' not in config:
+            config['base_context'] = []
+        if final_filename not in config['base_context']:
+            config['base_context'].append(final_filename)
         save_context_config(config)
 
         # Get file size and char count
@@ -1842,15 +2032,16 @@ def public_upload_context():
         with open(filepath, 'r', encoding='utf-8') as f:
             char_count = len(f.read())
 
-        print(f"Public API: Context file uploaded - {final_filename} ({char_count} chars, vector mode)")
+        backup_info = f" (previous version backed up as _bak{backup_version})" if backup_version else ""
+        print(f"Public API: Context file uploaded - {final_filename} ({char_count} chars, base_context){backup_info}")
 
         return jsonify({
             'success': True,
-            'message': f'File uploaded successfully',
+            'message': f'File uploaded successfully' + (f' (previous version backed up)' if backup_version else ''),
             'filename': final_filename,
             'original_filename': original_filename,
-            'version': version if version > 1 else None,
-            'mode': 'vector',
+            'backup_version': backup_version,
+            'mode': 'base_context',
             'size': file_size,
             'chars': char_count
         })

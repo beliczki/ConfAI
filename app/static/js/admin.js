@@ -315,25 +315,26 @@ function loadTemplate(templateName) {
  * Setup file upload handlers (drag & drop + click on file columns)
  */
 function setupFileUpload() {
-    const windowFilesList = document.getElementById('window-files-list');
-    const vectorFilesList = document.getElementById('vector-files-list');
     const fileInput = document.getElementById('context-file-input');
+    if (!fileInput) return;
 
-    if (!windowFilesList || !vectorFilesList || !fileInput) return;
-
-    const dropZones = [windowFilesList, vectorFilesList];
-
-    // File input change
+    // File input change - uses target from hidden input
     fileInput.addEventListener('change', (e) => {
-        handleFileSelect(e.target.files);
+        const target = document.getElementById('upload-target')?.value || 'vectorized:background_info';
+        handleFileSelect(e.target.files, target);
     });
 
     // Setup drag and drop for both columns
-    dropZones.forEach(dropZone => {
-        // Click to upload
+    const dropZones = [
+        { el: document.getElementById('base-context-list'), target: 'base_context' },
+        { el: document.getElementById('vectorized-files-list'), target: 'vectorized:background_info' }
+    ].filter(item => item.el);
+
+    dropZones.forEach(({ el: dropZone, target }) => {
+        // Click to upload (only on empty state)
         dropZone.addEventListener('click', (e) => {
-            // Only trigger file input if clicking on empty area, not on file items or buttons
             if (e.target === dropZone || e.target.closest('.empty-state-small')) {
+                document.getElementById('upload-target').value = target;
                 fileInput.click();
             }
         });
@@ -345,7 +346,6 @@ function setupFileUpload() {
         });
 
         dropZone.addEventListener('dragleave', (e) => {
-            // Only remove drag-over if actually leaving the drop zone
             if (!dropZone.contains(e.relatedTarget)) {
                 dropZone.classList.remove('drag-over');
             }
@@ -354,15 +354,23 @@ function setupFileUpload() {
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('drag-over');
-            handleFileSelect(e.dataTransfer.files);
+            handleFileSelect(e.dataTransfer.files, target);
         });
     });
 }
 
 /**
+ * Upload to a specific target (called from buttons)
+ */
+function uploadToTarget(target) {
+    document.getElementById('upload-target').value = target;
+    document.getElementById('context-file-input').click();
+}
+
+/**
  * Handle file selection and upload
  */
-async function handleFileSelect(files) {
+async function handleFileSelect(files, target = 'vectorized:background_info') {
     if (!files || files.length === 0) return;
 
     const maxSize = 500 * 1024; // 500KB
@@ -383,11 +391,12 @@ async function handleFileSelect(files) {
         }
     }
 
-    // Upload files
+    // Upload files with target
     const formData = new FormData();
     for (let file of files) {
         formData.append('files', file);
     }
+    formData.append('target', target);
 
     try {
         const response = await fetch('/api/admin/context-files', {
@@ -397,23 +406,25 @@ async function handleFileSelect(files) {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to upload files');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to upload files');
         }
 
         const data = await response.json();
-        showStatus('prompt-status', `Successfully uploaded ${files.length} file(s)`, 'success');
+        const targetDisplay = target === 'base_context' ? 'Base Context' : target.replace('vectorized:', '');
+        showStatus('prompt-status', `Successfully uploaded ${files.length} file(s) to ${targetDisplay}`, 'success');
 
-        // Reload file list and preview
+        // Reload file list
         await loadContextFiles();
 
     } catch (error) {
         console.error('Error uploading files:', error);
-        showDialog('Failed to upload files. Please try again.', 'error');
+        showDialog(`Failed to upload files: ${error.message}`, 'error');
     }
 }
 
 /**
- * Load and display context files
+ * Load and display context files (new schema with base_context, vectorized, streaming)
  */
 async function loadContextFiles() {
     try {
@@ -426,14 +437,565 @@ async function loadContextFiles() {
         }
 
         const data = await response.json();
-        currentFiles = data.files || [];
 
-        displayFilesList(currentFiles);
-        updateContextPreview(data.preview || '');
-        updateStatistics(); // Use updateStatistics() to only count enabled files
+        // Display files in their respective sections
+        displayBaseContextFiles(data.base_context || []);
+        displayVectorizedFiles(data.vectorized || {});
+
+        // Update stats
+        updateBaseContextStats(data.total_base_chars || 0, data.total_base_tokens || 0);
+
+        // Load embedding stats
+        loadEmbeddingStats();
 
     } catch (error) {
         console.error('Error loading context files:', error);
+    }
+}
+
+/**
+ * Display base context files
+ */
+function displayBaseContextFiles(files) {
+    const container = document.getElementById('base-context-list');
+    if (!container) return;
+
+    if (files.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-small">
+                <i data-lucide="file-plus"></i>
+                <p>No base context files</p>
+                <small>Drag files here or use the upload button</small>
+            </div>
+        `;
+    } else {
+        container.innerHTML = files.map(file => createFileItemHTML(file, 'base_context')).join('');
+    }
+
+    // Add event delegation for type selectors
+    container.querySelectorAll('.base-type-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const filename = this.dataset.filename;
+            const newType = this.value;
+            const currentType = this.dataset.currentType;
+            if (newType !== currentType) {
+                changeBaseContextFileType(filename, newType);
+            }
+        });
+    });
+
+    // Add event delegation for buttons
+    setupFileItemEventListeners(container);
+
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => lucide.createIcons(), 10);
+    }
+}
+
+/**
+ * Display vectorized files in a single list with type selector
+ */
+function displayVectorizedFiles(vectorized) {
+    const container = document.getElementById('vectorized-files-list');
+    if (!container) return;
+
+    // Flatten all files with their categories
+    const allFiles = [];
+    for (const [category, files] of Object.entries(vectorized)) {
+        for (const file of files) {
+            allFiles.push({ ...file, category });
+        }
+    }
+
+    // Update vector doc count
+    const docCountEl = document.getElementById('vector-doc-count');
+    if (docCountEl) docCountEl.textContent = allFiles.length;
+
+    if (allFiles.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-small">
+                <i data-lucide="database"></i>
+                <p>No vectorized files</p>
+                <small>Drag files here or upload</small>
+            </div>
+        `;
+    } else {
+        container.innerHTML = allFiles.map(file => createVectorizedFileItemHTML(file)).join('');
+    }
+
+    // Add event delegation for type selectors
+    container.querySelectorAll('.type-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const filename = this.dataset.filename;
+            const newType = this.value;
+            const currentCategory = this.dataset.currentCategory;
+            if (newType !== currentCategory) {
+                changeFileType(filename, newType);
+            }
+        });
+    });
+
+    // Add event delegation for buttons
+    setupFileItemEventListeners(container);
+
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => lucide.createIcons(), 10);
+    }
+}
+
+/**
+ * Setup event listeners for file item buttons
+ */
+function setupFileItemEventListeners(container) {
+    // Handle preview button clicks
+    container.querySelectorAll('button[data-action="preview"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const fileItem = this.closest('.file-column-item');
+            const filename = fileItem?.dataset.filename;
+            if (filename) {
+                openFilePreviewByName(filename);
+            }
+        });
+    });
+
+    // Handle move button clicks
+    container.querySelectorAll('button[data-action="move"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const fileItem = this.closest('.file-column-item');
+            const filename = fileItem?.dataset.filename;
+            const target = this.dataset.target;
+            if (filename && target) {
+                moveFile(filename, target);
+            }
+        });
+    });
+
+    // Handle delete button clicks
+    container.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const fileItem = this.closest('.file-column-item');
+            const filename = fileItem?.dataset.filename;
+            if (filename) {
+                deleteFile(filename);
+            }
+        });
+    });
+
+    // Handle finalize button clicks (for streaming files in base context)
+    container.querySelectorAll('button[data-action="finalize"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const sessionId = this.dataset.sessionId;
+            if (sessionId) {
+                finalizeStream(sessionId);
+            }
+        });
+    });
+
+    // Handle abort button clicks (for streaming files in base context)
+    container.querySelectorAll('button[data-action="abort"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const sessionId = this.dataset.sessionId;
+            if (sessionId) {
+                abortStream(sessionId);
+            }
+        });
+    });
+}
+
+/**
+ * Get icon name for file type
+ */
+function getTypeIcon(category) {
+    switch (category) {
+        case 'transcript': return 'mic';
+        case 'books': return 'book-open';
+        case 'background_info': return 'file-text';
+        default: return 'file';
+    }
+}
+
+/**
+ * Create HTML for a vectorized file item with type selector
+ */
+function createVectorizedFileItemHTML(file) {
+    const filename = file.filename;
+    const category = file.category || 'background_info';
+    const icon = getTypeIcon(category);
+
+    return `
+        <div class="file-column-item" data-filename="${escapeHtml(filename)}">
+            <div class="file-column-item-header">
+                <div class="file-column-item-name" title="${escapeHtml(filename)}">
+                    <i data-lucide="${icon}" class="type-icon type-${category}"></i>
+                    ${escapeHtml(truncateFilename(filename))}
+                </div>
+                <div class="file-column-item-actions">
+                    <button class="btn-preview" data-action="preview" title="Preview file">
+                        <i data-lucide="eye"></i>
+                    </button>
+                    <button class="btn-move" data-action="move" data-target="base_context" title="Move to Base Context">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                    <button class="btn-delete" data-action="delete" title="Delete file">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="file-column-item-info">
+                <span>${formatDateTimeShort(file.modified)}</span>
+                <span>${formatFileSize(file.size)}</span>
+                <span>${file.chars?.toLocaleString() || 0} chars</span>
+                <select class="type-select" data-filename="${escapeHtml(filename)}" data-current-category="${category}">
+                    <option value="transcript"${category === 'transcript' ? ' selected' : ''}>Transcript</option>
+                    <option value="books"${category === 'books' ? ' selected' : ''}>Book</option>
+                    <option value="background_info"${category === 'background_info' ? ' selected' : ''}>Background</option>
+                </select>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Create HTML for a base context file item
+ */
+function createFileItemHTML(file, location) {
+    const filename = file.filename;
+    const isStreaming = file.is_streaming;
+    const sessionId = file.session_id || '';
+    const fileType = file.file_type || 'background_info';
+
+    // For streaming files, show radio icon with pulse; otherwise use type icon
+    const icon = isStreaming ? 'radio' : getTypeIcon(fileType);
+    const iconClass = isStreaming ? 'streaming-icon pulse' : `type-icon type-${fileType}`;
+
+    // Different actions for streaming vs regular files
+    const actions = isStreaming ? `
+        <button class="btn-preview" data-action="preview" title="Preview file">
+            <i data-lucide="eye"></i>
+        </button>
+        <button class="btn-finalize" data-action="finalize" data-session-id="${escapeHtml(sessionId)}" title="Finalize stream">
+            <i data-lucide="check-circle"></i>
+        </button>
+        <button class="btn-abort" data-action="abort" data-session-id="${escapeHtml(sessionId)}" title="Abort stream">
+            <i data-lucide="x-circle"></i>
+        </button>
+    ` : `
+        <button class="btn-preview" data-action="preview" title="Preview file">
+            <i data-lucide="eye"></i>
+        </button>
+        <button class="btn-move" data-action="move" data-target="vectorized:background_info" title="Move to Vectorized">
+            <i data-lucide="arrow-right"></i>
+        </button>
+        <button class="btn-delete" data-action="delete" title="Delete file">
+            <i data-lucide="trash-2"></i>
+        </button>
+    `;
+
+    const streamingBadge = isStreaming ? '<span class="streaming-badge">LIVE</span>' : '';
+
+    // Type selector for non-streaming files
+    const typeSelector = isStreaming ? '' : `
+        <select class="type-select base-type-select" data-filename="${escapeHtml(filename)}" data-current-type="${fileType}">
+            <option value="transcript"${fileType === 'transcript' ? ' selected' : ''}>Transcript</option>
+            <option value="books"${fileType === 'books' ? ' selected' : ''}>Book</option>
+            <option value="background_info"${fileType === 'background_info' ? ' selected' : ''}>Background</option>
+        </select>
+    `;
+
+    return `
+        <div class="file-column-item${isStreaming ? ' streaming-item' : ''}" data-filename="${escapeHtml(filename)}"${isStreaming ? ` data-session-id="${escapeHtml(sessionId)}"` : ''}>
+            <div class="file-column-item-header">
+                <div class="file-column-item-name" title="${escapeHtml(filename)}">
+                    <i data-lucide="${icon}" class="${iconClass}"></i>
+                    ${escapeHtml(truncateFilename(filename))}
+                    ${streamingBadge}
+                </div>
+                <div class="file-column-item-actions">
+                    ${actions}
+                </div>
+            </div>
+            <div class="file-column-item-info">
+                <span>${formatDateTimeShort(file.modified)}</span>
+                <span>${formatFileSize(file.size)}</span>
+                <span>${file.chars?.toLocaleString() || 0} chars</span>
+                ${typeSelector}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Format datetime to short format (e.g., "Nov 30, 14:25")
+ */
+function formatDateTimeShort(isoString) {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = months[date.getMonth()];
+        const day = date.getDate();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const mins = date.getMinutes().toString().padStart(2, '0');
+        return `${month} ${day}, ${hours}:${mins}`;
+    } catch {
+        return '';
+    }
+}
+
+/**
+ * Change file type within vectorized files
+ */
+async function changeFileType(filename, newType) {
+    try {
+        const response = await fetch(`/api/admin/context-files/${encodeURIComponent(filename)}/move`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({ target: `vectorized:${newType}` })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to change file type');
+        }
+
+        // Reload to update icons
+        await loadContextFiles();
+
+    } catch (error) {
+        console.error('Error changing file type:', error);
+        showDialog(`Failed to change file type: ${error.message}`, 'error');
+        // Reload to reset select
+        await loadContextFiles();
+    }
+}
+
+/**
+ * Change file type for base context files (display type only)
+ */
+async function changeBaseContextFileType(filename, newType) {
+    try {
+        const response = await fetch(`/api/admin/context-files/${encodeURIComponent(filename)}/type`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({ type: newType })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to change file type');
+        }
+
+        // Reload to update icons
+        await loadContextFiles();
+
+    } catch (error) {
+        console.error('Error changing base context file type:', error);
+        showDialog(`Failed to change file type: ${error.message}`, 'error');
+        // Reload to reset select
+        await loadContextFiles();
+    }
+}
+
+/**
+ * Update base context stats display
+ */
+function updateBaseContextStats(chars, tokens) {
+    const charsEl = document.getElementById('base-context-chars');
+    const tokensEl = document.getElementById('base-context-tokens');
+
+    if (charsEl) charsEl.textContent = chars.toLocaleString();
+    if (tokensEl) tokensEl.textContent = tokens.toLocaleString();
+}
+
+/**
+ * Format datetime string for display
+ */
+function formatDateTime(isoString) {
+    if (!isoString) return 'Unknown';
+    try {
+        const date = new Date(isoString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+        return 'Unknown';
+    }
+}
+
+/**
+ * Move file to a different location
+ */
+async function moveFile(filename, target) {
+    if (!target) return;
+
+    try {
+        const response = await fetch(`/api/admin/context-files/${encodeURIComponent(filename)}/move`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({ target })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to move file');
+        }
+
+        const targetDisplay = target === 'base_context' ? 'Base Context' : target.replace('vectorized:', '');
+        showStatus('prompt-status', `Moved ${filename} to ${targetDisplay}`, 'success');
+
+        await loadContextFiles();
+
+    } catch (error) {
+        console.error('Error moving file:', error);
+        showDialog(`Failed to move file: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Delete file by filename
+ */
+async function deleteFile(filename) {
+    if (!await showConfirm(`Delete "${filename}"? This cannot be undone.`, {
+        confirmText: 'Delete',
+        confirmStyle: 'danger'
+    })) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/context-files/${encodeURIComponent(filename)}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete file');
+        }
+
+        showStatus('prompt-status', `Deleted ${filename}`, 'success');
+        await loadContextFiles();
+
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        showDialog(`Failed to delete file: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Finalize a streaming session
+ */
+async function finalizeStream(sessionId) {
+    try {
+        const response = await fetch('/api/transcription/finalize', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({
+                session_id: sessionId
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to finalize stream');
+        }
+
+        const data = await response.json();
+        showToast(data.message || `Stream finalized: ${data.filename}`, 'success');
+        await loadContextFiles();
+
+    } catch (error) {
+        console.error('Error finalizing stream:', error);
+        showToast(`Failed to finalize stream: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Abort a streaming session
+ */
+async function abortStream(sessionId) {
+    if (!await showConfirm('Abort this streaming session? Content will be preserved in base context.', {
+        confirmText: 'Abort',
+        confirmStyle: 'danger'
+    })) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/transcription/abort/${encodeURIComponent(sessionId)}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to abort stream');
+        }
+
+        showStatus('prompt-status', 'Stream aborted', 'success');
+        await loadContextFiles();
+
+    } catch (error) {
+        console.error('Error aborting stream:', error);
+        showDialog(`Failed to abort stream: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Simple prompt select dialog (fallback to browser prompt if not implemented)
+ */
+async function showPromptSelect(message, options, defaultValue) {
+    // Simple fallback using prompt
+    const optionsText = options.map((o, i) => `${i + 1}. ${o.label}`).join('\n');
+    const result = prompt(`${message}\n\n${optionsText}\n\nEnter number (1-${options.length}):`);
+
+    if (!result) return null;
+
+    const index = parseInt(result) - 1;
+    if (index >= 0 && index < options.length) {
+        return options[index].value;
+    }
+    return defaultValue;
+}
+
+/**
+ * Open file preview by filename
+ */
+async function openFilePreviewByName(filename) {
+    try {
+        const response = await fetch(`/api/admin/context-files/${encodeURIComponent(filename)}/content`, {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load file content');
+        }
+
+        const data = await response.json();
+
+        currentPreviewedFile = filename;
+
+        document.getElementById('preview-dialog-filename').textContent = filename;
+        document.getElementById('preview-dialog-content').textContent = data.content || '(Empty file)';
+        document.getElementById('preview-dialog-size').textContent = formatFileSize(data.size || 0);
+        document.getElementById('preview-dialog-chars').textContent = (data.chars || 0).toLocaleString();
+        document.getElementById('preview-dialog-tokens').textContent = Math.ceil((data.chars || 0) / 4).toLocaleString();
+
+        document.getElementById('file-preview-dialog').classList.add('active');
+
+    } catch (error) {
+        console.error('Error loading file content:', error);
+        showDialog('Failed to load file content', 'error');
     }
 }
 
@@ -1707,6 +2269,36 @@ function showStatus(elementId, message, type = 'info') {
 }
 
 /**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    // Remove existing toast
+    const existing = document.querySelector('.toast-notification');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerHTML = `
+        <i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'x-circle' : 'info'}"></i>
+        <span>${message}</span>
+    `;
+    document.body.appendChild(toast);
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+
+    // Animate in
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+/**
  * Format file size for display
  */
 function formatFileSize(bytes) {
@@ -2162,66 +2754,90 @@ async function processEmbeddings() {
 
     // Show initial status
     if (statusEl) {
-        statusEl.textContent = 'Processing documents and generating embeddings...';
+        statusEl.innerHTML = '<i data-lucide="loader-2" class="spinning"></i> Initializing...';
         statusEl.className = 'status-message info';
         statusEl.style.display = 'block';
+        lucide.createIcons();
     }
 
     try {
-        // Create abort controller for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for large embedding processing
-
-        const response = await fetch('/api/admin/embeddings/process', {
+        // Use streaming endpoint to avoid timeout issues
+        const response = await fetch('/api/admin/embeddings/process/stream', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            },
-            signal: controller.signal
+            }
         });
 
-        clearTimeout(timeoutId);
-
-        // Check response status first
         if (!response.ok) {
-            // Try to parse JSON error, fallback to text if not JSON
-            let errorMessage = 'Failed to process embeddings';
-            try {
-                const data = await response.json();
-                errorMessage = data.error || errorMessage;
-            } catch (parseError) {
-                // If JSON parsing fails, get text response
-                const text = await response.text();
-                errorMessage = `Server error (${response.status}): ${text.substring(0, 200)}`;
-            }
-            throw new Error(errorMessage);
+            throw new Error(`HTTP error ${response.status}`);
         }
 
-        const data = await response.json();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let finalResult = null;
 
-        // Update stats first to get the counts
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+
+                        if (data.type === 'error') {
+                            throw new Error(data.message);
+                        }
+
+                        if (data.type === 'progress') {
+                            if (statusEl) {
+                                statusEl.innerHTML = `<i data-lucide="loader-2" class="spinning"></i> Step ${data.step}/${data.total_steps}: ${data.message}`;
+                                lucide.createIcons();
+                            }
+                        }
+
+                        if (data.type === 'file_progress') {
+                            if (statusEl) {
+                                statusEl.innerHTML = `<i data-lucide="loader-2" class="spinning"></i> [${data.current}/${data.total}] ${data.message}`;
+                                lucide.createIcons();
+                            }
+                        }
+
+                        if (data.type === 'file_complete') {
+                            if (statusEl) {
+                                statusEl.innerHTML = `<i data-lucide="check"></i> [${data.current}/${data.total}] ${data.filename}: ${data.chunks} chunks`;
+                                lucide.createIcons();
+                            }
+                        }
+
+                        if (data.type === 'complete') {
+                            finalResult = data;
+                        }
+                    } catch (parseError) {
+                        console.warn('Failed to parse SSE data:', parseError);
+                    }
+                }
+            }
+        }
+
+        // Update stats
         await loadEmbeddingStats();
 
         // Display success message
-        if (statusEl) {
-            const message = data.message || 'Embeddings processed successfully!';
-            const docCount = data.document_count || 'N/A';
-            const chunkCount = data.chunk_count || 'N/A';
-
-            statusEl.innerHTML = `<i data-lucide="check-circle"></i> ${message}<br><small>Documents: ${docCount} | Chunks: ${chunkCount}</small>`;
+        if (statusEl && finalResult) {
+            statusEl.innerHTML = `<i data-lucide="check-circle"></i> ${finalResult.message}`;
             statusEl.className = 'status-message success';
-            statusEl.style.display = 'block';
             lucide.createIcons();
         }
 
     } catch (error) {
         console.error('Error processing embeddings:', error);
         if (statusEl) {
-            let errorMessage = error.message;
-            if (error.name === 'AbortError') {
-                errorMessage = 'Processing timed out after 2 minutes. Check server logs for details.';
-            }
-            statusEl.innerHTML = '<i data-lucide="x-circle"></i> Error: ' + errorMessage;
+            statusEl.innerHTML = '<i data-lucide="x-circle"></i> Error: ' + error.message;
             statusEl.className = 'status-message error';
             lucide.createIcons();
         }
@@ -2239,11 +2855,11 @@ async function processEmbeddings() {
 
         if (buttonText) buttonText.textContent = 'Process Embeddings';
 
-        // Auto-hide success/error message after 5 seconds
-        if (statusEl) {
+        // Auto-hide success message after 10 seconds (longer for success to let user read)
+        if (statusEl && statusEl.classList.contains('success')) {
             setTimeout(() => {
                 statusEl.style.display = 'none';
-            }, 5000);
+            }, 10000);
         }
     }
 }

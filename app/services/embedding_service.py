@@ -175,8 +175,14 @@ class EmbeddingService:
 
         return np.array(all_embeddings)
 
-    def chunk_text(self, text: str, filename: str) -> List[Dict]:
-        """Split text into overlapping chunks."""
+    def chunk_text(self, text: str, filename: str, category: str = 'background_info') -> List[Dict]:
+        """Split text into overlapping chunks.
+
+        Args:
+            text: The text content to chunk
+            filename: Name of the source file
+            category: Category of the file (transcript, books, background_info)
+        """
         chunks = []
         text_length = len(text)
         start = 0
@@ -201,6 +207,7 @@ class EmbeddingService:
                 'text': chunk_text.strip(),
                 'metadata': {
                     'filename': filename,
+                    'category': category,
                     'chunk_id': chunk_id,
                     'start': start,
                     'end': end
@@ -243,16 +250,17 @@ class EmbeddingService:
                 print(f"  [INFO] No existing collection to delete (this is normal for first run)")
                 # Collection should already be created in initialize()
 
-            # Load context config to check file modes
+            # Load context config with new schema (vectorized_files with categories)
             print("\n[2/4] Loading configuration...")
             config_file = 'data/context_config.json'
-            file_modes = {}
+            vectorized_files = {}
             if os.path.exists(config_file):
                 try:
                     with open(config_file, 'r', encoding='utf-8') as f:
                         config = json.load(f)
-                        file_modes = config.get('file_modes', {})
-                    print(f"  [OK] Loaded file modes for {len(file_modes)} files")
+                        vectorized_files = config.get('vectorized_files', {})
+                    total_files = sum(len(files) for files in vectorized_files.values())
+                    print(f"  [OK] Loaded vectorized files config: {total_files} files across {len(vectorized_files)} categories")
                 except Exception as e:
                     print(f"  [ERROR] Error loading context config: {e}")
 
@@ -260,33 +268,31 @@ class EmbeddingService:
                 print(f"  [ERROR] Context folder not found: {self.CONTEXT_FOLDER}")
                 return False
 
-            # Count files in vector mode
-            vector_files = [f for f in os.listdir(self.CONTEXT_FOLDER)
-                          if os.path.isfile(os.path.join(self.CONTEXT_FOLDER, f))
-                          and f.endswith(('.txt', '.md'))
-                          and file_modes.get(f, None) == 'vector']
+            # Build file-to-category mapping
+            file_categories = {}
+            for category, files in vectorized_files.items():
+                for filename in files:
+                    file_categories[filename] = category
 
-            print(f"  [OK] Found {len(vector_files)} files in vector mode to process")
+            print(f"  [OK] Found {len(file_categories)} files to process")
 
             total_chunks = 0
+            processed_files = 0
 
-            # Process each context file that is in vector mode
+            # Process each context file in vectorized_files
             print("\n[3/4] Processing and chunking files...")
-            for filename in os.listdir(self.CONTEXT_FOLDER):
+            for filename, category in file_categories.items():
                 filepath = os.path.join(self.CONTEXT_FOLDER, filename)
 
-                # Only process files that are explicitly set to vector mode
-                is_vector_mode = file_modes.get(filename, None) == 'vector'
-
-                if os.path.isfile(filepath) and filename.endswith(('.txt', '.md')) and is_vector_mode:
-                    print(f"  Processing: {filename}")
+                if os.path.isfile(filepath) and filename.endswith(('.txt', '.md')):
+                    print(f"  Processing: {filename} (category: {category})")
 
                     # Read file content
                     with open(filepath, 'r', encoding='utf-8') as f:
                         content = f.read()
 
-                    # Chunk the text
-                    chunks = self.chunk_text(content, filename)
+                    # Chunk the text with category metadata
+                    chunks = self.chunk_text(content, filename, category)
                     print(f"    -> Created {len(chunks)} chunks")
 
                     if chunks:
@@ -309,10 +315,13 @@ class EmbeddingService:
                         )
 
                         total_chunks += len(chunks)
+                        processed_files += 1
                         print(f"    [OK] Added {len(chunks)} chunks from {filename}\n")
+                else:
+                    print(f"  [WARNING] File not found or invalid: {filename}")
 
             print(f"\n[4/4] Finalizing...")
-            print(f"  [OK] Successfully processed {len(vector_files)} documents")
+            print(f"  [OK] Successfully processed {processed_files} documents")
             print(f"  [OK] Total chunks created: {total_chunks}")
             print("=== Embedding processing complete ===\n")
             return True
@@ -323,6 +332,127 @@ class EmbeddingService:
             traceback.print_exc()
             print("=== Embedding processing failed ===\n")
             return False
+
+    def process_context_files_streaming(self):
+        """Process all context files and yield progress updates for SSE streaming."""
+        print("\n=== Starting context files processing (streaming) ===")
+
+        if not self.embeddings_initialized:
+            self.initialize()
+
+        if not self.embeddings_initialized:
+            yield {'type': 'error', 'message': 'Failed to initialize embedding service'}
+            return
+
+        try:
+            # Step 1: Clear existing
+            yield {'type': 'progress', 'step': 1, 'total_steps': 4, 'message': 'Clearing existing embeddings...'}
+
+            try:
+                self.client.delete_collection(self.COLLECTION_NAME)
+                self.collection = self.client.create_collection(
+                    name=self.COLLECTION_NAME,
+                    metadata={"description": "Context documents for AI chat"}
+                )
+            except Exception:
+                pass  # Collection might not exist
+
+            # Step 2: Load config
+            yield {'type': 'progress', 'step': 2, 'total_steps': 4, 'message': 'Loading configuration...'}
+
+            config_file = 'data/context_config.json'
+            vectorized_files = {}
+            if os.path.exists(config_file):
+                try:
+                    with open(config_file, 'r', encoding='utf-8') as f:
+                        config = json.load(f)
+                        vectorized_files = config.get('vectorized_files', {})
+                except Exception as e:
+                    yield {'type': 'error', 'message': f'Error loading config: {e}'}
+                    return
+
+            if not os.path.exists(self.CONTEXT_FOLDER):
+                yield {'type': 'error', 'message': f'Context folder not found: {self.CONTEXT_FOLDER}'}
+                return
+
+            # Build file-to-category mapping
+            file_categories = {}
+            for category, files in vectorized_files.items():
+                for filename in files:
+                    file_categories[filename] = category
+
+            total_files = len(file_categories)
+            if total_files == 0:
+                yield {'type': 'complete', 'message': 'No files to process', 'document_count': 0, 'chunk_count': 0}
+                return
+
+            yield {'type': 'progress', 'step': 3, 'total_steps': 4, 'message': f'Processing {total_files} files...'}
+
+            total_chunks = 0
+            processed_files = 0
+
+            # Step 3: Process each file
+            for filename, category in file_categories.items():
+                filepath = os.path.join(self.CONTEXT_FOLDER, filename)
+
+                if os.path.isfile(filepath) and filename.endswith(('.txt', '.md')):
+                    yield {
+                        'type': 'file_progress',
+                        'filename': filename,
+                        'current': processed_files + 1,
+                        'total': total_files,
+                        'message': f'Processing {filename}...'
+                    }
+
+                    # Read file content
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+
+                    # Chunk the text
+                    chunks = self.chunk_text(content, filename, category)
+
+                    if chunks:
+                        # Generate embeddings
+                        chunk_texts = [chunk['text'] for chunk in chunks]
+                        embeddings = self.encode(chunk_texts)
+
+                        # Prepare and add to collection
+                        ids = [chunk['id'] for chunk in chunks]
+                        metadatas = [chunk['metadata'] for chunk in chunks]
+
+                        self.collection.add(
+                            ids=ids,
+                            embeddings=embeddings.tolist(),
+                            documents=chunk_texts,
+                            metadatas=metadatas
+                        )
+
+                        total_chunks += len(chunks)
+                        processed_files += 1
+
+                        yield {
+                            'type': 'file_complete',
+                            'filename': filename,
+                            'chunks': len(chunks),
+                            'current': processed_files,
+                            'total': total_files
+                        }
+
+            # Step 4: Complete
+            yield {'type': 'progress', 'step': 4, 'total_steps': 4, 'message': 'Finalizing...'}
+
+            yield {
+                'type': 'complete',
+                'message': f'Successfully processed {processed_files} documents into {total_chunks} chunks',
+                'document_count': processed_files,
+                'chunk_count': total_chunks
+            }
+
+        except Exception as e:
+            print(f"\n[ERROR] Error processing context files: {e}")
+            import traceback
+            traceback.print_exc()
+            yield {'type': 'error', 'message': str(e)}
 
     def search_context(self, query: str, top_k: int = None) -> str:
         """Search for relevant context based on query using semantic search."""
@@ -365,10 +495,11 @@ class EmbeddingService:
                 for i, doc in enumerate(results['documents'][0]):
                     metadata = results['metadatas'][0][i]
                     filename = metadata.get('filename', 'unknown')
+                    category = metadata.get('category', 'background_info')
                     chunk_id = metadata.get('chunk_id', i)
 
-                    # Format: --- Source: filename (Chunk #X) ---
-                    source_header = f"--- Source: {filename} (Chunk #{chunk_id + 1}) ---"
+                    # Format: --- Source: filename [category] (Chunk #X) ---
+                    source_header = f"--- Source: {filename} [{category}] (Chunk #{chunk_id + 1}) ---"
                     context_parts.append(f"{source_header}\n{doc}\n")
 
             return "\n".join(context_parts) if context_parts else ""

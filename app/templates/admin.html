@@ -43,73 +43,54 @@
 
     <!-- Tab: Context -->
     <div id="context-files" class="tab-content active">
-        <!-- Context Mode Selector -->
-        <div class="section-card">
-            <h2><i data-lucide="settings"></i> Context Mode</h2>
-            <p class="help-text">Choose how context files are processed and used by the AI.</p>
+        <!-- Hidden file input -->
+        <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
+        <input type="hidden" id="upload-target" value="vectorized:background_info">
 
-            <div class="form-group">
-                <div class="context-mode-toggle-container">
-                    <div class="context-mode-option" id="mode-context-window">
-                        <div class="mode-icon"><i data-lucide="file-text"></i></div>
-                        <div class="mode-details">
-                            <strong>Context Window</strong>
-                            <span>Informed but costly. (Uses selected files directly in the prompt)</span>
-                        </div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="context-mode-toggle">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <div class="context-mode-option" id="mode-vector-embeddings">
-                        <div class="mode-icon"><i data-lucide="database"></i></div>
-                        <div class="mode-details">
-                            <strong>Vector Embeddings</strong>
-                            <span>Scalable but narrow. (Uses semantic search to find relevant content)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Manage Files Section -->
-        <div class="section-card">
-            <div class="section-header-with-stats">
-                <div>
-                    <h2><i data-lucide="folder"></i> Manage Files</h2>
-                    <p class="help-text">Upload and organize files for different context modes.</p>
-                </div>
-                <div class="context-stats-compact">
-                    Always included Context: <span id="context-total-chars">0</span> chars | <span id="context-total-tokens">0</span> tokens
-                </div>
-            </div>
-
-            <!-- Hidden file input -->
-            <input type="file" id="context-file-input" accept=".txt,.md" multiple hidden>
-
-            <!-- Two-Column File Layout -->
-            <div class="files-two-column">
-                <!-- Left: Window Mode Files -->
-                <div class="file-column">
-                    <div class="file-column-header">
-                        <h3><i data-lucide="file-text"></i> Window Mode Files</h3>
-                        <p class="help-text-small">Full files added to prompt (in window mode only)</p>
-                    </div>
-                    <div class="file-column-list" id="window-files-list">
-                        <div class="empty-state-small">
-                            <i data-lucide="upload"></i>
-                            <p>Click or drag files here</p>
-                            <small>No files in window mode</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right: Vector Mode Files -->
-                <div class="file-column">
-                    <div class="file-column-header">
+        <!-- Two Column Layout: Base Context + Vectorized Files -->
+        <div class="context-two-column">
+            <!-- Left: Base Context -->
+            <div class="context-column">
+                <div class="section-card">
+                    <div class="section-header-with-stats">
                         <div>
-                            <h3><i data-lucide="database"></i> Vector Mode Files</h3>
-                            <p class="help-text-small">Chunked for semantic search (retrieves relevant parts dynamically)</p>
+                            <h2><i data-lucide="file-text"></i> Base Context</h2>
+                            <p class="help-text">Base Content is fully included in LLM context with every user message</p>
+                        </div>
+                        <div class="embeddings-stats-inline">
+                            <div class="stat-badge stat-badge-purple">
+                                <i data-lucide="text"></i>
+                                <span id="base-context-chars">0</span> chars
+                            </div>
+                            <div class="stat-badge stat-badge-indigo">
+                                <i data-lucide="hash"></i>
+                                <span id="base-context-tokens">0</span> tokens
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-column-list" id="base-context-list">
+                        <div class="empty-state-small">
+                            <i data-lucide="file-plus"></i>
+                            <p>No base context files</p>
+                            <small>Drag files here or upload</small>
+                        </div>
+                    </div>
+                    <div class="file-column-footer">
+                        <button class="btn btn-secondary btn-block" onclick="uploadToTarget('base_context')">
+                            <i data-lucide="upload"></i>
+                            <span>Add to Base Context</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Vectorized Files -->
+            <div class="context-column">
+                <div class="section-card">
+                    <div class="section-header-with-stats">
+                        <div>
+                            <h2><i data-lucide="database"></i> Vectorized Files</h2>
+                            <p class="help-text">Relevant chunks retrieved via semantic search and added to LLM context</p>
                         </div>
                         <div class="embeddings-stats-inline">
                             <div class="stat-badge stat-badge-success">
@@ -122,20 +103,24 @@
                             </div>
                         </div>
                     </div>
-                    <div class="file-column-list" id="vector-files-list">
+                    <div class="file-column-list" id="vectorized-files-list">
                         <div class="empty-state-small">
-                            <i data-lucide="upload"></i>
-                            <p>Click or drag files here</p>
-                            <small>No files in vector mode</small>
+                            <i data-lucide="database"></i>
+                            <p>No vectorized files</p>
+                            <small>Drag files here or upload</small>
                         </div>
                     </div>
                     <div class="file-column-footer">
-                        <button id="process-embeddings-btn" class="btn btn-secondary btn-block" onclick="processEmbeddings()">
-                            <i data-lucide="play" id="process-embeddings-icon"></i>
-                            <span id="process-embeddings-text">Process Embeddings</span>
+                        <button class="btn btn-secondary" onclick="uploadToTarget('vectorized:background_info')">
+                            <i data-lucide="upload"></i>
+                            <span>Add File for Vectorization</span>
                         </button>
-                        <div id="embeddings-status" class="status-message" style="display: none; margin-top: 10px;"></div>
+                        <button id="process-embeddings-btn" class="btn btn-primary" onclick="processEmbeddings()">
+                            <i data-lucide="play" id="process-embeddings-icon"></i>
+                            <span id="process-embeddings-text">Process</span>
+                        </button>
                     </div>
+                    <div id="embeddings-status" class="status-message" style="display: none; margin-top: 10px;"></div>
                 </div>
             </div>
         </div>

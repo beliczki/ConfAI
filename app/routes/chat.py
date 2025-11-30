@@ -349,25 +349,11 @@ def stream_message():
         for m in messages_history[-10:]  # Last 10 messages for context
     ]
 
-    # Get relevant context based on context mode
-    context_mode = Settings.get('context_mode', 'context_window').lower()
-    context = ""
-
-    if context_mode == 'vector_embeddings':
-        # Vector embeddings mode: combine always-in-context files + semantic search
-        always_in_context = llm_service.get_context_files()
-        semantic_results = embedding_service.search_context(message)
-
-        # Combine both contexts
-        context_parts = []
-        if always_in_context:
-            context_parts.append("=== ALWAYS IN CONTEXT FILES ===\n" + always_in_context)
-        if semantic_results:
-            context_parts.append("=== SEMANTIC SEARCH RESULTS ===\n" + semantic_results)
-
-        context = "\n\n".join(context_parts)
-        print(f"Vector embeddings: always-in-context={len(always_in_context)} chars, semantic={len(semantic_results)} chars, total={len(context)} chars")
-    # In context_window mode, context is loaded directly in llm_service
+    # Always use hybrid context: base context + semantic search
+    # Base context is loaded by llm_service, semantic search results passed here
+    context = embedding_service.search_context(message)
+    if context:
+        print(f"Semantic search context: {len(context)} chars")
 
     # Get current model from user's session BEFORE the generator (avoid request context issues)
     current_model = session.get('preferred_model', os.getenv('LLM_PROVIDER', 'gemini')).lower()
@@ -490,43 +476,23 @@ def get_debug_context():
             for m in messages_history[-10:]  # Last 10 messages for context
         ]
 
-        # Get relevant context based on context mode
-        context_mode = Settings.get('context_mode', 'context_window').lower()
+        # Always use hybrid context: base context + semantic search
+        base_context = llm_service.get_context_files()
+        semantic_results = embedding_service.search_context(message)
 
-        if context_mode == 'vector_embeddings':
-            # Vector embeddings mode: use semantic search + always-in-context files
-            semantic_results = embedding_service.search_context(message)
-            always_in_context = llm_service.get_context_files()
-
-            # Build the debug context object
-            debug_context = {
-                'metadata': {
-                    'datetime': current_datetime,
-                    'model': model_display,
-                    'context_mode': 'Vector Embeddings (Semantic Search)'
-                },
-                'system_prompt': system_prompt,
-                'always_in_context_files': always_in_context if always_in_context else "(No always-in-context files)",
-                'semantic_search_results': semantic_results if semantic_results else "(No semantic search results)",
-                'conversation_history': conversation_history,
-                'user_message': message
-            }
-        else:
-            # Context window mode: load full context files
-            context_files = llm_service.get_context_files()
-
-            # Build the debug context object
-            debug_context = {
-                'metadata': {
-                    'datetime': current_datetime,
-                    'model': model_display,
-                    'context_mode': 'Context Window (Full Files)'
-                },
-                'system_prompt': system_prompt,
-                'context_files': context_files if context_files else "(No context files)",
-                'conversation_history': conversation_history,
-                'user_message': message
-            }
+        # Build the debug context object
+        debug_context = {
+            'metadata': {
+                'datetime': current_datetime,
+                'model': model_display,
+                'context_mode': 'Hybrid (Base Context + Semantic Search)'
+            },
+            'system_prompt': system_prompt,
+            'base_context': base_context if base_context else "(No base context files)",
+            'semantic_search_results': semantic_results if semantic_results else "(No semantic search results)",
+            'conversation_history': conversation_history,
+            'user_message': message
+        }
 
         return jsonify(debug_context)
 

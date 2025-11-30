@@ -529,11 +529,8 @@ async function loadMessages(threadId) {
         // Store first two user prompts for auto-rename
         conversationHistory = userMessages.slice(0, 2).map(m => m.content);
 
-        // Store current model from first assistant message
-        const assistantMsg = data.messages.find(m => m.role === 'assistant');
-        if (assistantMsg && assistantMsg.model) {
-            currentModel = assistantMsg.model;
-        }
+        // Note: We don't override currentModel from thread history -
+        // currentModel should always reflect the user's current selection in the dropdown
 
         // Check which messages are shared
         await checkSharedStatus(data.messages);

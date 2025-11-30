@@ -49,33 +49,50 @@ Be professional, engaging, and help users derive meaningful insights."""
         return self.DEFAULT_SYSTEM_PROMPT
 
     def get_context_files(self) -> str:
-        """Load enabled context files and return as concatenated string."""
+        """Load base context files and active streaming files.
+
+        New schema reads from:
+        - base_context: array of filenames always included
+        - streaming_sessions: dict of active streaming files (also always included)
+        """
         try:
             if not os.path.exists(self.CONTEXT_FOLDER):
                 return ""
 
-            # Load enabled files configuration
-            enabled_files = {}
+            # Load configuration
+            config = {}
             if os.path.exists(self.CONTEXT_CONFIG_FILE):
                 try:
                     with open(self.CONTEXT_CONFIG_FILE, 'r', encoding='utf-8') as f:
                         config = json.load(f)
-                        enabled_files = config.get('enabled_files', {})
                 except Exception as e:
                     print(f"Error loading context config: {e}")
 
             context_parts = []
 
-            for filename in os.listdir(self.CONTEXT_FOLDER):
+            # Load base context files
+            base_context = config.get('base_context', [])
+            for filename in base_context:
                 filepath = os.path.join(self.CONTEXT_FOLDER, filename)
+                if os.path.isfile(filepath):
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            context_parts.append(f"--- {filename} ---\n{content}\n")
+                    except Exception as e:
+                        print(f"Error reading base context file {filename}: {e}")
 
-                # Check if file is enabled (default to True if not specified)
-                is_enabled = enabled_files.get(filename, True)
-
-                if os.path.isfile(filepath) and filename.endswith(('.txt', '.md')) and is_enabled:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                        context_parts.append(f"--- {filename} ---\n{content}\n")
+            # Load active streaming files (always in base context)
+            streaming_sessions = config.get('streaming_sessions', {})
+            for filename in streaming_sessions.keys():
+                filepath = os.path.join(self.CONTEXT_FOLDER, filename)
+                if os.path.isfile(filepath):
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            context_parts.append(f"--- {filename} (LIVE) ---\n{content}\n")
+                    except Exception as e:
+                        print(f"Error reading streaming file {filename}: {e}")
 
             if context_parts:
                 return "\n".join(context_parts)
@@ -136,20 +153,15 @@ Be professional, engaging, and help users derive meaningful insights."""
         # Load system prompt from file
         system_prompt = self._load_system_prompt()
 
-        # Get context mode from database
-        context_mode = self._get_context_mode()
-        print(f"Context mode: {context_mode}")
+        # Always use hybrid mode: base context + semantic search
+        # Base context files are always loaded
+        context_files = self.get_context_files()
+        if context_files:
+            system_prompt += f"\n\nBase context:\n{context_files}"
 
-        if context_mode == 'context_window':
-            # CONTEXT WINDOW MODE: Load all context files directly
-            context_files = self.get_context_files()
-            if context_files:
-                system_prompt += f"\n\nContext files:\n{context_files}"
-        elif context_mode == 'vector_embeddings':
-            # VECTOR EMBEDDINGS MODE: Use semantic search for relevant chunks
-            # Context is provided by the caller (from embedding_service.search_context)
-            if context:
-                system_prompt += f"\n\nRelevant context:\n{context}"
+        # Semantic search context is provided by the caller
+        if context:
+            system_prompt += f"\n\nRelevant context from semantic search:\n{context}"
 
         # Use provided provider or fall back to env default
         if not provider:
