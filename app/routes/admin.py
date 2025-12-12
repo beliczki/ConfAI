@@ -571,7 +571,9 @@ def summarize_file_stream():
             yield f"data: {json.dumps({'type': 'synthesis_complete', 'summary': final_summary, 'length': len(final_summary)})}\n\n"
 
             # Find next available version number for summary file
-            base_filename = "conference_summary_multimodel"
+            # Use original filename with MMS_ prefix
+            original_name = os.path.splitext(filename)[0]
+            base_filename = f"MMS_{original_name}"
             extension = ".txt"
             version = 1
             summary_filename = f"{base_filename}{extension}"
@@ -680,7 +682,9 @@ def summarize_file():
             return jsonify({'error': 'Failed to synthesize summaries'}), 500
 
         # Find next available version number for summary file
-        base_filename = "conference_summary_multimodel"
+        # Use original filename with MMS_ prefix
+        original_name = os.path.splitext(filename)[0]
+        base_filename = f"MMS_{original_name}"
         extension = ".txt"
         version = 1
         summary_filename = f"{base_filename}{extension}"
