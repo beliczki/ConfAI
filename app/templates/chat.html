@@ -19,10 +19,12 @@
             <img src="{{ url_for('static', filename='img/telekom-confai-white.png') }}" alt="ConfAI" class="sidebar-logo">
             <p>Conference Intelligence</p>
             <img src="{{ url_for('static', filename='img/telekom-confai-favicon.png') }}" alt="ConfAI" class="sidebar-logo-collapsed">
+            <!-- Insights Wall temporarily disabled
             <a href="/insights" class="insights-wall-link">
                 <i data-lucide="lightbulb"></i>
                 <span>Insights Wall</span>
             </a>
+            -->
             <button class="new-chat-btn" onclick="(async () => { await showChat(); createNewThread(); })();">
                 <i data-lucide="plus"></i>
                 <span>New Chat</span>
@@ -49,7 +51,7 @@
                     </button>
 
                     <div class="avatar-dropdown-menu" id="avatar-dropdown">
-                        <!-- Votes and Shares Section -->
+                        <!-- Votes and Shares Section - temporarily disabled
                         <div class="dropdown-section" id="votes-shares-section">
                             <a href="/myvotes" class="dropdown-counter-btn" id="votes-header">
                                 <i data-lucide="thumbs-up"></i>
@@ -64,6 +66,7 @@
                         </div>
 
                         <div class="dropdown-divider" id="votes-shares-divider"></div>
+                        -->
 
                         <!-- Model Selector Section -->
                         <div class="dropdown-section">

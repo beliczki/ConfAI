@@ -2666,7 +2666,8 @@ body:has(.admin-container) .dialog-btn-secondary:hover {
 }
 
 /* Streaming Badge - LIVE indicator */
-.streaming-badge {
+.streaming-badge,
+.live-badge {
     display: inline-block;
     margin-left: 8px;
     padding: 2px 6px;

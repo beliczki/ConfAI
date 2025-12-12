@@ -52,6 +52,7 @@ let currentFiles = [];
 let currentSystemPrompt = '';
 let selectedFile = null;
 let currentPreviewedFile = null; // Track the file currently being previewed
+let fileWatchEventSource = null; // SSE connection for live file watching
 
 /**
  * Initialize the admin dashboard on page load
@@ -552,8 +553,9 @@ function setupFileItemEventListeners(container) {
         btn.addEventListener('click', function() {
             const fileItem = this.closest('.file-column-item');
             const filename = fileItem?.dataset.filename;
+            const isStreaming = fileItem?.classList.contains('streaming-item');
             if (filename) {
-                openFilePreviewByName(filename);
+                openFilePreviewByName(filename, isStreaming);
             }
         });
     });
@@ -970,32 +972,110 @@ async function showPromptSelect(message, options, defaultValue) {
 
 /**
  * Open file preview by filename
+ * @param {string} filename - The file to preview
+ * @param {boolean} isStreaming - Whether this is a live streaming file
  */
-async function openFilePreviewByName(filename) {
-    try {
-        const response = await fetch(`/api/admin/context-files/${encodeURIComponent(filename)}/content`, {
-            headers: getAuthHeaders()
-        });
+async function openFilePreviewByName(filename, isStreaming = false) {
+    // Close any existing SSE connection
+    if (fileWatchEventSource) {
+        fileWatchEventSource.close();
+        fileWatchEventSource = null;
+    }
 
-        if (!response.ok) {
-            throw new Error('Failed to load file content');
+    currentPreviewedFile = filename;
+
+    const filenameEl = document.getElementById('preview-dialog-filename');
+    const contentEl = document.getElementById('preview-dialog-content');
+    const sizeEl = document.getElementById('preview-dialog-size');
+    const charsEl = document.getElementById('preview-dialog-chars');
+    const tokensEl = document.getElementById('preview-dialog-tokens');
+    const dialog = document.getElementById('file-preview-dialog');
+
+    // Add/remove live indicator based on streaming status
+    if (isStreaming) {
+        filenameEl.innerHTML = `${escapeHtml(filename)} <span class="live-badge">LIVE</span>`;
+    } else {
+        filenameEl.textContent = filename;
+    }
+
+    if (isStreaming) {
+        // Use SSE for live streaming files
+        contentEl.textContent = 'Connecting to live stream...';
+        dialog.classList.add('active');
+
+        try {
+            const token = localStorage.getItem('admin_token');
+            const url = `/api/transcription/watch/${encodeURIComponent(filename)}?token=${encodeURIComponent(token)}`;
+
+            fileWatchEventSource = new EventSource(url);
+
+            fileWatchEventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'full') {
+                        // Full content update
+                        contentEl.textContent = data.content || '(Empty file)';
+                        sizeEl.textContent = formatFileSize(data.size || 0);
+                        charsEl.textContent = (data.chars || 0).toLocaleString();
+                        tokensEl.textContent = Math.ceil((data.chars || 0) / 4).toLocaleString();
+                    } else if (data.type === 'append') {
+                        // Append new content
+                        contentEl.textContent += data.content;
+                        sizeEl.textContent = formatFileSize(data.size || 0);
+                        charsEl.textContent = (data.chars || 0).toLocaleString();
+                        tokensEl.textContent = Math.ceil((data.chars || 0) / 4).toLocaleString();
+                        // Auto-scroll to bottom
+                        contentEl.scrollTop = contentEl.scrollHeight;
+                    } else if (data.type === 'deleted') {
+                        contentEl.textContent = '(File was deleted)';
+                        fileWatchEventSource.close();
+                        fileWatchEventSource = null;
+                    } else if (data.type === 'error') {
+                        console.error('Stream error:', data.message);
+                    }
+                } catch (e) {
+                    console.error('Error parsing SSE data:', e);
+                }
+            };
+
+            fileWatchEventSource.onerror = function(error) {
+                console.error('SSE connection error:', error);
+                if (fileWatchEventSource) {
+                    fileWatchEventSource.close();
+                    fileWatchEventSource = null;
+                }
+            };
+
+        } catch (error) {
+            console.error('Error setting up live stream:', error);
+            contentEl.textContent = 'Failed to connect to live stream';
         }
 
-        const data = await response.json();
+    } else {
+        // Regular fetch for non-streaming files
+        try {
+            const response = await fetch(`/api/admin/context-files/${encodeURIComponent(filename)}/content`, {
+                headers: getAuthHeaders()
+            });
 
-        currentPreviewedFile = filename;
+            if (!response.ok) {
+                throw new Error('Failed to load file content');
+            }
 
-        document.getElementById('preview-dialog-filename').textContent = filename;
-        document.getElementById('preview-dialog-content').textContent = data.content || '(Empty file)';
-        document.getElementById('preview-dialog-size').textContent = formatFileSize(data.size || 0);
-        document.getElementById('preview-dialog-chars').textContent = (data.chars || 0).toLocaleString();
-        document.getElementById('preview-dialog-tokens').textContent = Math.ceil((data.chars || 0) / 4).toLocaleString();
+            const data = await response.json();
 
-        document.getElementById('file-preview-dialog').classList.add('active');
+            contentEl.textContent = data.content || '(Empty file)';
+            sizeEl.textContent = formatFileSize(data.size || 0);
+            charsEl.textContent = (data.chars || 0).toLocaleString();
+            tokensEl.textContent = Math.ceil((data.chars || 0) / 4).toLocaleString();
 
-    } catch (error) {
-        console.error('Error loading file content:', error);
-        showDialog('Failed to load file content', 'error');
+            dialog.classList.add('active');
+
+        } catch (error) {
+            console.error('Error loading file content:', error);
+            showDialog('Failed to load file content', 'error');
+        }
     }
 }
 
@@ -2944,6 +3024,12 @@ async function openFilePreview(fileIndex) {
  * Close file preview dialog
  */
 function closeFilePreview() {
+    // Close SSE connection if active
+    if (fileWatchEventSource) {
+        fileWatchEventSource.close();
+        fileWatchEventSource = null;
+    }
+
     const dialog = document.getElementById('file-preview-dialog');
     if (dialog) {
         dialog.classList.remove('active');
@@ -2960,7 +3046,7 @@ async function downloadPreviewFile() {
         return;
     }
 
-    const filename = currentPreviewedFile.name;
+    const filename = currentPreviewedFile;
 
     try {
         // Use the download endpoint to get the complete file with auth headers
@@ -3008,7 +3094,7 @@ async function summarizePreviewFile() {
     }
 
     // Save filename before closing the dialog (closeFilePreview clears currentPreviewedFile)
-    const filename = currentPreviewedFile.name;
+    const filename = currentPreviewedFile;
 
     // Confirm before proceeding
     if (!await showConfirm(`Create multi-model summary of "${filename}"?\n\nThis will use all 4 models (Claude, Gemini, Grok, Perplexity) and synthesize their outputs.`, {

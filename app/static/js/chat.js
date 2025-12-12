@@ -11,6 +11,9 @@ let currentModel = null; // Track current thread's model
 let debugContextBypass = false; // Flag to bypass debug context dialog when sending from dialog
 let storedDebugMessage = null; // Store message when showing debug dialog
 
+// Feature flag to disable insights sharing functionality
+const INSIGHTS_ENABLED = false;
+
 // Helper function to parse markdown safely
 function parseMarkdown(text) {
     if (typeof marked !== 'undefined' && marked.parse) {
@@ -632,7 +635,7 @@ function renderMessages(messages) {
                 <div class="message-avatar" style="background: ${gradient}"><span>${avatar}</span></div>
                 <div>
                     <div class="message-content">${content}</div>
-                    ${m.role === 'assistant' ? `
+                    ${m.role === 'assistant' && INSIGHTS_ENABLED ? `
                         <div class="message-actions">
                             ${isShared ? `
                                 <span class="shared-tag">
@@ -828,7 +831,7 @@ function addMessageToUI(role, content) {
         <div class="message-avatar" style="background: ${gradient}"><span>${avatar}</span></div>
         <div>
             <div class="message-content" data-original-content="${originalContent}">${displayContent}</div>
-            ${role === 'assistant' ? `
+            ${role === 'assistant' && INSIGHTS_ENABLED ? `
                 <div class="message-actions">
                     ${shareLimitReached ? `
                         <div class="share-limit-message">
@@ -872,18 +875,20 @@ function addStreamingMessage() {
         <div class="message-avatar" style="background: ${gradient}"><span>AI</span></div>
         <div>
             <div class="message-content"></div>
-            <div class="message-actions" style="display: none;">
-                ${shareLimitReached ? `
-                    <div class="share-limit-message">
-                        Share limit reached. Try unsharing your least favourites on <a href="#" onclick="showMyShares(); return false;">your shares page</a>
-                    </div>
-                ` : `
-                    <button class="share-btn" onclick="shareInsightFromElement(this)">
-                        <i data-lucide="share-2"></i>
-                        <span>Share to Insights Wall</span>
-                    </button>
-                `}
-            </div>
+            ${INSIGHTS_ENABLED ? `
+                <div class="message-actions" style="display: none;">
+                    ${shareLimitReached ? `
+                        <div class="share-limit-message">
+                            Share limit reached. Try unsharing your least favourites on <a href="#" onclick="showMyShares(); return false;">your shares page</a>
+                        </div>
+                    ` : `
+                        <button class="share-btn" onclick="shareInsightFromElement(this)">
+                            <i data-lucide="share-2"></i>
+                            <span>Share to Insights Wall</span>
+                        </button>
+                    `}
+                </div>
+            ` : ''}
         </div>
     `;
 
@@ -897,8 +902,8 @@ function updateStreamingMessage(element, content, done = false, messageId = null
     // Parse markdown during streaming AND when complete
     contentDiv.innerHTML = parseMarkdown(content);
 
-    // Show share button when streaming is complete
-    if (done) {
+    // Show share button when streaming is complete (only if insights enabled)
+    if (done && INSIGHTS_ENABLED) {
         const actionsDiv = element.querySelector('.message-actions');
         if (actionsDiv && content) {
             actionsDiv.style.display = 'flex';

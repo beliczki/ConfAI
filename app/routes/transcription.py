@@ -1,5 +1,5 @@
 """Streaming transcription API for real-time content updates."""
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from app.utils.helpers import admin_required
 from werkzeug.utils import secure_filename
 import os
@@ -7,6 +7,7 @@ import json
 import secrets
 from datetime import datetime
 import threading
+import time
 
 transcription_bp = Blueprint('transcription', __name__)
 
@@ -190,7 +191,7 @@ def append_content():
         file_lock = get_file_lock(filename)
         with file_lock:
             with open(filepath, 'a', encoding='utf-8') as f:
-                f.write(content)
+                f.write(content + '\n')
 
         # Update last_updated timestamp
         config['streaming_sessions'][filename]['last_updated'] = datetime.utcnow().isoformat() + 'Z'
@@ -421,3 +422,107 @@ def list_sessions():
     except Exception as e:
         print(f"Error listing sessions: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@transcription_bp.route('/api/transcription/watch/<filename>', methods=['GET'])
+@admin_required
+def watch_file(filename):
+    """SSE endpoint to watch a file for real-time updates.
+
+    Streams the full file content initially, then sends only new content as it arrives.
+    Uses file size tracking to detect changes efficiently.
+    """
+    filename = secure_filename(filename)
+    filepath = os.path.join(CONTEXT_FOLDER, filename)
+
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'File not found'}), 404
+
+    def generate():
+        last_char_count = 0
+        last_mtime = 0
+
+        # Send initial full content
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            last_char_count = len(content)
+            last_mtime = os.path.getmtime(filepath)
+
+            # Send full content as initial event
+            data = json.dumps({
+                'type': 'full',
+                'content': content,
+                'size': len(content.encode('utf-8')),
+                'chars': last_char_count
+            })
+            yield f"data: {data}\n\n"
+        except Exception as e:
+            error_data = json.dumps({'type': 'error', 'message': str(e)})
+            yield f"data: {error_data}\n\n"
+            return
+
+        # Watch for changes
+        while True:
+            try:
+                time.sleep(1)  # Check every second
+
+                if not os.path.exists(filepath):
+                    # File was deleted
+                    data = json.dumps({'type': 'deleted'})
+                    yield f"data: {data}\n\n"
+                    break
+
+                current_mtime = os.path.getmtime(filepath)
+
+                if current_mtime > last_mtime:
+                    # File was modified
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+
+                    current_char_count = len(content)
+
+                    if current_char_count > last_char_count:
+                        # Content was appended - send only the new characters
+                        new_content = content[last_char_count:]
+
+                        data = json.dumps({
+                            'type': 'append',
+                            'content': new_content,
+                            'size': len(content.encode('utf-8')),
+                            'chars': current_char_count
+                        })
+                        yield f"data: {data}\n\n"
+                    else:
+                        # File was modified (possibly truncated/rewritten) - send full content
+                        data = json.dumps({
+                            'type': 'full',
+                            'content': content,
+                            'size': len(content.encode('utf-8')),
+                            'chars': current_char_count
+                        })
+                        yield f"data: {data}\n\n"
+
+                    last_char_count = current_char_count
+                    last_mtime = current_mtime
+
+                # Send heartbeat to keep connection alive
+                yield f": heartbeat\n\n"
+
+            except GeneratorExit:
+                # Client disconnected
+                break
+            except Exception as e:
+                error_data = json.dumps({'type': 'error', 'message': str(e)})
+                yield f"data: {error_data}\n\n"
+                break
+
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
