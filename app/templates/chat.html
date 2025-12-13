@@ -3,8 +3,8 @@
 {% block title %}Chat - ConfAI{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}?v=1.0.1">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/insights.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}?v={{ cache_buster }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/insights.css') }}?v={{ cache_buster }}">
 <script src="https://unpkg.com/lucide@latest"></script>
 {% endblock %}
 
@@ -25,7 +25,7 @@
                 <span>Insights Wall</span>
             </a>
             -->
-            <button class="new-chat-btn" onclick="(async () => { await showChat(); createNewThread(); })();">
+            <button class="new-chat-btn" onclick="(async () => { await showChat(); createNewThread(); closeSidebarOnMobile(); })();">
                 <i data-lucide="plus"></i>
                 <span>New Chat</span>
             </button>
@@ -250,8 +250,8 @@
     const initialView = {{ ('"%s"' % initial_view) | safe if initial_view else 'null' }};
     const insightsMode = {{ ('"%s"' % insights_mode) | safe if insights_mode else 'null' }};
 </script>
-<script src="{{ url_for('static', filename='js/chat.js') }}?v=1.0.3"></script>
-<script src="{{ url_for('static', filename='js/insights.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}?v={{ cache_buster }}"></script>
+<script src="{{ url_for('static', filename='js/insights.js') }}?v={{ cache_buster }}"></script>
 <script>
     // Sidebar toggle function
     function toggleSidebar() {
@@ -262,6 +262,14 @@
         setTimeout(() => {
             lucide.createIcons();
         }, 300);
+    }
+
+    // Close sidebar on mobile (used when creating new chat)
+    function closeSidebarOnMobile() {
+        if (window.innerWidth <= 1080) {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.add('collapsed');
+        }
     }
 
     // View switcher functions

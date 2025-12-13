@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}ConfAI{% endblock %}</title>
     <style>
         * {
@@ -88,14 +88,14 @@
         }
     </style>
     <!-- Dialog System CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dialog.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dialog.css') }}?v={{ cache_buster }}">
     {% block styles %}{% endblock %}
 </head>
 <body>
     {% block content %}{% endblock %}
 
     <!-- Dialog System JS -->
-    <script src="{{ url_for('static', filename='js/dialog.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dialog.js') }}?v={{ cache_buster }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

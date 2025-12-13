@@ -27,6 +27,7 @@ body {
     height: 100vh;
     overflow: hidden;
     font-family: 'TeleNeoWeb', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a1a;
 }
 
 /* Remove all button focus glows */

@@ -3,7 +3,7 @@
 {% block title %}Login - ConfAI{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}?v={{ cache_buster }}">
 {% endblock %}
 
 {% block content %}
@@ -61,5 +61,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/login.js') }}"></script>
+<script src="{{ url_for('static', filename='js/login.js') }}?v={{ cache_buster }}"></script>
 {% endblock %}

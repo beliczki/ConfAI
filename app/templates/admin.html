@@ -3,7 +3,7 @@
 {% block title %}Admin Dashboard - ConfAI{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ cache_buster }}">
 <script src="https://unpkg.com/lucide@latest"></script>
 {% endblock %}
 
@@ -595,7 +595,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}?v={{ cache_buster }}"></script>
 <script>
     // Initialize Lucide icons
     if (typeof lucide !== 'undefined' && lucide.createIcons) {

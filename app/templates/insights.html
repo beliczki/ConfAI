@@ -3,7 +3,7 @@
 {% block title %}Insights Wall - ConfAI{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/insights.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/insights.css') }}?v={{ cache_buster }}">
 {% endblock %}
 
 {% block content %}
@@ -110,5 +110,5 @@
 </script>
 
 <!-- Load insights.js -->
-<script src="{{ url_for('static', filename='js/insights.js') }}"></script>
+<script src="{{ url_for('static', filename='js/insights.js') }}?v={{ cache_buster }}"></script>
 {% endblock %}

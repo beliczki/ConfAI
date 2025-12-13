@@ -1,5 +1,6 @@
 """Flask application factory and initialization."""
 import os
+import time
 from flask import Flask, jsonify
 from flask_session import Session
 from flask_limiter import Limiter
@@ -8,6 +9,9 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Cache buster - updated on each app restart
+CACHE_BUSTER = str(int(time.time()))
 
 # Initialize extensions
 session = Session()
@@ -69,5 +73,10 @@ def create_app(config_name='development'):
     @app.errorhandler(429)
     def ratelimit_handler(e):
         return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+
+    # Inject cache buster into all templates
+    @app.context_processor
+    def inject_cache_buster():
+        return {'cache_buster': CACHE_BUSTER}
 
     return app
