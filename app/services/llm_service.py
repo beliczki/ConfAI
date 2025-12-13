@@ -368,30 +368,48 @@ Be professional, engaging, and help users derive meaningful insights."""
                 }
 
                 def generate_stream():
-                    response = model.generate_content(
-                        gemini_messages,
-                        stream=True,
-                        generation_config=genai.types.GenerationConfig(
-                            max_output_tokens=2048,
-                            temperature=0.7,
+                    try:
+                        response = model.generate_content(
+                            gemini_messages,
+                            stream=True,
+                            generation_config=genai.types.GenerationConfig(
+                                max_output_tokens=2048,
+                                temperature=0.7,
+                            )
                         )
-                    )
 
-                    # Stream the text
-                    for chunk in response:
-                        if chunk.text:
-                            yield chunk.text
+                        has_content = False
+                        # Stream the text
+                        for chunk in response:
+                            try:
+                                if chunk.text:
+                                    has_content = True
+                                    yield chunk.text
+                            except ValueError:
+                                # Empty chunk, skip
+                                pass
 
-                        # Try to capture usage from last chunk
-                        if hasattr(chunk, 'usage_metadata') and chunk.usage_metadata:
-                            usage = chunk.usage_metadata
-                            usage_data['input_tokens'] = getattr(usage, 'prompt_token_count', 0)
-                            usage_data['output_tokens'] = getattr(usage, 'candidates_token_count', 0)
-                            usage_data['captured'] = True
+                            # Try to capture usage from last chunk
+                            if hasattr(chunk, 'usage_metadata') and chunk.usage_metadata:
+                                usage = chunk.usage_metadata
+                                usage_data['input_tokens'] = getattr(usage, 'prompt_token_count', 0)
+                                usage_data['output_tokens'] = getattr(usage, 'candidates_token_count', 0)
+                                usage_data['captured'] = True
 
-                    # Log usage if captured
-                    if usage_data['captured']:
-                        print(f"Gemini usage - Input: {usage_data['input_tokens']}, Output: {usage_data['output_tokens']}")
+                        # If no content was yielded, show helpful message
+                        if not has_content:
+                            yield "⚠️ A Gemini modell nem tudott választ generálni. Ez lehet átmeneti hiba vagy quota limit. **Próbálj másik modellt választani a jobb felső sarokban lévő avatar menüből** (pl. Claude vagy Grok)."
+
+                        # Log usage if captured
+                        if usage_data['captured']:
+                            print(f"Gemini usage - Input: {usage_data['input_tokens']}, Output: {usage_data['output_tokens']}")
+                    except Exception as e:
+                        error_str = str(e)
+                        print(f"Gemini streaming error: {error_str}")
+                        if "Invalid operation" in error_str or "response.text" in error_str or "valid `Part`" in error_str:
+                            yield "⚠️ A Gemini modell nem tudott választ generálni. Ez lehet átmeneti hiba vagy quota limit. **Próbálj másik modellt választani a jobb felső sarokban lévő avatar menüből** (pl. Claude vagy Grok)."
+                        else:
+                            yield f"Sorry, I encountered an error: {error_str}"
 
                 def get_usage():
                     return usage_data if usage_data['captured'] else None
@@ -414,11 +432,21 @@ Be professional, engaging, and help users derive meaningful insights."""
                     output_tokens = getattr(usage, 'candidates_token_count', 0)
                     print(f"Gemini usage - Input: {input_tokens}, Output: {output_tokens}")
 
-                return response.text
+                # Safely get response text
+                try:
+                    return response.text
+                except ValueError as ve:
+                    # Handle empty response (no valid Part)
+                    print(f"Gemini returned empty response: {str(ve)}")
+                    return "⚠️ A Gemini modell nem tudott választ generálni. Ez lehet átmeneti hiba vagy quota limit. **Próbálj másik modellt választani a jobb felső sarokban lévő avatar menüből** (pl. Claude vagy Grok)."
 
         except Exception as e:
-            print(f"Error calling Gemini API: {str(e)}")
-            return f"Sorry, I encountered an error: {str(e)}"
+            error_str = str(e)
+            print(f"Error calling Gemini API: {error_str}")
+            # Check for common Gemini errors and provide helpful message
+            if "Invalid operation" in error_str or "response.text" in error_str or "valid `Part`" in error_str:
+                return "⚠️ A Gemini modell nem tudott választ generálni. Ez lehet átmeneti hiba vagy quota limit. **Próbálj másik modellt választani a jobb felső sarokban lévő avatar menüből** (pl. Claude vagy Grok)."
+            return f"Sorry, I encountered an error: {error_str}"
 
     def _generate_grok(
         self,
