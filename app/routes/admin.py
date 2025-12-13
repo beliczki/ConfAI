@@ -1655,22 +1655,53 @@ def update_embedding_provider():
 @admin_bp.route('/api/admin/users', methods=['GET'])
 @admin_required
 def get_users():
-    """Get all users with invite status."""
+    """Get all users with invite status and tags. Optionally filter by tag."""
     try:
+        tag_filter = request.args.get('tag')
+
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
-                SELECT
-                    u.*,
-                    i.invite_code,
-                    i.status as invite_status,
-                    i.sent_at,
-                    i.accepted_at
-                FROM users u
-                LEFT JOIN invites i ON u.id = i.user_id
-                ORDER BY u.created_at DESC
-            ''')
+
+            if tag_filter:
+                # Filter users by tag
+                cursor.execute('''
+                    SELECT
+                        u.*,
+                        i.invite_code,
+                        i.status as invite_status,
+                        i.sent_at,
+                        i.accepted_at
+                    FROM users u
+                    LEFT JOIN invites i ON u.id = i.user_id
+                    INNER JOIN user_tags ut ON u.id = ut.user_id
+                    WHERE ut.tag = ?
+                    ORDER BY u.created_at DESC
+                ''', (tag_filter,))
+            else:
+                cursor.execute('''
+                    SELECT
+                        u.*,
+                        i.invite_code,
+                        i.status as invite_status,
+                        i.sent_at,
+                        i.accepted_at
+                    FROM users u
+                    LEFT JOIN invites i ON u.id = i.user_id
+                    ORDER BY u.created_at DESC
+                ''')
             users = cursor.fetchall()
+
+            # Get tags for all users
+            cursor.execute('SELECT user_id, tag FROM user_tags')
+            all_tags = cursor.fetchall()
+
+            # Build user_id -> tags mapping
+            user_tags_map = {}
+            for row in all_tags:
+                uid = row['user_id']
+                if uid not in user_tags_map:
+                    user_tags_map[uid] = []
+                user_tags_map[uid].append(row['tag'])
 
         return jsonify({
             'success': True,
@@ -1685,7 +1716,8 @@ def get_users():
                     'invite_code': user['invite_code'],
                     'invite_status': user['invite_status'],
                     'sent_at': user['sent_at'],
-                    'accepted_at': user['accepted_at']
+                    'accepted_at': user['accepted_at'],
+                    'tags': user_tags_map.get(user['id'], [])
                 } for user in users
             ]
         })
@@ -1934,6 +1966,156 @@ def toggle_user_access(user_id):
             'success': True,
             'is_allowed': new_status,
             'message': f'User access {"enabled" if new_status else "disabled"}'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Predefined tags for users
+AVAILABLE_TAGS = ['Test', 'HiFest', 'HypeWise']
+
+
+@admin_bp.route('/api/admin/tags', methods=['GET'])
+@admin_required
+def get_available_tags():
+    """Get list of available tags."""
+    return jsonify({
+        'success': True,
+        'tags': AVAILABLE_TAGS
+    })
+
+
+@admin_bp.route('/api/admin/users/<int:user_id>/tags', methods=['POST'])
+@admin_required
+def add_user_tag(user_id):
+    """Add a tag to a user."""
+    try:
+        data = request.get_json()
+        tag = data.get('tag', '').strip()
+
+        if tag not in AVAILABLE_TAGS:
+            return jsonify({'error': f'Invalid tag. Available tags: {", ".join(AVAILABLE_TAGS)}'}), 400
+
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    'INSERT INTO user_tags (user_id, tag) VALUES (?, ?)',
+                    (user_id, tag)
+                )
+            except Exception:
+                # Tag already exists for this user
+                return jsonify({'error': 'User already has this tag'}), 400
+
+        return jsonify({
+            'success': True,
+            'message': f'Tag "{tag}" added to user'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/users/<int:user_id>/tags/<tag>', methods=['DELETE'])
+@admin_required
+def remove_user_tag(user_id, tag):
+    """Remove a tag from a user."""
+    try:
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'DELETE FROM user_tags WHERE user_id = ? AND tag = ?',
+                (user_id, tag)
+            )
+
+            if cursor.rowcount == 0:
+                return jsonify({'error': 'Tag not found on user'}), 404
+
+        return jsonify({
+            'success': True,
+            'message': f'Tag "{tag}" removed from user'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/send-reminder', methods=['POST'])
+@admin_required
+def send_reminder_emails():
+    """Send reminder email to users, optionally filtered by tags."""
+    try:
+        data = request.get_json()
+        subject = data.get('subject', '').strip()
+        message = data.get('message', '').strip()
+        tags = data.get('tags', [])  # List of tags to filter by (empty = all users)
+
+        if not subject:
+            return jsonify({'error': 'Subject is required'}), 400
+        if not message:
+            return jsonify({'error': 'Message is required'}), 400
+
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            if tags:
+                # Get users with any of the specified tags
+                placeholders = ','.join('?' * len(tags))
+                cursor.execute(f'''
+                    SELECT DISTINCT u.id, u.email, u.name
+                    FROM users u
+                    INNER JOIN user_tags ut ON u.id = ut.user_id
+                    WHERE ut.tag IN ({placeholders}) AND u.is_allowed = 1
+                ''', tags)
+            else:
+                # Get all allowed users
+                cursor.execute('SELECT id, email, name FROM users WHERE is_allowed = 1')
+
+            users = cursor.fetchall()
+
+        if not users:
+            return jsonify({'error': 'No users found matching the criteria'}), 404
+
+        # Import email service
+        from app.services.email_service import email_service
+
+        sent_count = 0
+        failed_count = 0
+        failed_emails = []
+
+        for user in users:
+            try:
+                success = email_service.send_reminder_email(
+                    to_email=user['email'],
+                    name=user['name'],
+                    subject=subject,
+                    message=message
+                )
+                if success:
+                    sent_count += 1
+                else:
+                    failed_count += 1
+                    failed_emails.append(user['email'])
+            except Exception as e:
+                print(f"Failed to send reminder to {user['email']}: {e}")
+                failed_count += 1
+                failed_emails.append(user['email'])
+
+        return jsonify({
+            'success': True,
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'failed_emails': failed_emails,
+            'message': f'Sent {sent_count} reminder emails' + (f', {failed_count} failed' if failed_count else '')
         })
 
     except Exception as e:

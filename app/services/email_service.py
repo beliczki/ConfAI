@@ -241,6 +241,97 @@ The ConfAI Team
             print(f"Error sending invite email: {str(e)}")
             return False
 
+    def send_reminder_email(self, to_email, name, subject, message):
+        """Send reminder email to user with custom subject and message."""
+        try:
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = self.from_email
+            msg['To'] = to_email
+            msg['Message-ID'] = make_msgid(domain=self.from_email.split('@')[1])
+
+            # Create HTML and plain text versions
+            text_content = f"""
+Hello {name},
+
+{message}
+
+Best regards,
+The ConfAI Team
+            """
+
+            # Build logo HTML (use CID if logo available)
+            logo_html = '<img src="cid:logo" alt="ConfAI" style="max-height: 50px; margin: 0;">' if self.logo_data else '<h1 style="color: white; margin: 0;">ConfAI</h1>'
+
+            # Convert newlines in message to HTML breaks
+            html_message = message.replace('\n', '<br>')
+
+            html_content = f"""
+<html>
+  <head>
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <style>
+      .email-header {{
+        background-color: #1a1a1a !important;
+        background: linear-gradient(to bottom, #1a1a1a, #2a2a2a) !important;
+      }}
+    </style>
+  </head>
+  <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div class="email-header" style="overflow: hidden; background: linear-gradient(to bottom, #1a1a1a, #2a2a2a); padding: 30px 20px 20px 30px; border-radius: 10px 10px 0 0; text-align: left;">
+      <img src="cid:bggrad" alt="" style="height: 1px; opacity: 0.1;">
+      {logo_html}
+    </div>
+    <div style="background: #f8f8f8; padding: 30px; border-radius: 0 0 10px 10px;">
+      <h2 style="color: #333;">{subject}</h2>
+      <p style="color: #666; font-size: 16px;">Hello {name},</p>
+      <div style="color: #666; font-size: 16px; line-height: 1.6;">
+        {html_message}
+      </div>
+    </div>
+    <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+      <p>© 2025 Telekom ConfAI. All rights reserved.</p>
+    </div>
+  </body>
+</html>
+            """
+
+            # Attach both versions
+            part1 = MIMEText(text_content, 'plain')
+            part2 = MIMEText(html_content, 'html')
+            msg.attach(part1)
+            msg.attach(part2)
+
+            # Attach logo as inline image with CID
+            if self.logo_data:
+                logo_img = MIMEImage(self.logo_data)
+                logo_img.add_header('Content-ID', '<logo>')
+                logo_img.add_header('Content-Disposition', 'inline', filename='logo.png')
+                msg.attach(logo_img)
+
+            # Attach background gradient image
+            if self.bg_gradient_data:
+                bg_img = MIMEImage(self.bg_gradient_data, 'jpeg')
+                bg_img.add_header('Content-ID', '<bggrad>')
+                bg_img.add_header('Content-Disposition', 'inline', filename='bggrad.jpg')
+                msg.attach(bg_img)
+
+            # Send email
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
+                if self.username and self.password:
+                    server.login(self.username, self.password)
+                server.send_message(msg)
+
+            print(f"Reminder email sent to {to_email}")
+            return True
+
+        except Exception as e:
+            print(f"Error sending reminder email: {str(e)}")
+            return False
+
 
 # Singleton instance
 email_service = EmailService()

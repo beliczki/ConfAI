@@ -3564,8 +3564,26 @@ async function loadUsers() {
     }
 }
 
+// Available tags (hardcoded)
+const AVAILABLE_TAGS = ['Test', 'HiFest', 'HypeWise'];
+
+// Current tag filter
+let currentTagFilter = '';
+
+// Store all users for filtering
+let allUsersData = [];
+
 function renderUsersList(users) {
     const listEl = document.getElementById('users-list');
+
+    // Store users for filtering
+    allUsersData = users;
+
+    // Update user count
+    const countEl = document.getElementById('filtered-user-count');
+    if (countEl) {
+        countEl.textContent = `${users.length} user${users.length !== 1 ? 's' : ''}`;
+    }
 
     if (!users || users.length === 0) {
         listEl.innerHTML = `
@@ -3583,6 +3601,30 @@ function renderUsersList(users) {
         const statusBadge = getInviteStatusBadge(user.invite_status, user.sent_at, user.accepted_at);
         const canSendInvite = (!user.invite_status || user.invite_status === 'pending') && user.invite_status !== 'accepted';
 
+        // Format created_at date
+        const createdDate = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric'
+        }) : '';
+
+        // Render tags
+        const userTags = user.tags || [];
+        const tagsHtml = userTags.map(tag =>
+            `<span class="tag-badge tag-${tag}" onclick="removeTag(${user.id}, '${tag}')" title="Click to remove">${tag}</span>`
+        ).join('');
+
+        // Available tags to add (not already assigned)
+        const availableTags = AVAILABLE_TAGS.filter(t => !userTags.includes(t));
+        const addTagDropdown = availableTags.length > 0 ? `
+            <div class="tag-dropdown">
+                <button class="add-tag-btn" onclick="toggleTagDropdown(event, ${user.id})">+ Tag</button>
+                <div class="tag-dropdown-menu" id="tag-dropdown-${user.id}">
+                    ${availableTags.map(tag =>
+                        `<button class="tag-dropdown-item" onclick="addTag(${user.id}, '${tag}')">${tag}</button>`
+                    ).join('')}
+                </div>
+            </div>
+        ` : '';
+
         return `
             <div class="user-item">
                 <div class="user-info">
@@ -3594,6 +3636,11 @@ function renderUsersList(users) {
                         <div class="user-email">${escapeHtml(user.email)}</div>
                     </div>
                 </div>
+                <div class="user-tags">
+                    ${tagsHtml}
+                    ${addTagDropdown}
+                </div>
+                <div class="user-created-at">${createdDate}</div>
                 <div class="user-status">
                     ${statusBadge}
                 </div>
@@ -3619,6 +3666,213 @@ function renderUsersList(users) {
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+// Toggle tag dropdown menu
+function toggleTagDropdown(event, userId) {
+    event.stopPropagation();
+    // Close all other dropdowns
+    document.querySelectorAll('.tag-dropdown-menu.show').forEach(el => el.classList.remove('show'));
+    // Toggle this one
+    const dropdown = document.getElementById(`tag-dropdown-${userId}`);
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', () => {
+    document.querySelectorAll('.tag-dropdown-menu.show').forEach(el => el.classList.remove('show'));
+});
+
+// Add tag to user
+async function addTag(userId, tag) {
+    try {
+        const response = await fetch(`/api/admin/users/${userId}/tags`, {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ tag })
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to add tag');
+        }
+
+        // Reload users to reflect changes
+        await loadUsers();
+    } catch (error) {
+        console.error('Error adding tag:', error);
+        alert('Failed to add tag: ' + error.message);
+    }
+}
+
+// Remove tag from user
+async function removeTag(userId, tag) {
+    try {
+        const response = await fetch(`/api/admin/users/${userId}/tags/${encodeURIComponent(tag)}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to remove tag');
+        }
+
+        // Reload users to reflect changes
+        await loadUsers();
+    } catch (error) {
+        console.error('Error removing tag:', error);
+        alert('Failed to remove tag: ' + error.message);
+    }
+}
+
+// Filter users by tag
+async function filterUsersByTag(tag) {
+    currentTagFilter = tag;
+
+    // Update active button
+    document.querySelectorAll('.tag-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tag === tag);
+    });
+
+    // Reload users with filter
+    await loadUsers();
+}
+
+// Override loadUsers to support tag filter
+const originalLoadUsers = loadUsers;
+loadUsers = async function() {
+    const listEl = document.getElementById('users-list');
+    listEl.innerHTML = `
+        <div class="loading-state">
+            <i data-lucide="loader"></i>
+            <p>Loading users...</p>
+        </div>
+    `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    try {
+        let url = '/api/admin/users';
+        if (currentTagFilter) {
+            url += `?tag=${encodeURIComponent(currentTagFilter)}`;
+        }
+
+        const response = await fetch(url, {
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load users');
+        }
+
+        const data = await response.json();
+        renderUsersList(data.users);
+    } catch (error) {
+        console.error('Error loading users:', error);
+        listEl.innerHTML = `
+            <div class="error-state">
+                <i data-lucide="alert-circle"></i>
+                <p>Error loading users: ${error.message}</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+};
+
+// Reminder email modal functions
+function openReminderModal() {
+    document.getElementById('reminder-modal').style.display = 'flex';
+    // Reset form
+    document.getElementById('reminder-subject').value = '';
+    document.getElementById('reminder-message').value = '';
+    document.querySelectorAll('.tag-checkboxes input').forEach(cb => cb.checked = false);
+    updateRecipientCount();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeReminderModal() {
+    document.getElementById('reminder-modal').style.display = 'none';
+}
+
+// Update recipient count based on selected tags
+function updateRecipientCount() {
+    const selectedTags = Array.from(document.querySelectorAll('.tag-checkboxes input:checked')).map(cb => cb.value);
+    const countEl = document.getElementById('reminder-recipient-count');
+
+    if (selectedTags.length === 0) {
+        countEl.textContent = 'No tags selected - will send to all allowed users';
+    } else {
+        countEl.textContent = `Will send to users with tags: ${selectedTags.join(', ')}`;
+    }
+}
+
+// Add event listeners to tag checkboxes
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.tag-checkboxes input').forEach(cb => {
+        cb.addEventListener('change', updateRecipientCount);
+    });
+});
+
+// Send reminder emails
+async function sendReminderEmails() {
+    const subject = document.getElementById('reminder-subject').value.trim();
+    const message = document.getElementById('reminder-message').value.trim();
+    const selectedTags = Array.from(document.querySelectorAll('.tag-checkboxes input:checked')).map(cb => cb.value);
+
+    if (!subject) {
+        alert('Please enter a subject');
+        return;
+    }
+
+    if (!message) {
+        alert('Please enter a message');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to send this reminder email${selectedTags.length > 0 ? ' to users with tags: ' + selectedTags.join(', ') : ' to all users'}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/send-reminder', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                subject,
+                message,
+                tags: selectedTags
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to send reminders');
+        }
+
+        closeReminderModal();
+        alert(data.message);
+    } catch (error) {
+        console.error('Error sending reminders:', error);
+        alert('Failed to send reminders: ' + error.message);
+    }
+}
+
+// Export new functions to window
+window.filterUsersByTag = filterUsersByTag;
+window.addTag = addTag;
+window.removeTag = removeTag;
+window.toggleTagDropdown = toggleTagDropdown;
+window.openReminderModal = openReminderModal;
+window.closeReminderModal = closeReminderModal;
+window.sendReminderEmails = sendReminderEmails;
 
 function getInviteStatusBadge(status, sentAt, acceptedAt) {
     if (acceptedAt) {

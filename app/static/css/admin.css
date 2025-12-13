@@ -2741,3 +2741,266 @@ body:has(.admin-container) .dialog-btn-secondary:hover {
 .toast-info {
     background: #0ea5e9;
 }
+
+/* ============================
+   User Tags & Filter Styles
+   ============================ */
+
+.tag-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-right: 8px;
+}
+
+.tag-filter-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tag-filter-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.tag-filter-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.user-count {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* Tag Badges */
+.tag-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-right: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.tag-badge:hover {
+    opacity: 0.8;
+}
+
+.tag-badge.tag-Test {
+    background: #6b7280;
+    color: white;
+}
+
+.tag-badge.tag-HiFest {
+    background: #3b82f6;
+    color: white;
+}
+
+.tag-badge.tag-HypeWise {
+    background: #10b981;
+    color: white;
+}
+
+/* Tag selector in user row */
+.user-tags {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.add-tag-btn {
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-tag-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.tag-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.tag-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    min-width: 120px;
+    display: none;
+}
+
+.tag-dropdown-menu.show {
+    display: block;
+}
+
+.tag-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.tag-dropdown-item:hover {
+    background: var(--bg-secondary);
+}
+
+.tag-dropdown-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* User row with created_at */
+.user-card .user-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.user-created-at {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-dialog {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--text-secondary);
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+}
+
+/* Tag checkboxes in modal */
+.tag-checkboxes {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.tag-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.tag-checkbox input {
+    cursor: pointer;
+}
+
+/* Form control for modal */
+.modal-body .form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.modal-body .form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.modal-body textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}

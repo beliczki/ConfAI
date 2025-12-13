@@ -74,6 +74,18 @@ def init_db():
             )
         ''')
 
+        # User tags table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                tag TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(user_id, tag)
+            )
+        ''')
+
         # Chat threads table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS chat_threads (

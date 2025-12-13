@@ -577,10 +577,26 @@
         <div class="section-card">
             <div class="section-header-with-actions">
                 <h2><i data-lucide="users"></i> Invited Users</h2>
-                <button class="btn btn-primary" onclick="sendBulkInvites()">
-                    <i data-lucide="mail"></i>
-                    <span>Send All Pending Invites</span>
-                </button>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="openReminderModal()">
+                        <i data-lucide="bell"></i>
+                        <span>Send Reminder</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="sendBulkInvites()">
+                        <i data-lucide="mail"></i>
+                        <span>Send All Pending Invites</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tag Filter Bar -->
+            <div class="tag-filter-bar">
+                <span class="filter-label">Filter by tag:</span>
+                <button class="tag-filter-btn active" data-tag="" onclick="filterUsersByTag('')">All</button>
+                <button class="tag-filter-btn" data-tag="Test" onclick="filterUsersByTag('Test')">Test</button>
+                <button class="tag-filter-btn" data-tag="HiFest" onclick="filterUsersByTag('HiFest')">HiFest</button>
+                <button class="tag-filter-btn" data-tag="HypeWise" onclick="filterUsersByTag('HypeWise')">HypeWise</button>
+                <span class="user-count" id="filtered-user-count"></span>
             </div>
 
             <div id="users-list" class="users-list">
@@ -589,6 +605,53 @@
                     <p>Loading users...</p>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reminder Email Modal -->
+<div class="modal-overlay" id="reminder-modal" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3><i data-lucide="bell"></i> Send Reminder Email</h3>
+            <button class="modal-close" onclick="closeReminderModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Filter by tags (select recipients):</label>
+                <div class="tag-checkboxes">
+                    <label class="tag-checkbox">
+                        <input type="checkbox" id="reminder-tag-Test" value="Test">
+                        <span class="tag-badge tag-Test">Test</span>
+                    </label>
+                    <label class="tag-checkbox">
+                        <input type="checkbox" id="reminder-tag-HiFest" value="HiFest">
+                        <span class="tag-badge tag-HiFest">HiFest</span>
+                    </label>
+                    <label class="tag-checkbox">
+                        <input type="checkbox" id="reminder-tag-HypeWise" value="HypeWise">
+                        <span class="tag-badge tag-HypeWise">HypeWise</span>
+                    </label>
+                </div>
+                <p class="help-text" id="reminder-recipient-count">No tags selected - will send to all allowed users</p>
+            </div>
+            <div class="form-group">
+                <label for="reminder-subject">Subject:</label>
+                <input type="text" id="reminder-subject" class="form-control" placeholder="Email subject...">
+            </div>
+            <div class="form-group">
+                <label for="reminder-message">Message:</label>
+                <textarea id="reminder-message" class="form-control" rows="6" placeholder="Write your reminder message here..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeReminderModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="sendReminderEmails()">
+                <i data-lucide="send"></i>
+                <span>Send Reminder</span>
+            </button>
         </div>
     </div>
 </div>
