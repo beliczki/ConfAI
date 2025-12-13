@@ -2053,6 +2053,9 @@ def remove_user_tag(user_id, tag):
 @admin_required
 def send_reminder_emails():
     """Send reminder email to users, optionally filtered by tags."""
+    from app.utils.helpers import generate_magic_token
+    from datetime import datetime, timedelta
+
     try:
         data = request.get_json()
         subject = data.get('subject', '').strip()
@@ -2092,13 +2095,31 @@ def send_reminder_emails():
         failed_count = 0
         failed_emails = []
 
+        # Get base URL for magic links
+        base_url = request.host_url.rstrip('/')
+
         for user in users:
             try:
+                # Generate magic login token (7 days expiry)
+                magic_token = generate_magic_token()
+                expires_at = datetime.now() + timedelta(days=7)
+
+                with get_db() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        'INSERT INTO login_tokens (email, token, expires_at) VALUES (?, ?, ?)',
+                        (user['email'], magic_token, expires_at)
+                    )
+
+                # Build magic login link
+                login_link = f"{base_url}/magic-login/{magic_token}"
+
                 success = email_service.send_reminder_email(
                     to_email=user['email'],
                     name=user['name'],
                     subject=subject,
-                    message=message
+                    message=message,
+                    login_link=login_link
                 )
                 if success:
                     sent_count += 1

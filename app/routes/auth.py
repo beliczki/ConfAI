@@ -5,7 +5,7 @@ from app.models import User, Settings, get_db
 from app.services.email_service import email_service
 from app.utils.helpers import (
     generate_pin, generate_gradient, extract_name_from_email,
-    is_valid_email
+    is_valid_email, generate_magic_token
 )
 from app import limiter
 
@@ -159,6 +159,57 @@ def logout():
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+
+@auth_bp.route('/magic-login/<token>')
+def magic_login(token):
+    """Magic link login - automatically logs user in with valid token."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        # Find valid magic token (longer tokens are magic links, not PINs)
+        cursor.execute('''
+            SELECT * FROM login_tokens
+            WHERE token = ? AND used = 0 AND expires_at > ? AND LENGTH(token) > 10
+            ORDER BY created_at DESC
+            LIMIT 1
+        ''', (token, datetime.now()))
+
+        token_record = cursor.fetchone()
+
+        if not token_record:
+            # Invalid or expired token - redirect to login
+            return redirect(url_for('auth.login'))
+
+        # Mark token as used
+        cursor.execute(
+            'UPDATE login_tokens SET used = 1 WHERE id = ?',
+            (token_record['id'],)
+        )
+
+    # Get or create user
+    email = token_record['email']
+    user = User.get_by_email(email)
+
+    if not user:
+        # User doesn't exist - redirect to login
+        return redirect(url_for('auth.login'))
+
+    # Check if user is allowed
+    if not user['is_allowed']:
+        return redirect(url_for('auth.login'))
+
+    # Set session
+    session['user_id'] = user['id']
+    session['email'] = user['email']
+    session['name'] = user['name']
+
+    # Check if admin
+    import os
+    admin_emails = os.getenv('ADMIN_EMAILS', '').split(',')
+    session['is_admin'] = email in admin_emails
+
+    # Redirect to chat
+    return redirect(url_for('chat.chat_page'))
 
 
 @auth_bp.route('/me')

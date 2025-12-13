@@ -241,7 +241,7 @@ The ConfAI Team
             print(f"Error sending invite email: {str(e)}")
             return False
 
-    def send_reminder_email(self, to_email, name, subject, message):
+    def send_reminder_email(self, to_email, name, subject, message, login_link=None):
         """Send reminder email to user with custom subject and message."""
         try:
             # Create message
@@ -251,11 +251,15 @@ The ConfAI Team
             msg['To'] = to_email
             msg['Message-ID'] = make_msgid(domain=self.from_email.split('@')[1])
 
+            # Build login link text for plain version
+            login_text = f"\n\nClick here to login directly: {login_link}\n(This link expires in 7 days)" if login_link else ""
+
             # Create HTML and plain text versions
             text_content = f"""
 Hello {name},
 
 {message}
+{login_text}
 
 Best regards,
 The ConfAI Team
@@ -266,6 +270,16 @@ The ConfAI Team
 
             # Convert newlines in message to HTML breaks
             html_message = message.replace('\n', '<br>')
+
+            # Build login button HTML
+            login_button_html = ""
+            if login_link:
+                login_button_html = f"""
+      <div style="margin-top: 24px; text-align: center;">
+        <a href="{login_link}" style="display: inline-block; background: #E20074; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Open ConfAI</a>
+        <p style="color: #999; font-size: 12px; margin-top: 12px;">This link expires in 7 days</p>
+      </div>
+"""
 
             html_content = f"""
 <html>
@@ -290,6 +304,7 @@ The ConfAI Team
       <div style="color: #666; font-size: 16px; line-height: 1.6;">
         {html_message}
       </div>
+      {login_button_html}
     </div>
     <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
       <p>© 2025 Telekom ConfAI. All rights reserved.</p>

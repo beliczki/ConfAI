@@ -11,6 +11,12 @@ def generate_pin(length=4):
     return ''.join(random.choices(string.digits, k=length))
 
 
+def generate_magic_token():
+    """Generate a secure magic login token."""
+    import secrets
+    return secrets.token_urlsafe(32)
+
+
 def generate_gradient():
     """Generate a random gradient for user avatar."""
     gradients = [
