@@ -3900,7 +3900,15 @@ async function sendReminderEmails() {
         return;
     }
 
-    if (!confirm(`Are you sure you want to send this reminder email${selectedTags.length > 0 ? ' to users with tags: ' + selectedTags.join(', ') : ' to all users'}?`)) {
+    // Close modal first so confirm dialog is visible
+    closeReminderModal();
+
+    const confirmMsg = `Are you sure you want to send this reminder email${selectedTags.length > 0 ? ' to users with tags: ' + selectedTags.join(', ') : ' to all users'}?`;
+    if (!confirm(confirmMsg)) {
+        // User cancelled - reopen modal with values preserved
+        document.getElementById('reminder-modal').style.display = 'flex';
+        document.getElementById('reminder-subject').value = subject;
+        document.getElementById('reminder-message').value = message;
         return;
     }
 
