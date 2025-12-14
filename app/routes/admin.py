@@ -1986,6 +1986,35 @@ def get_available_tags():
     })
 
 
+@admin_bp.route('/api/admin/tags/counts', methods=['GET'])
+@admin_required
+def get_tag_counts():
+    """Get count of users for each tag."""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            counts = {}
+            for tag in AVAILABLE_TAGS:
+                cursor.execute('''
+                    SELECT COUNT(DISTINCT ut.user_id)
+                    FROM user_tags ut
+                    JOIN users u ON ut.user_id = u.id
+                    WHERE ut.tag = ? AND u.is_allowed = 1
+                ''', (tag,))
+                counts[tag] = cursor.fetchone()[0]
+
+            # Also get total allowed users
+            cursor.execute('SELECT COUNT(*) FROM users WHERE is_allowed = 1')
+            counts['_total'] = cursor.fetchone()[0]
+
+        return jsonify({
+            'success': True,
+            'counts': counts
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/api/admin/users/<int:user_id>/tags', methods=['POST'])
 @admin_required
 def add_user_tag(user_id):

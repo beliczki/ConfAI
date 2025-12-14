@@ -2990,6 +2990,12 @@ body:has(.admin-container) .dialog-btn-secondary:hover {
     cursor: pointer;
 }
 
+.tag-count {
+    color: #666;
+    font-size: 12px;
+    font-weight: normal;
+}
+
 /* Form control for modal */
 .modal-body .form-control {
     width: 100%;

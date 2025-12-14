@@ -3784,7 +3784,7 @@ loadUsers = async function() {
 };
 
 // Reminder email modal functions
-function openReminderModal() {
+async function openReminderModal() {
     console.log('openReminderModal called');
     const modal = document.getElementById('reminder-modal');
     modal.style.display = 'flex';
@@ -3794,6 +3794,29 @@ function openReminderModal() {
     document.querySelectorAll('.tag-checkboxes input').forEach(cb => cb.checked = false);
     updateRecipientCount();
     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Fetch and display tag counts
+    try {
+        const response = await fetch('/api/admin/tags/counts', {
+            headers: getAuthHeaders()
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.counts) {
+                // Update count displays
+                for (const [tag, count] of Object.entries(data.counts)) {
+                    if (tag !== '_total') {
+                        const countEl = document.getElementById(`tag-count-${tag}`);
+                        if (countEl) {
+                            countEl.textContent = `(${count})`;
+                        }
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching tag counts:', error);
+    }
 
     // Debug: Add click listener to send button
     const sendBtn = modal.querySelector('.btn-primary');
