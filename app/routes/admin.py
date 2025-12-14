@@ -2078,6 +2078,45 @@ def remove_user_tag(user_id, tag):
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/users/bulk-tag', methods=['POST'])
+@admin_required
+def bulk_add_tag():
+    """Add a tag to multiple users at once."""
+    try:
+        data = request.get_json()
+        user_ids = data.get('user_ids', [])
+        tag = data.get('tag', '').strip()
+
+        if not user_ids:
+            return jsonify({'error': 'No users specified'}), 400
+
+        if tag not in AVAILABLE_TAGS:
+            return jsonify({'error': f'Invalid tag. Available tags: {", ".join(AVAILABLE_TAGS)}'}), 400
+
+        updated_count = 0
+        with get_db() as conn:
+            cursor = conn.cursor()
+            for user_id in user_ids:
+                try:
+                    cursor.execute(
+                        'INSERT OR IGNORE INTO user_tags (user_id, tag) VALUES (?, ?)',
+                        (user_id, tag)
+                    )
+                    if cursor.rowcount > 0:
+                        updated_count += 1
+                except Exception as e:
+                    print(f"Error adding tag to user {user_id}: {e}")
+
+        return jsonify({
+            'success': True,
+            'updated_count': updated_count,
+            'message': f'Added "{tag}" tag to {updated_count} user(s)'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/api/admin/send-reminder', methods=['POST'])
 @admin_required
 def send_reminder_emails():

@@ -3626,7 +3626,8 @@ function renderUsersList(users) {
         ` : '';
 
         return `
-            <div class="user-item">
+            <div class="user-item" data-user-id="${user.id}">
+                <input type="checkbox" class="user-checkbox" data-user-id="${user.id}" onchange="updateUserSelection()">
                 <div class="user-info">
                     <div class="user-avatar" style="background: ${user.avatar_gradient}">
                         ${user.name.substring(0, 2).toUpperCase()}
@@ -3727,6 +3728,112 @@ async function removeTag(userId, tag) {
     } catch (error) {
         console.error('Error removing tag:', error);
         alert('Failed to remove tag: ' + error.message);
+    }
+}
+
+// Bulk selection functions
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('select-all-users');
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+
+    userCheckboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+        const userItem = cb.closest('.user-item');
+        if (userItem) {
+            userItem.classList.toggle('selected', cb.checked);
+        }
+    });
+
+    updateSelectionCount();
+}
+
+function updateUserSelection() {
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const selectAllCheckbox = document.getElementById('select-all-users');
+
+    // Update select all checkbox state
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = userCheckboxes.length > 0 && checkedBoxes.length === userCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < userCheckboxes.length;
+    }
+
+    // Update visual selection state
+    userCheckboxes.forEach(cb => {
+        const userItem = cb.closest('.user-item');
+        if (userItem) {
+            userItem.classList.toggle('selected', cb.checked);
+        }
+    });
+
+    updateSelectionCount();
+}
+
+function updateSelectionCount() {
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const count = checkedBoxes.length;
+    const countEl = document.getElementById('selected-count');
+    const buttonsEl = document.getElementById('bulk-action-buttons');
+
+    if (countEl) {
+        countEl.textContent = `${count} selected`;
+    }
+
+    if (buttonsEl) {
+        buttonsEl.style.display = count > 0 ? 'flex' : 'none';
+    }
+}
+
+function clearSelection() {
+    const selectAllCheckbox = document.getElementById('select-all-users');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+    }
+
+    document.querySelectorAll('.user-checkbox').forEach(cb => {
+        cb.checked = false;
+        const userItem = cb.closest('.user-item');
+        if (userItem) {
+            userItem.classList.remove('selected');
+        }
+    });
+
+    updateSelectionCount();
+}
+
+async function addTagToSelected(tag) {
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const userIds = Array.from(checkedBoxes).map(cb => parseInt(cb.dataset.userId));
+
+    if (userIds.length === 0) {
+        alert('No users selected');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/users/bulk-tag', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_ids: userIds, tag: tag })
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to add tags');
+        }
+
+        const data = await response.json();
+        alert(`Added "${tag}" tag to ${data.updated_count} user(s)`);
+
+        // Clear selection and reload
+        clearSelection();
+        await loadUsers();
+    } catch (error) {
+        console.error('Error adding tags:', error);
+        alert('Failed to add tags: ' + error.message);
     }
 }
 
@@ -4030,6 +4137,10 @@ window.closeProgressModal = closeProgressModal;
 window.removeTag = removeTag;
 window.toggleTagDropdown = toggleTagDropdown;
 window.openReminderModal = openReminderModal;
+window.toggleSelectAll = toggleSelectAll;
+window.updateUserSelection = updateUserSelection;
+window.clearSelection = clearSelection;
+window.addTagToSelected = addTagToSelected;
 window.closeReminderModal = closeReminderModal;
 window.sendReminderEmails = sendReminderEmails;
 

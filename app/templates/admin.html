@@ -599,6 +599,22 @@
                 <span class="user-count" id="filtered-user-count"></span>
             </div>
 
+            <!-- Bulk Actions Bar -->
+            <div class="bulk-actions-bar" id="bulk-actions-bar">
+                <label class="select-all-label">
+                    <input type="checkbox" id="select-all-users" onchange="toggleSelectAll()">
+                    <span>Select All</span>
+                </label>
+                <span class="selected-count" id="selected-count">0 selected</span>
+                <div class="bulk-action-buttons" id="bulk-action-buttons" style="display: none;">
+                    <span>Add tag:</span>
+                    <button class="btn btn-sm tag-Test" onclick="addTagToSelected('Test')">Test</button>
+                    <button class="btn btn-sm tag-HiFest" onclick="addTagToSelected('HiFest')">HiFest</button>
+                    <button class="btn btn-sm tag-HypeWise" onclick="addTagToSelected('HypeWise')">HypeWise</button>
+                    <button class="btn btn-sm btn-secondary" onclick="clearSelection()">Clear</button>
+                </div>
+            </div>
+
             <div id="users-list" class="users-list">
                 <div class="loading-state">
                     <i data-lucide="loader"></i>
