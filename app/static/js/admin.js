@@ -3785,13 +3785,30 @@ loadUsers = async function() {
 
 // Reminder email modal functions
 function openReminderModal() {
-    document.getElementById('reminder-modal').style.display = 'flex';
+    console.log('openReminderModal called');
+    const modal = document.getElementById('reminder-modal');
+    modal.style.display = 'flex';
     // Reset form
     document.getElementById('reminder-subject').value = '';
     document.getElementById('reminder-message').value = '';
     document.querySelectorAll('.tag-checkboxes input').forEach(cb => cb.checked = false);
     updateRecipientCount();
     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Debug: Add click listener to send button
+    const sendBtn = modal.querySelector('.btn-primary');
+    console.log('Send button found:', sendBtn);
+    if (sendBtn) {
+        // Remove any existing debug listener
+        sendBtn.removeEventListener('click', debugSendClick);
+        // Add fresh listener
+        sendBtn.addEventListener('click', debugSendClick);
+        console.log('Debug click listener attached');
+    }
+}
+
+function debugSendClick(e) {
+    console.log('Send button clicked via addEventListener!', e);
 }
 
 function closeReminderModal() {
@@ -3819,9 +3836,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Send reminder emails
 async function sendReminderEmails() {
-    const subject = document.getElementById('reminder-subject').value.trim();
-    const message = document.getElementById('reminder-message').value.trim();
+    console.log('sendReminderEmails called');
+
+    const subjectEl = document.getElementById('reminder-subject');
+    const messageEl = document.getElementById('reminder-message');
+
+    console.log('Subject element:', subjectEl);
+    console.log('Message element:', messageEl);
+
+    if (!subjectEl || !messageEl) {
+        console.error('Form elements not found');
+        alert('Error: Form elements not found. Please refresh the page.');
+        return;
+    }
+
+    const subject = subjectEl.value.trim();
+    const message = messageEl.value.trim();
     const selectedTags = Array.from(document.querySelectorAll('.tag-checkboxes input:checked')).map(cb => cb.value);
+
+    console.log('Subject:', subject);
+    console.log('Message:', message);
+    console.log('Selected tags:', selectedTags);
 
     if (!subject) {
         alert('Please enter a subject');
@@ -3838,6 +3873,7 @@ async function sendReminderEmails() {
     }
 
     try {
+        console.log('Sending request...');
         const response = await fetch('/api/admin/send-reminder', {
             method: 'POST',
             headers: {
@@ -3851,7 +3887,9 @@ async function sendReminderEmails() {
             })
         });
 
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
 
         if (!response.ok) {
             throw new Error(data.error || 'Failed to send reminders');
