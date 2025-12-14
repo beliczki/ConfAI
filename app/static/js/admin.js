@@ -3818,20 +3818,11 @@ async function openReminderModal() {
         console.error('Error fetching tag counts:', error);
     }
 
-    // Debug: Add click listener to send button
-    const sendBtn = modal.querySelector('.btn-primary');
-    console.log('Send button found:', sendBtn);
-    if (sendBtn) {
-        // Remove any existing debug listener
-        sendBtn.removeEventListener('click', debugSendClick);
-        // Add fresh listener
-        sendBtn.addEventListener('click', debugSendClick);
-        console.log('Debug click listener attached');
-    }
-}
-
-function debugSendClick(e) {
-    console.log('Send button clicked via addEventListener!', e);
+    // Log button state for debugging
+    const sendBtn = document.getElementById('send-reminder-btn');
+    console.log('Send button element:', sendBtn);
+    console.log('Send button disabled:', sendBtn?.disabled);
+    console.log('Send button style.pointerEvents:', sendBtn?.style.pointerEvents);
 }
 
 function closeReminderModal() {
@@ -3850,11 +3841,29 @@ function updateRecipientCount() {
     }
 }
 
-// Add event listeners to tag checkboxes
+// Add event listeners to tag checkboxes and send button
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.tag-checkboxes input').forEach(cb => {
         cb.addEventListener('change', updateRecipientCount);
     });
+
+    // Attach send button listener
+    const sendBtn = document.getElementById('send-reminder-btn');
+    if (sendBtn) {
+        sendBtn.addEventListener('click', function(e) {
+            console.log('Send button click event fired!', e);
+            sendReminderEmails();
+        });
+        console.log('Send reminder button listener attached');
+    }
+
+    // Debug: Log all clicks on the modal
+    const modal = document.getElementById('reminder-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            console.log('Click inside reminder modal:', e.target, e.target.id, e.target.className);
+        }, true);
+    }
 });
 
 // Send reminder emails
