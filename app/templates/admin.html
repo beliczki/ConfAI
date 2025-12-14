@@ -658,6 +658,28 @@
         </div>
     </div>
 </div>
+
+<!-- Email Sending Progress Modal -->
+<div class="modal-overlay" id="email-progress-modal" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3><i data-lucide="mail"></i> Sending Emails</h3>
+        </div>
+        <div class="modal-body">
+            <div class="progress-info">
+                <p id="progress-status">Preparing to send...</p>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+                </div>
+                <p id="progress-count">0 / 0 emails sent</p>
+            </div>
+            <div id="progress-log" class="progress-log"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="progress-close-btn" onclick="closeProgressModal()" style="display: none;">Close</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

@@ -2172,6 +2172,109 @@ def send_reminder_emails():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/send-reminder-stream', methods=['POST'])
+@admin_required
+def send_reminder_emails_stream():
+    """Send reminder emails with streaming progress updates."""
+    import time
+    import json
+    from app.utils.helpers import generate_magic_token
+    from datetime import datetime, timedelta
+    from flask import Response, stream_with_context
+
+    data = request.get_json()
+    subject = data.get('subject', '').strip()
+    message = data.get('message', '').strip()
+    tags = data.get('tags', [])
+    delay = data.get('delay', 2)  # Default 2 seconds between emails
+
+    if not subject or not message:
+        return jsonify({'error': 'Subject and message are required'}), 400
+
+    def generate():
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+
+                if tags:
+                    placeholders = ','.join('?' * len(tags))
+                    cursor.execute(f'''
+                        SELECT DISTINCT u.id, u.email, u.name
+                        FROM users u
+                        INNER JOIN user_tags ut ON u.id = ut.user_id
+                        WHERE ut.tag IN ({placeholders}) AND u.is_allowed = 1
+                    ''', tags)
+                else:
+                    cursor.execute('SELECT id, email, name FROM users WHERE is_allowed = 1')
+
+                users = cursor.fetchall()
+
+            if not users:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'No users found'})}\n\n"
+                return
+
+            total = len(users)
+            yield f"data: {json.dumps({'type': 'start', 'total': total})}\n\n"
+
+            from app.services.email_service import email_service
+            base_url = request.host_url.rstrip('/')
+
+            sent_count = 0
+            failed_count = 0
+
+            for i, user in enumerate(users):
+                try:
+                    # Generate magic login token
+                    magic_token = generate_magic_token()
+                    expires_at = datetime.now() + timedelta(days=7)
+
+                    with get_db() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute(
+                            'INSERT INTO login_tokens (email, token, expires_at) VALUES (?, ?, ?)',
+                            (user['email'], magic_token, expires_at)
+                        )
+
+                    login_link = f"{base_url}/magic-login/{magic_token}"
+
+                    success = email_service.send_reminder_email(
+                        to_email=user['email'],
+                        name=user['name'],
+                        subject=subject,
+                        message=message,
+                        login_link=login_link
+                    )
+
+                    if success:
+                        sent_count += 1
+                        yield f"data: {json.dumps({'type': 'progress', 'current': i + 1, 'total': total, 'email': user['email'], 'status': 'success'})}\n\n"
+                    else:
+                        failed_count += 1
+                        yield f"data: {json.dumps({'type': 'progress', 'current': i + 1, 'total': total, 'email': user['email'], 'status': 'failed'})}\n\n"
+
+                except Exception as e:
+                    failed_count += 1
+                    yield f"data: {json.dumps({'type': 'progress', 'current': i + 1, 'total': total, 'email': user['email'], 'status': 'error', 'error': str(e)})}\n\n"
+
+                # Delay between emails (except for the last one)
+                if i < total - 1 and delay > 0:
+                    time.sleep(delay)
+
+            yield f"data: {json.dumps({'type': 'complete', 'sent': sent_count, 'failed': failed_count})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
+
 @admin_bp.route('/api/admin/registration-mode', methods=['GET'])
 @admin_required
 def get_registration_mode():

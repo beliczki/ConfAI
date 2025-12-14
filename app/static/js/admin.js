@@ -3900,12 +3900,13 @@ async function sendReminderEmails() {
         return;
     }
 
-    // Close modal and proceed with sending
+    // Close reminder modal and show progress modal
     closeReminderModal();
+    showProgressModal();
 
     try {
-        console.log('Sending request...');
-        const response = await fetch('/api/admin/send-reminder', {
+        console.log('Starting streaming request...');
+        const response = await fetch('/api/admin/send-reminder-stream', {
             method: 'POST',
             headers: {
                 ...getAuthHeaders(),
@@ -3914,29 +3915,118 @@ async function sendReminderEmails() {
             body: JSON.stringify({
                 subject,
                 message,
-                tags: selectedTags
+                tags: selectedTags,
+                delay: 2  // 2 seconds between emails
             })
         });
 
-        console.log('Response status:', response.status);
-        const data = await response.json();
-        console.log('Response data:', data);
-
         if (!response.ok) {
-            throw new Error(data.error || 'Failed to send reminders');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to start sending');
         }
 
-        closeReminderModal();
-        alert(data.message);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const text = decoder.decode(value);
+            const lines = text.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        handleProgressEvent(data);
+                    } catch (e) {
+                        console.error('Failed to parse SSE data:', e);
+                    }
+                }
+            }
+        }
     } catch (error) {
         console.error('Error sending reminders:', error);
-        alert('Failed to send reminders: ' + error.message);
+        updateProgressStatus('Error: ' + error.message, true);
+        showProgressCloseButton();
+    }
+}
+
+function showProgressModal() {
+    document.getElementById('email-progress-modal').style.display = 'flex';
+    document.getElementById('progress-status').textContent = 'Preparing to send...';
+    document.getElementById('progress-bar').style.width = '0%';
+    document.getElementById('progress-count').textContent = '0 / 0 emails sent';
+    document.getElementById('progress-log').innerHTML = '';
+    document.getElementById('progress-close-btn').style.display = 'none';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeProgressModal() {
+    document.getElementById('email-progress-modal').style.display = 'none';
+}
+
+function showProgressCloseButton() {
+    document.getElementById('progress-close-btn').style.display = 'inline-flex';
+}
+
+function updateProgressStatus(text, isError = false) {
+    const statusEl = document.getElementById('progress-status');
+    statusEl.textContent = text;
+    statusEl.style.color = isError ? '#dc3545' : '#333';
+}
+
+function addProgressLogEntry(text, type = 'info') {
+    const log = document.getElementById('progress-log');
+    const entry = document.createElement('div');
+    entry.className = `progress-log-entry ${type}`;
+    entry.textContent = text;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+}
+
+function handleProgressEvent(data) {
+    console.log('Progress event:', data);
+
+    switch (data.type) {
+        case 'start':
+            updateProgressStatus(`Sending to ${data.total} recipients...`);
+            document.getElementById('progress-count').textContent = `0 / ${data.total} emails sent`;
+            addProgressLogEntry(`Starting to send ${data.total} emails...`, 'info');
+            break;
+
+        case 'progress':
+            const percent = Math.round((data.current / data.total) * 100);
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('progress-count').textContent = `${data.current} / ${data.total} emails sent`;
+
+            if (data.status === 'success') {
+                addProgressLogEntry(`✓ Sent to ${data.email}`, 'success');
+            } else {
+                addProgressLogEntry(`✗ Failed: ${data.email}${data.error ? ' - ' + data.error : ''}`, 'error');
+            }
+            break;
+
+        case 'complete':
+            updateProgressStatus('Complete!');
+            document.getElementById('progress-bar').style.width = '100%';
+            addProgressLogEntry(`\nFinished: ${data.sent} sent, ${data.failed} failed`, data.failed > 0 ? 'error' : 'success');
+            showProgressCloseButton();
+            break;
+
+        case 'error':
+            updateProgressStatus('Error: ' + data.message, true);
+            addProgressLogEntry('Error: ' + data.message, 'error');
+            showProgressCloseButton();
+            break;
     }
 }
 
 // Export new functions to window
 window.filterUsersByTag = filterUsersByTag;
 window.addTag = addTag;
+window.closeProgressModal = closeProgressModal;
 window.removeTag = removeTag;
 window.toggleTagDropdown = toggleTagDropdown;
 window.openReminderModal = openReminderModal;
