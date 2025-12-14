@@ -17,8 +17,14 @@ class EmailService:
         self.username = os.getenv('SMTP_USERNAME')
         self.password = os.getenv('SMTP_PASSWORD')
         self.from_email = os.getenv('EMAIL_FROM', 'noreply@confai.com')
+        self.from_name = os.getenv('EMAIL_FROM_NAME', 'Telekom ConfAI')
         self.logo_data = self._load_logo()
         self.bg_gradient_data = self._load_bg_gradient()
+
+    def _get_from_header(self):
+        """Get formatted From header with display name."""
+        from email.utils import formataddr
+        return formataddr((self.from_name, self.from_email))
 
     def _load_logo(self):
         """Load the logo image as bytes."""
@@ -46,7 +52,7 @@ class EmailService:
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = 'Your ConfAI Login PIN'
-            msg['From'] = self.from_email
+            msg['From'] = self._get_from_header()
             msg['To'] = to_email
             msg['Message-ID'] = make_msgid(domain=self.from_email.split('@')[1])
 
@@ -143,7 +149,7 @@ The ConfAI Team
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = 'You\'re invited to ConfAI!'
-            msg['From'] = self.from_email
+            msg['From'] = self._get_from_header()
             msg['To'] = to_email
             msg['Message-ID'] = make_msgid(domain=self.from_email.split('@')[1])
 
@@ -247,7 +253,7 @@ The ConfAI Team
             # Create message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
-            msg['From'] = self.from_email
+            msg['From'] = self._get_from_header()
             msg['To'] = to_email
             msg['Message-ID'] = make_msgid(domain=self.from_email.split('@')[1])
 
