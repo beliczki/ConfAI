@@ -274,8 +274,16 @@ The ConfAI Team
             # Build logo HTML (use CID if logo available)
             logo_html = '<img src="cid:logo" alt="ConfAI" style="max-height: 50px; margin: 0;">' if self.logo_data else '<h1 style="color: white; margin: 0;">ConfAI</h1>'
 
-            # Convert newlines in message to HTML breaks
-            html_message = message.replace('\n', '<br>')
+            # Convert newlines and basic markdown to HTML
+            import re
+            html_message = message
+            # Bold: **text** or *text*
+            html_message = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_message)
+            html_message = re.sub(r'\*(.+?)\*', r'<strong>\1</strong>', html_message)
+            # Italic: _text_
+            html_message = re.sub(r'_(.+?)_', r'<em>\1</em>', html_message)
+            # Newlines to <br>
+            html_message = html_message.replace('\n', '<br>')
 
             # Build login button HTML
             login_button_html = ""
